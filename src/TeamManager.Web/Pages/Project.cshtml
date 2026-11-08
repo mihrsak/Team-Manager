@@ -1,7 +1,7 @@
 @page
 @model TeamManager.Web.Pages.ProjectModel
 <p><a asp-page="/Projects">Svi projekti</a></p><h1>@(Model.Id is null?"Novi projekt":Model.Input.Name)</h1>
-@if(Model.Id is not null){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">Projektni zadaci</a>}
+@if(Model.Id is not null&&Model.Input.IssuesEnabled){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">Projektni zadaci</a>}
 <div class="card"><form method="post" asp-route-id="@Model.Id">
 <div asp-validation-summary="All"></div><input type="hidden" asp-for="Input.Revision">
 <fieldset disabled="@(!Model.CanEdit)">
@@ -13,3 +13,15 @@
 <p>Hijerarhija služi organizaciji. Članstva, ovlasti i stanje svakog projekta ostaju zasebni. Za premještanje trebaš ovlast upravljanja odabranim nadređenim projektom.</p>
 @if(Model.CanEdit){<button>Spremi projekt</button>}
 </fieldset></form></div>
+
+@if(Model.Id is not null){
+<section class="card"><h2>Moduli projekta</h2>
+<p>Isključivanje modula skriva njegove stranice i podatke te blokira nove unose. Podaci ostaju sačuvani. Evidencija vremena dostupna je samo dok je uključen i modul zadataka.</p>
+<form method="post" asp-page-handler="Modules" asp-route-id="@Model.Id">
+<input type="hidden" name="revision" value="@Model.Input.Revision">
+<fieldset disabled="@(!Model.CanEdit)">
+<label><input type="checkbox" name="issuesEnabled" value="true" checked="@Model.Input.IssuesEnabled"> Zadaci i komentari</label>
+<label><input type="checkbox" name="timeEnabled" value="true" checked="@Model.Input.TimeEnabled"> Evidencija vremena</label>
+@if(Model.CanEdit){<button>Spremi module</button>}
+</fieldset></form></section>
+}

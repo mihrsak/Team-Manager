@@ -11,6 +11,8 @@ public sealed class ProjectInput
     public bool IsPublic {get;set;}
     public string State {get;set;}="Active";
     public int Revision {get;set;}
+    public bool IssuesEnabled {get;set;}=true;
+    public bool TimeEnabled {get;set;}=true;
 }
 public record ProjectDetail(int Id,ProjectInput Input);
 public sealed class ProjectStore(IConfiguration config,Permissions permissions)
@@ -25,13 +27,21 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions)
     {
         var all=new List<ProjectDetail>();
         await using(var c=Connect()){
-            await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name,Description,ParentId,IsPublic,State,Revision FROM dbo.Projects ORDER BY Name",c);
+            await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name,Description,ParentId,IsPublic,State,Revision,IssuesEnabled,TimeEnabled FROM dbo.Projects ORDER BY Name",c);
             await using var r=await cmd.ExecuteReaderAsync();
-            while(await r.ReadAsync())all.Add(new(r.GetInt32(0),new(){Name=r.GetString(1),Description=r.GetString(2),ParentId=r.IsDBNull(3)?null:r.GetInt32(3),IsPublic=r.GetBoolean(4),State=r.GetString(5),Revision=r.GetInt32(6)}));
+            while(await r.ReadAsync())all.Add(new(r.GetInt32(0),new(){Name=r.GetString(1),Description=r.GetString(2),ParentId=r.IsDBNull(3)?null:r.GetInt32(3),IsPublic=r.GetBoolean(4),State=r.GetString(5),Revision=r.GetInt32(6),IssuesEnabled=r.GetBoolean(7),TimeEnabled=r.GetBoolean(8)}));
         }
         var result=new List<ProjectDetail>();
         foreach(var p in all){var rights=await permissions.Effective(user,"project",p.Id);if(p.Input.IsPublic||rights.Contains("*")||rights.Contains("issues.view")||rights.Contains("projects.manage"))result.Add(p);}
         return result;
+    }
+    public async Task SetModules(int user,int id,bool issues,bool time,int revision)
+    {
+        if(!await CanManage(user,id))throw new UnauthorizedAccessException();
+        await using var c=Connect();await c.OpenAsync();
+        await using var cmd=new SqlCommand("UPDATE dbo.Projects SET IssuesEnabled=@issues,TimeEnabled=@time,Revision=Revision+1 WHERE Id=@id AND Revision=@revision",c);
+        cmd.Parameters.AddRange([P("@issues",issues),P("@time",time),P("@id",id),P("@revision",revision)]);
+        if(await cmd.ExecuteNonQueryAsync()!=1)throw new InvalidOperationException("Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
     }
     public async Task<int> Save(int user,int? id,ProjectInput input)
     {

@@ -14,7 +14,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
     public List<TimeEntry> Time{get;set;}=[];
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
-    public bool CanLogTime{get;set;}
+    public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public async Task<IActionResult> OnGetAsync(int? id,int projectId)
     {
@@ -23,7 +23,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
         if(id is not null){var issue=await store.Get(UserId,id.Value);if(issue is null)return NotFound();ProjectId=issue.ProjectId;Input=issue.Input;var activity=await store.Activity(UserId,id.Value);Events=activity.Events;Time=activity.Time;}
         else ProjectId=projectId;
         var project=(await store.Projects(UserId)).FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
-        CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();return Page();
+        CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();return Page();
     }
     public async Task<IActionResult> OnPostSaveAsync(int? id,int projectId)
     {

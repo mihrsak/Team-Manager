@@ -22,5 +22,6 @@ Invoke-SqlFile '004-roles.sql' 'TeamManager'
 Invoke-SqlFile '005-issues.sql' 'TeamManager'
 Invoke-SqlFile '007-workflow.sql' 'TeamManager'
 Invoke-SqlFile '008-projects.sql' 'TeamManager'
+Invoke-SqlFile '009-project-modules.sql' 'TeamManager'
 if ($Demo) { Invoke-SqlFile '002-demo.sql' 'TeamManager' }
 Write-Host 'TeamManager database is ready.'

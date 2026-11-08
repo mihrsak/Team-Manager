@@ -19,6 +19,14 @@ public class ProjectModel(ProjectStore store):PageModel
         if(Input.ParentId is int parent&&!Parents.Any(x=>x.Id==parent))Parents.Add(new(parent,new(){Name="Nedostupan projekt"}));
         return Page();
     }
+    public async Task<IActionResult> OnPostModulesAsync(int id,bool issuesEnabled,bool timeEnabled,int revision)
+    {
+        ModelState.Clear();var result=await OnGetAsync(id);if(result is not PageResult)return result;
+        if(!CanEdit)return Forbid();
+        try{await store.SetModules(UserId,id,issuesEnabled,timeEnabled,revision);return RedirectToPage(new{id});}
+        catch(UnauthorizedAccessException){return Forbid();}
+        catch(InvalidOperationException ex){ModelState.AddModelError("",ex.Message);return Page();}
+    }
     public async Task<IActionResult> OnPostAsync(int? id)
     {
         var submitted=Input;var result=await OnGetAsync(id);if(result is not PageResult)return result;Input=submitted;

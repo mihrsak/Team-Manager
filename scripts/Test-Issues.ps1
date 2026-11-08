@@ -132,6 +132,42 @@ try {
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Post-edit migration failed'}}finally{Pop-Location}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Projects WHERE Id=$project AND IsPublic=1 AND Description='Public demo' AND Revision=5") -eq 1) 'Repeated installation preserves edited project settings'
+    # PROJ-03: module settings, route protection and preservation of existing data.
+    $page=Post "/Project?id=$project&handler=Modules" $regular @{issuesEnabled='false';timeEnabled='false';revision='5'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Nonmanager cannot change project modules'
+    $page=Post "/Project?id=$project&handler=Modules" $admin @{issuesEnabled='true';timeEnabled='false';revision='5'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
+    Assert (-not $page.Content.Contains('QA time') -and -not $page.Content.Contains('name="hours"')) 'Disabled time module hides entries history and input form'
+    $beforeTime=Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id"
+    $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='2';note='disabled module write'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id") -eq $beforeTime) 'Disabled time module rejects direct POST even from administrator'
+    $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='Comment with time module disabled'}
+    Assert ($page.Content.Contains('Comment with time module disabled')) 'Disabling time does not disable issue comments'
+    $page=Post "/Project?id=$project&handler=Modules" $admin @{issuesEnabled='false';timeEnabled='true';revision='5'}
+    Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$project") -eq 1) 'Stale module settings cannot overwrite newer configuration'
+    $page=Post "/Project?id=$project&handler=Modules" $admin @{issuesEnabled='false';timeEnabled='true';revision='6'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issues" -WebSession $admin
+    Assert (-not $page.Content.Contains('QA changed')) 'Disabled issue module removes project issues from search and listing'
+    foreach($route in @("/Issue?id=$id","/Issue?projectId=$project")){
+        try{Invoke-WebRequest -UseBasicParsing "$base$route" -WebSession $admin|Out-Null;throw 'Disabled module visible'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 404) 'Disabled issue module blocks direct detail or create URL'}
+    }
+    # Obtain a valid antiforgery token from project settings to forge a disabled route POST.
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Project?id=$project" -WebSession $admin
+    $token=[regex]::Match($page.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    foreach($handler in @('Comment','Time','Save')){
+        try{Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=$handler" -WebSession $admin -Method Post -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token);text='forbidden';date='2026-11-08';hours='1'}|Out-Null;throw 'Disabled route accepted POST'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 404) 'Disabled issue module blocks forged write request'}
+    }
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Project?id=$project" -WebSession $admin
+    Assert ($page.Content.Contains('Moduli projekta')) 'Project settings remain accessible while all issue routes are disabled'
+    Push-Location (Join-Path $root 'src\TeamManager.Web')
+    try{& $dotnet $dll --apply-schema;if($LASTEXITCODE -ne 0){throw 'Module migration repeat failed'}}finally{Pop-Location}
+    Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$project") -eq 0) 'Repeated migration preserves disabled module settings'
+    $page=Post "/Project?id=$project&handler=Modules" $admin @{issuesEnabled='true';timeEnabled='true';revision='7'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
+    Assert ($page.Content.Contains('QA time') -and $page.Content.Contains('QA changed')) 'Reenabling modules restores existing issue and time records'
+    $page=Post "/Project?id=$child&handler=Modules" $regular @{issuesEnabled='false';timeEnabled='false';revision='2'}
+    Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$child") -eq 0) 'Scoped project manager can configure own project modules'
+    Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$project") -eq 1) 'Module configuration is isolated between projects'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

@@ -27,14 +27,17 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     public async Task<bool> Can(int user,int project,string right)
     {
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT IsPublic,State FROM dbo.Projects WHERE Id=@p",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return false;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT IsPublic,State,IssuesEnabled,TimeEnabled FROM dbo.Projects WHERE Id=@p",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return false;
+        if(!r.GetBoolean(2)||(right.StartsWith("time.")&&!r.GetBoolean(3)))return false;
+        if(right=="time.view")right="issues.view";
         if(right!="issues.view"&&r.GetString(1)!="Active")return false;
         if(right=="issues.view"&&r.GetBoolean(0))return true;
         var rights=await permissions.Effective(user,"project",project);return rights.Contains("*")||rights.Contains(right);
     }
-    private static async Task RequireActive(SqlConnection c,SqlTransaction tx,int project)
+    private static async Task RequireActive(SqlConnection c,SqlTransaction tx,int project,bool time=false)
     {
-        await using var cmd=new SqlCommand("SELECT State FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@p",c,tx);cmd.Parameters.Add(P("@p",project));
+        await using var cmd=new SqlCommand("SELECT State FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@p AND IssuesEnabled=1 AND (@time=0 OR TimeEnabled=1)",c,tx);cmd.Parameters.Add(P("@p",project));
+        cmd.Parameters.Add(P("@time",time));
         if(Convert.ToString(await cmd.ExecuteScalarAsync())!="Active")throw new UnauthorizedAccessException("Projekt je zatvoren ili arhiviran.");
     }
     public async Task<List<Team>> Projects(int user,string right="issues.view")
@@ -88,10 +91,10 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"time.log"))throw new UnauthorizedAccessException();if(hours<=0||hours>24||decimal.Round(hours,2)!=hours||date.Year<1753||(note?.Length??0)>1000)throw new ArgumentException("Unesi datum i sate od 0,01 do 24 (najviše dvije decimale).");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note) VALUES(@id,@user,@date,@hours,@note)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??"")]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note) VALUES(@id,@user,@date,@hours,@note)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??"")]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
     }
     public async Task<(List<IssueEvent> Events,List<TimeEntry> Time)> Activity(int user,int id)
     {
-        if(await Get(user,id) is null)throw new UnauthorizedAccessException();await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3)));return(events,time);
+        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3)));return(events,time);
     }
 }

@@ -13,4 +13,12 @@ U navigaciji odaberite **Projekti**, zatim naziv projekta ili **Novi projekt**. 
 
 Instalacija: pokrenuti uobičajenu `Install-Database.ps1` iz novog paketa (ili aplikaciju s `--apply-schema`) prije pokretanja novog izdanja. Ponovno pokretanje migracije ne resetira postavke.
 
-Sljedeći korak: PROJ-03, uključivanje i isključivanje implementiranih modula po projektu. Nasljeđivanje članstava i više rola zasebna su stavka ROLE-03.
+## Moduli projekta (PROJ-03)
+
+Na postojećem projektu odjeljak **Moduli projekta** zasebno sprema postavke zadataka/komentara i evidencije vremena. Potrebna je ista ovlast `projects.manage` kao za druge postavke projekta. Migracija `009-project-modules.sql` uključuje oba modula postojećim projektima; novi projekti također započinju s oba uključena.
+
+Isključen modul zadataka uklanja zadatke iz popisa/pretrage i blokira izravne URL-ove i POST zahtjeve, čak i administratoru. Projektne postavke ostaju dostupne za ponovno uključivanje. Isključen modul vremena skriva tablicu sati, obrazac i vremenske zapise u povijesti te blokira upis sati. Komentari i zadaci nastavljaju raditi.
+
+Vrijeme zahtijeva i uključen modul zadataka. Odabir vremena ostaje sačuvan kad se zadaci isključe. Isključivanje ne briše podatke; ponovno uključivanje vraća prethodne podatke. Ponovljena migracija ne mijenja odabire. Revizija projekta štiti i ove postavke od zastarjelog obrasca. Ne postoji automatsko nasljeđivanje postavki potprojektima.
+
+Moduli koji još nisu implementirani (wiki, dokumenti i ostalo) ostaju u svojim backlog stavkama. Nasljeđivanje članstava i više rola zasebna su stavka ROLE-03.

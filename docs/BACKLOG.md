@@ -25,7 +25,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ORG-01 | Unos organizacijskih jedinica, timova i projekata | Gotovo |
 | PROJ-01 | Pregled projekata i pripadajućih zadataka prema ovlastima | Gotovo |
 | PROJ-02 | Hijerarhija, opis, zatvaranje/arhiviranje, privatni/javni projekti | Gotovo: javno prijavljenim korisnicima; bez nasljeđivanja ovlasti i stanja |
-| PROJ-03 | Uključivanje modula i postavke po projektu | Backlog |
+| PROJ-03 | Uključivanje modula i postavke po projektu | Gotovo za postojeće module: zadaci/komentari i vrijeme; novi moduli dodaju se s vlastitim stavkama |
 | ISSUE-01 | Unos i uređivanje zadataka, tip, prioritet, status, rok, nositelj | Gotovo |
 | ISSUE-02 | Komentari i transakcijska povijest promjena | Gotovo: povijest s detaljima prije/poslije |
 | ISSUE-03 | Filtri po projektu/statusu/tekstu | Gotovo |
