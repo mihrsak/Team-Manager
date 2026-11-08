@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace TeamManager.Web;
 public static class DatabaseInstaller
 {
-    public static readonly string[] SchemaFiles=["001-schema.sql","003-users.sql","004-roles.sql","005-issues.sql","007-workflow.sql"];
+    public static readonly string[] SchemaFiles=["001-schema.sql","003-users.sql","004-roles.sql","005-issues.sql","007-workflow.sql","008-projects.sql"];
     public static async Task Run(string connectionString,bool createDatabase,bool demo)
     {
         var settings=new SqlConnectionStringBuilder(connectionString);

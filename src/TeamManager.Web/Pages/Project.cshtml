@@ -1,0 +1,15 @@
+@page
+@model TeamManager.Web.Pages.ProjectModel
+<p><a asp-page="/Projects">Svi projekti</a></p><h1>@(Model.Id is null?"Novi projekt":Model.Input.Name)</h1>
+@if(Model.Id is not null){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">Projektni zadaci</a>}
+<div class="card"><form method="post" asp-route-id="@Model.Id">
+<div asp-validation-summary="All"></div><input type="hidden" asp-for="Input.Revision">
+<fieldset disabled="@(!Model.CanEdit)">
+<label>Naziv<input asp-for="Input.Name" maxlength="100" required></label>
+<label>Opis<textarea asp-for="Input.Description" maxlength="4000" rows="6"></textarea></label>
+<label>Nadređeni projekt<select asp-for="Input.ParentId"><option value="">Bez nadređenog projekta</option>@foreach(var p in Model.Parents){<option value="@p.Id">@p.Input.Name</option>}</select></label>
+<label><input type="checkbox" asp-for="Input.IsPublic"> Javni projekt (svim prijavljenim korisnicima)</label>
+<label>Stanje<select asp-for="Input.State"><option value="Active">Aktivan</option><option value="Closed">Zatvoren</option><option value="Archived">Arhiviran</option></select></label>
+<p>Hijerarhija služi organizaciji. Članstva, ovlasti i stanje svakog projekta ostaju zasebni. Za premještanje trebaš ovlast upravljanja odabranim nadređenim projektom.</p>
+@if(Model.CanEdit){<button>Spremi projekt</button>}
+</fieldset></form></div>

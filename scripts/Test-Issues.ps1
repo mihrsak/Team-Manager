@@ -71,6 +71,67 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Workflow" -WebSession $regular
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project developer cannot modify global workflow'
     try{Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Comment" -WebSession $regular -Method Post -Body @{text='no token'}|Out-Null;throw 'CSRF accepted'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 400) 'Missing antiforgery token rejected'}
+    # Project lifecycle and hierarchy regression tests (PROJ-02).
+    $projectInput=@{'Input.Name'='QA parent';'Input.Description'='<b>plain description</b>';'Input.State'='Active';'Input.IsPublic'='false';'Input.Revision'='0'}
+    $page=Post '/Project' $admin $projectInput
+    $parent=Sql "SELECT Id FROM dbo.Projects WHERE Name='QA parent'"
+    Assert ($null -ne $parent) 'Create project through settings form'
+    Assert ($page.Content.Contains('&lt;b&gt;plain description&lt;/b&gt;')) 'Project description is HTML encoded'
+    $projectInput['Input.Name']='QA child';$projectInput['Input.ParentId']=$parent
+    $page=Post '/Project' $admin $projectInput
+    $child=Sql "SELECT Id FROM dbo.Projects WHERE Name='QA child'"
+    Assert ((Sql "SELECT ParentId FROM dbo.Projects WHERE Id=$child") -eq $parent) 'Child project retains parent'
+    $projectInput['Input.Name']='QA parent';$projectInput['Input.ParentId']=$child;$projectInput['Input.Revision']='1'
+    $page=Post "/Project?id=$parent" $admin $projectInput
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Projects WHERE Id=$parent AND ParentId IS NULL AND Revision=1") -eq 1) 'Hierarchy cycle is rejected without modifying project'
+    $projectInput['Input.ParentId']='';$projectInput['Input.Name']='QA parent updated'
+    $page=Post "/Project?id=$parent" $admin $projectInput
+    $projectInput['Input.Name']='Stale project overwrite'
+    $page=Post "/Project?id=$parent" $admin $projectInput
+    Assert ((Sql "SELECT Name FROM dbo.Projects WHERE Id=$parent") -eq 'QA parent updated') 'Concurrent project edit cannot overwrite newer revision'
+    Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$project AND UserId=$uid" | Out-Null
+    try{Invoke-WebRequest -UseBasicParsing "$base/Project?id=$project" -WebSession $regular|Out-Null;throw 'Private project exposed'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 404) 'Private project settings are hidden from nonmembers'}
+    $name=Sql "SELECT Name FROM dbo.Projects WHERE Id=$project"
+    $projectInput=@{'Input.Name'=$name;'Input.Description'='Public demo';'Input.State'='Active';'Input.IsPublic'='true';'Input.Revision'='1'}
+    $page=Post "/Project?id=$project" $admin $projectInput
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $regular
+    Assert ($page.Content.Contains('QA changed')) 'Public project grants authenticated nonmember read access'
+    $page=Post "/Project?id=$project" $regular $projectInput
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public visibility does not grant project administration'
+    $before=Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id"
+    $page=Post "/Issue?id=$id&handler=Comment" $regular @{text='forbidden public comment'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id") -eq $before) 'Public visibility does not grant commenting'
+    $projectInput['Input.State']='Closed';$projectInput['Input.Revision']='2'
+    $page=Post "/Project?id=$project" $admin $projectInput
+    $input['Input.Revision']='3';$input['Input.Title']='forbidden closed edit'
+    $page=Post "/Issue?id=$id&handler=Save" $admin $input
+    $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='forbidden closed comment'}
+    $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='2';note='forbidden closed time'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id") -eq $before) 'Closed project blocks edits comments and time even for administrator'
+    $page=Post "/Issue?projectId=$project&handler=Save" $admin $input
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Title='forbidden closed edit'") -eq 0) 'Closed project blocks new issues'
+    $projectInput['Input.State']='Archived';$projectInput['Input.Revision']='3'
+    $page=Post "/Project?id=$project" $admin $projectInput
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
+    Assert ($page.Content.Contains('QA changed')) 'Archived project preserves readable issue history'
+    $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='forbidden archived comment'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id") -eq $before) 'Archived project blocks comments'
+    $projectInput['Input.State']='Active';$projectInput['Input.Revision']='4'
+    $page=Post "/Project?id=$project" $admin $projectInput
+    $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='reopened comment'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id") -eq ($before+1)) 'Reopening project restores editing without data loss'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$child;role='Voditelj'}
+    $childInput=@{'Input.Name'='QA child managed';'Input.Description'='Scoped manager';'Input.ParentId'=$parent;'Input.State'='Active';'Input.IsPublic'='false';'Input.Revision'='1'}
+    $page=Post "/Project?id=$child" $regular $childInput
+    Assert ((Sql "SELECT Name FROM dbo.Projects WHERE Id=$child") -eq 'QA child managed') 'Scoped project manager can edit own project without changing hidden parent'
+    $childInput['Input.ParentId']=$project;$childInput['Input.Revision']='2'
+    $page=Post "/Project?id=$child" $regular $childInput
+    Assert ((Sql "SELECT ParentId FROM dbo.Projects WHERE Id=$child") -eq $parent) 'Scoped manager cannot move project under unauthorized parent'
+    $page=Post "/Project?id=$project" $regular $projectInput
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project management permission does not leak to another project'
+    Push-Location (Join-Path $root 'src\TeamManager.Web')
+    try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Post-edit migration failed'}}finally{Pop-Location}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Projects WHERE Id=$project AND IsPublic=1 AND Description='Public demo' AND Revision=5") -eq 1) 'Repeated installation preserves edited project settings'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

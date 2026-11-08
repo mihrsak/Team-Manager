@@ -10,6 +10,7 @@ public sealed class Permissions(IConfiguration config)
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     static Permissions()
     {
+        Catalog["projects.manage"]="Uređivanje postavki projekta";
         Catalog["issues.view"]="Pregled projektnih zadataka";
         Catalog["issues.create"]="Kreiranje projektnih zadataka";
         Catalog["issues.edit"]="Uređivanje projektnih zadataka";

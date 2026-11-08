@@ -5,7 +5,7 @@ IF NOT EXISTS(SELECT 1 FROM dbo.Projects WHERE Name=N'Demo • Team Manager')
 BEGIN
     DECLARE @UserId int=(SELECT TOP(1) u.UserId FROM dbo.UserRoles u JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName WHERE p.Permission='*' ORDER BY u.UserId);
     IF @UserId IS NULL THROW 51002,'Start application once to prepare the initial administrator before loading demo data.',1;
-    INSERT dbo.Projects(Name) VALUES(N'Demo • Team Manager');
+    INSERT dbo.Projects(Name,Description) VALUES(N'Demo • Team Manager',N'Demonstracijski projekt za zadatke, role, tijek rada i postavke projekta.');
     DECLARE @ProjectId int=SCOPE_IDENTITY();
     INSERT dbo.ProjectMembers(ProjectId,UserId,Role) VALUES(@ProjectId,@UserId,N'Voditelj');
     INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,CreatedBy)

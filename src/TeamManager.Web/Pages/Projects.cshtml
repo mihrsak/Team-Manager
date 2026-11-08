@@ -1,0 +1,8 @@
+@page
+@model TeamManager.Web.Pages.ProjectsModel
+<h1>Projekti</h1>
+<p>Javni projekti vidljivi su svim prijavljenim korisnicima. Zatvoreni i arhivirani projekti čuvaju podatke, a zadaci su dostupni samo za čitanje.</p>
+@if(Model.CanCreate){<a class="button" asp-page="/Project">Novi projekt</a>}
+<div class="card table"><table><thead><tr><th>Naziv</th><th>Nadređeni projekt</th><th>Vidljivost</th><th>Stanje</th></tr></thead><tbody>
+@foreach(var p in Model.Items){<tr><td><a asp-page="/Project" asp-route-id="@p.Id">@p.Input.Name</a></td><td>@Model.ParentName(p.Input.ParentId)</td><td>@(p.Input.IsPublic?"Javni":"Privatni")</td><td>@TeamManager.Web.Pages.ProjectsModel.StateName(p.Input.State)</td></tr>}
+</tbody></table></div>
