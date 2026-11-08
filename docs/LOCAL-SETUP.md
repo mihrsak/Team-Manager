@@ -24,7 +24,7 @@ Početna stranica vodi na prijavu i imenik korisnika. Implementirani su korisni�
 
 Nakon inicijalizacije baze aplikacija pri pokretanju automatski kreira `admin` / `admin` samo ako tablica korisnika nema nijedan redak. Račun dobiva punu administratorsku rolu, a lozinka se sprema kao hash. Ako korisnici već postoje, ništa se ne dodaje niti resetira.
 
-Pri svakoj prijavi računom `admin` s lozinkom `admin` nudi se promjena lozinke ili nastavak bez promjene. Nakon promjene podsjetnik prestaje. Postojeći lokalni račun `b113304` ostaje sačuvan.
+Pri svakoj prijavi računom `admin` s lozinkom `admin` nudi se promjena lozinke ili nastavak bez promjene. Nakon promjene podsjetnik prestaje. Postojeći lokalni računi ostaju sačuvani.
 
 Za eksplicitnu pripremu početnog računa bez pokretanja web servera u razvojnoj okolini može se koristiti i:
 
