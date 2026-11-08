@@ -1,0 +1,19 @@
+@page
+@model TeamManager.Web.Pages.UsersModel
+<p class="muted">ORGANIZACIJA / KORISNICI</p><h1>Korisnici</h1><p>Brojevi radnika, funkcije i organizacijske jedinice.</p>
+<div class="card table"><table><thead><tr><th>Broj radnika</th><th>Ime i prezime</th><th>Funkcija</th><th>Organizacijska jedinica</th><th></th></tr></thead><tbody>
+@foreach(var entry in Model.Entries){<tr><td>@entry.User.EmployeeNumber</td><td>@entry.User.DisplayName</td><td>@entry.User.JobTitle</td><td>@entry.Unit</td><td><a asp-page="/Profile" asp-route-id="@entry.User.Id">Profil</a></td></tr>}
+</tbody></table></div>
+<div asp-validation-summary="All"></div><div class="grid">
+@if(User.IsInRole("users.manage")){
+<section class="card"><h2>Novi korisnik</h2><form method="post" asp-page-handler="Create">
+<label>Broj radnika<input name="employee" required maxlength="30" pattern="[A-Za-z0-9._-]+"></label><label>Ime i prezime<input name="name" required maxlength="100"></label><label>Funkcija<input name="job" maxlength="100"></label>
+<label>Organizacijska jedinica<select name="unit"><option value="">Nije dodijeljena</option>@foreach(var unit in Model.Units){<option value="@unit.Id">@unit.Name</option>}</select></label>
+<label>Početna lozinka<input name="password" type="password" required minlength="7" maxlength="200" autocomplete="new-password"></label><button>Dodaj korisnika</button></form></section>
+}
+@if(User.IsInRole("organization.manage")){<section class="card"><h2>Organizacija, timovi i projekti</h2><p class="muted">Nakon kreiranja, članstvo i ulogu dodijeli na profilu korisnika.</p><form method="post" asp-page-handler="Scope">
+<label>Vrsta<select name="kind"><option value="unit">Organizacijska jedinica</option><option value="team">Tim</option><option value="project">Projekt</option></select></label><label>Naziv<input name="name" required maxlength="100"></label><button>Dodaj</button></form>
+<p>Jedinice: @Model.Units.Count · Timovi: @Model.Teams.Count · Projekti: @Model.Projects.Count</p>
+@foreach(var scope in Model.Teams){<p><span class="badge">Tim</span> @scope.Name</p>}
+@foreach(var scope in Model.Projects){<p><span class="badge">Projekt</span> @scope.Name</p>}
+</section>}</div>

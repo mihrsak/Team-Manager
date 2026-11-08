@@ -1,0 +1,4 @@
+@page
+@model TeamManager.Web.Pages.LoginModel
+<div class="card" style="max-width:440px;margin:60px auto"><p class="muted">DOBRO DOŠLI</p><h1>Prijava</h1><p>Prijavi se svojim brojem radnika.</p><div asp-validation-summary="All"></div>
+<form method="post"><label>Broj radnika<input asp-for="EmployeeNumber" autocomplete="username" required maxlength="30"></label><label>Lozinka<input asp-for="Password" type="password" autocomplete="current-password" required maxlength="200"></label><button>Prijavi se</button></form></div>

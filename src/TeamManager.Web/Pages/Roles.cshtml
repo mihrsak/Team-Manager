@@ -1,0 +1,8 @@
+@page
+@model TeamManager.Web.Pages.RolesModel
+<h1>Role i ovlasti</h1><p>Kreiraj rolu i odaberi prava koja daje. Globalne role vrijede u cijeloj aplikaciji; role članstva samo u dodijeljenom timu ili projektu.</p><div asp-validation-summary="All"></div>
+<div class="grid">@foreach(var role in Model.Roles){<section class="card"><h2>@role.Name</h2><form method="post"><input type="hidden" name="name" value="@role.Name"><label>Opis<input name="description" value="@role.Description" maxlength="200"></label>
+@foreach(var permission in Permissions.Catalog){<label><input style="display:inline;width:auto" type="checkbox" name="rights" value="@permission.Key" checked="@role.Permissions.Contains(permission.Key)"> @permission.Value</label>}
+<button>Spremi ovlasti</button></form></section>}
+<section class="card"><h2>Nova rola</h2><form method="post"><input type="hidden" name="create" value="true"><label>Naziv<input name="name" required maxlength="30"></label><label>Opis<input name="description" maxlength="200"></label>@foreach(var permission in Permissions.Catalog){<label><input style="display:inline;width:auto" type="checkbox" name="rights" value="@permission.Key"> @permission.Value</label>}<button>Kreiraj rolu</button></form></section></div>
+<p class="muted">Prava za zadatke, dokumente i ostale module dodavat ćemo kada ti moduli budu implementirani. Posljednjem administratoru nije moguće ukloniti punu administraciju.</p>

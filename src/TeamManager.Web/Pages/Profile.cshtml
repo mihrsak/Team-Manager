@@ -1,0 +1,25 @@
+@page
+@model TeamManager.Web.Pages.ProfileModel
+<p class="muted">KORISNICI / PROFIL</p><h1>@Model.Person!.DisplayName</h1><p>Broj radnika: <strong>@Model.Person.EmployeeNumber</strong></p>
+@if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
+<div asp-validation-summary="All"></div>
+<section class="card"><h2>Globalne role</h2><p>@(Model.GlobalRoles.Count==0?"Nema globalnih rola":string.Join(", ",Model.GlobalRoles))</p>
+@if(User.IsInRole("roles.manage")){<form method="post" asp-page-handler="GlobalRole" asp-route-id="@Model.Person.Id"><label>Rola<select name="role">@foreach(var role in Model.Roles){<option>@role.Name</option>}</select></label><button name="remove" value="false">Dodijeli</button> <button name="remove" value="true">Ukloni</button></form>}
+</section>
+<div class="grid"><section class="card"><h2>Osnovni podaci</h2>
+@if(Model.CanEdit){<form method="post" asp-page-handler="Save" asp-route-id="@Model.Person.Id"><label>Ime i prezime<input name="name" value="@Model.Person.DisplayName" required maxlength="100"></label><label>Funkcija<input name="job" value="@Model.Person.JobTitle" maxlength="100"></label>
+@if(User.IsInRole("users.manage")){<label>Organizacijska jedinica<select name="unit"><option value="">Nije dodijeljena</option>@foreach(var unit in Model.Units){<option value="@unit.Id" selected="@(unit.Id==Model.Person.OrganizationUnitId)">@unit.Name</option>}</select></label>}
+else{<p>Organizacijska jedinica: @Model.UnitName</p>}
+<button>Spremi podatke</button></form>}
+else{<p>Funkcija: @Model.Person.JobTitle</p><p>Organizacijska jedinica: @Model.UnitName</p>}
+</section>
+@if(Model.IsSelf){<section class="card"><h2>Promjena lozinke</h2><form method="post" asp-page-handler="Password" asp-route-id="@Model.Person.Id"><label>Trenutna lozinka<input name="currentPassword" type="password" required maxlength="200" autocomplete="current-password"></label><label>Nova lozinka<input name="newPassword" type="password" required minlength="10" maxlength="200" autocomplete="new-password"></label><label>Ponovi novu lozinku<input name="confirmPassword" type="password" required maxlength="200" autocomplete="new-password"></label><button>Promijeni lozinku</button></form></section>}
+</div>
+<div class="grid">
+@foreach(var kind in new[]{"team","project"}){var memberships=kind=="team"?Model.Teams:Model.Projects;var choices=kind=="team"?Model.TeamChoices:Model.ProjectChoices; var manageable=kind=="team"?Model.ManageTeams:Model.ManageProjects;
+<section class="card"><h2>@(kind=="team"?"Timovi":"Projekti")</h2>
+@if(memberships.Count==0){<p class="muted">Nema dodijeljenih članstava.</p>}
+@foreach(var member in memberships){<div class="actions"><p>@member.Scope · <strong>@member.Role</strong></p>@if(manageable.Contains(member.ScopeId)){<form method="post" asp-page-handler="Remove" asp-route-id="@Model.Person.Id"><input type="hidden" name="kind" value="@kind"><input type="hidden" name="scopeId" value="@member.ScopeId"><button>Ukloni</button></form>}</div>}
+@if(manageable.Count>0){<form method="post" asp-page-handler="Membership" asp-route-id="@Model.Person.Id"><input type="hidden" name="kind" value="@kind"><label>@(kind=="team"?"Tim":"Projekt")<select name="scopeId" required><option value="">Odaberi</option>@foreach(var choice in choices.Where(x=>manageable.Contains(x.Id))){<option value="@choice.Id">@choice.Name</option>}</select></label><label>Uloga<select name="role">@foreach(var role in Model.Roles){<option>@role.Name</option>}</select></label><button>Dodaj / promijeni ulogu</button></form>}
+</section>}
+</div><p class="muted">Uloga vrijedi samo unutar odabranog tima ili projekta. Administracija korisnika zasebna je ovlast.</p>

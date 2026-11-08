@@ -1,0 +1,8 @@
+@page
+@model TeamManager.Web.Pages.IssuesModel
+<p class="muted">PROJEKTI / ZADACI</p><h1>Projektni zadaci</h1><p>Prikazani su projekti za koje imaš ovlast pregleda zadataka.</p>
+<div class="card"><form method="get" class="grid"><label>Projekt<select asp-for="ProjectId"><option value="">Svi dostupni projekti</option>@foreach(var p in Model.Projects){<option value="@p.Id">@p.Name</option>}</select></label><label>Status<select asp-for="Status"><option value="">Svi statusi</option>@foreach(var s in Model.Statuses){<option>@s</option>}</select></label><label>Pretraga<input asp-for="Query" maxlength="200"></label><div><button>Filtriraj</button> <a href="/Issues">Očisti</a></div></form></div>
+<div class="card"><h2>Projekti</h2>@foreach(var p in Model.Projects){<p><a asp-page="/Issues" asp-route-ProjectId="@p.Id">@p.Name</a> @if(Model.CanCreate.Contains(p.Id)){<a class="button" asp-page="/Issue" asp-route-projectId="@p.Id">Novi zadatak</a>}</p>}@if(Model.Projects.Count==0){<p>Nema dostupnih projekata. Administrator može kreirati projekt i dodijeliti članstvo.</p>}</div>
+<div class="card table"><table><thead><tr><th>#</th><th>Zadatak</th><th>Projekt</th><th>Status</th><th>Prioritet</th><th>Nositelj</th><th>Rok</th></tr></thead><tbody>
+@foreach(var i in Model.Items){<tr><td>@i.Id</td><td><a asp-page="/Issue" asp-route-id="@i.Id">@i.Title</a></td><td>@i.Project</td><td><span class="badge">@i.Status</span></td><td>@i.Priority</td><td>@(i.Assignee??"Nije dodijeljen")</td><td>@i.DueDate?.ToString("dd.MM.yyyy")</td></tr>}
+</tbody></table>@if(Model.Items.Count==0){<p>Nema zadataka za odabrane filtre.</p>}</div>
