@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
@@ -6,6 +7,7 @@ namespace TeamManager.Web.Pages;
 
 public sealed class GroupsModel(GroupStore groups, UserStore users, Permissions permissions) : PageModel
 {
+    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public GroupDirectory Directory { get; private set; } = new([], []);
     public List<DirectoryEntry> Users { get; private set; } = [];
     public List<AccessRole> Roles { get; private set; } = [];
@@ -22,14 +24,14 @@ public sealed class GroupsModel(GroupStore groups, UserStore users, Permissions 
     public Task<IActionResult> OnPostCreateAsync(string? name)
     {
         name = name?.Trim();
-        return Save(name is { Length: > 0 and <= 100 } ? () => groups.Create(name) : null);
+        return Save(name is { Length: > 0 and <= 100 } ? () => groups.Create(UserId,name) : null);
     }
 
     public Task<IActionResult> OnPostMemberAsync(int groupId, int userId, bool remove)
-        => Save(groupId > 0 && userId > 0 ? () => groups.SetMember(groupId, userId, remove) : null);
+        => Save(groupId > 0 && userId > 0 ? () => groups.SetMember(UserId,groupId, userId, remove) : null);
 
     public Task<IActionResult> OnPostRoleAsync(int groupId, string? role, bool remove)
-        => Save(groupId > 0 && role is { Length: > 0 and <= 30 } ? () => groups.SetRole(groupId, role, remove) : null);
+        => Save(groupId > 0 && role is { Length: > 0 and <= 30 } ? () => groups.SetRole(UserId,groupId, role, remove) : null);
 
     private async Task<IActionResult> Save(Func<Task>? change)
     {

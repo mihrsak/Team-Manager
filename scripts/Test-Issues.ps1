@@ -424,6 +424,8 @@ try {
     $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='QA hidden watcher event'}
     $page=Invoke-WebRequest -UseBasicParsing "$base/Notifications" -WebSession $regular
     Assert (-not $page.Content.Contains("href=`"/Issue?id=$id`"")) 'Notifications hide issues after access is revoked'
+    Assert ((Sql "SELECT COUNT(DISTINCT Action) FROM dbo.AdministrationAudit WHERE ActorEmployeeNumber=N'admin' AND Action IN ('project.create','project.update','project.modules','workflow.value.create','workflow.transition.add','roadmap.create','roadmap.update')") -eq 7) 'Audit covers project settings, workflow, and roadmap administration'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Action='roadmap.update' AND Subject=N'QA stale'") -eq 0) 'Stale administrative update leaves no audit entry'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

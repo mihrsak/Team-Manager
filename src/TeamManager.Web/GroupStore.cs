@@ -33,11 +33,11 @@ public sealed class GroupStore(IConfiguration configuration)
         return new(groups, assignments);
     }
 
-    public Task Create(string name)
-        => Execute("INSERT dbo.UserGroups(Name) VALUES(@name)", P("@name", name));
+    public Task Create(int actor, string name)
+        => Execute(new(actor,"group.create",name),"INSERT dbo.UserGroups(Name) VALUES(@name)", P("@name", name));
 
-    public Task SetMember(int groupId, int userId, bool remove)
-        => Execute(remove
+    public Task SetMember(int actor,int groupId, int userId, bool remove)
+        => Execute(new(actor,remove?"group.member.remove":"group.member.add",$"#{groupId}",$"Korisnik #{userId}"),remove
             ? "DELETE dbo.UserGroupMembers WHERE GroupId=@group AND UserId=@user"
             : """
               INSERT dbo.UserGroupMembers(GroupId,UserId)
@@ -45,8 +45,8 @@ public sealed class GroupStore(IConfiguration configuration)
                   SELECT 1 FROM dbo.UserGroupMembers WITH(UPDLOCK,HOLDLOCK) WHERE GroupId=@group AND UserId=@user)
               """, P("@group", groupId), P("@user", userId));
 
-    public Task SetRole(int groupId, string role, bool remove)
-        => Execute(remove
+    public Task SetRole(int actor,int groupId, string role, bool remove)
+        => Execute(new(actor,remove?"group.role.remove":"group.role.add",$"#{groupId}",role),remove
             ? "DELETE dbo.UserGroupRoles WHERE GroupId=@group AND RoleName=@role"
             : """
               INSERT dbo.UserGroupRoles(GroupId,RoleName)
@@ -54,12 +54,9 @@ public sealed class GroupStore(IConfiguration configuration)
                   SELECT 1 FROM dbo.UserGroupRoles WITH(UPDLOCK,HOLDLOCK) WHERE GroupId=@group AND RoleName=@role)
               """, P("@group", groupId), P("@role", role));
 
-    private async Task Execute(string sql, params SqlParameter[] parameters)
+    private async Task Execute(AuditChange change, string sql, params SqlParameter[] parameters)
     {
         await using var connection = Connect();
-        await connection.OpenAsync();
-        await using var command = new SqlCommand(sql, connection);
-        command.Parameters.AddRange(parameters);
-        await command.ExecuteNonQueryAsync();
+        await AdministrationAuditStore.Execute(connection, change, sql, parameters);
     }
 }

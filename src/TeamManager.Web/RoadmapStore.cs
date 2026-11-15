@@ -81,7 +81,6 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
     {
         if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
-        await connection.OpenAsync();
         var sql = item.Id == 0
             ? """
               INSERT dbo.ProjectMilestones(ProjectId,Kind,Name,Description,TargetDate,IsComplete)
@@ -95,11 +94,12 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
               WHERE m.ProjectId=@project AND m.Id=@id AND m.Revision=@revision AND p.State='Active'
               """;
 
-        await using var command = new SqlCommand(sql, connection);
-        command.Parameters.AddRange([P("@project", project), P("@id", item.Id), P("@revision", item.Revision),
+        var rows = await AdministrationAuditStore.Execute(connection,
+            new(user,item.Id==0?"roadmap.create":"roadmap.update",item.Name,$"Projekt #{project}; {item.Kind}"),sql,
+            P("@project", project), P("@id", item.Id), P("@revision", item.Revision),
             P("@kind", item.Kind), P("@name", item.Name), P("@description", item.Description), P("@complete", item.IsComplete),
-            new SqlParameter("@date", System.Data.SqlDbType.Date) { Value = (object?)item.TargetDate ?? DBNull.Value }]);
-        if (await command.ExecuteNonQueryAsync() != 1)
+            new SqlParameter("@date", System.Data.SqlDbType.Date) { Value = (object?)item.TargetDate ?? DBNull.Value });
+        if (rows != 1)
             throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");
     }
 }

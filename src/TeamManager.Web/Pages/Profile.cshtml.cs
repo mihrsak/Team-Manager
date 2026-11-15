@@ -18,6 +18,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
     public List<Team> ProjectChoices {get;set;}=[];
     public List<Membership> Teams {get;set;}=[];
     public List<Membership> Projects {get;set;}=[];
+    private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public bool IsSelf=>Person?.Id.ToString()==User.FindFirstValue(ClaimTypes.NameIdentifier);
     public bool CanEdit=>IsSelf||User.IsInRole("users.manage");
     public string UnitName=>Units.FirstOrDefault(x=>x.Id==Person?.OrganizationUnitId)?.Name??"Nije dodijeljena";
@@ -38,7 +39,15 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         name=name?.Trim();job=job?.Trim()??"";
         if(!ModelState.IsValid||string.IsNullOrWhiteSpace(name)||name.Length>100||job.Length>100)return Invalid("Unesi ime i funkciju do 100 znakova.");
         if(!User.IsInRole("users.manage"))unit=Person.OrganizationUnitId;
-        try{await store.Execute("UPDATE dbo.AppUsers SET DisplayName=@n,JobTitle=@j,OrganizationUnitId=@o WHERE Id=@id",P("@n",name),P("@j",job),P("@o",unit),P("@id",id));}
+        const string sql = "UPDATE dbo.AppUsers SET DisplayName=@n,JobTitle=@j,OrganizationUnitId=@o WHERE Id=@id";
+        SqlParameter[] parameters = [P("@n",name),P("@j",job),P("@o",unit),P("@id",id)];
+        try
+        {
+            if (!IsSelf || unit != Person.OrganizationUnitId)
+                await store.ExecuteAudited(new(UserId,"account.update",Person.EmployeeNumber),sql,parameters);
+            else
+                await store.Execute(sql,parameters);
+        }
         catch(SqlException ex) when(ex.Number==547){return Invalid("Organizacijska jedinica nije valjana.");}
         return Success(id,"Podaci su spremljeni.");
     }
@@ -96,7 +105,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
                   INSERT dbo.ProjectMemberRoles(ProjectId,UserId,RoleName) VALUES(@s,@u,@r);
               COMMIT;
               """;
-        try{await store.Execute(sql,P("@s",scopeId),P("@u",id),P("@r",role),P("@name",Person.EmployeeNumber),P("@remove",removeRole),P("@replace",replacePrimary));}
+        try{await store.ExecuteAudited(new(UserId,removeRole?"membership.role.remove":replacePrimary?"membership.role.replace":"membership.role.add",Person.EmployeeNumber,$"{kind} #{scopeId}: {role}"),sql,P("@s",scopeId),P("@u",id),P("@r",role),P("@name",Person.EmployeeNumber),P("@remove",removeRole),P("@replace",replacePrimary));}
         catch(SqlException ex) when(ex.Number is 547 or 2601 or 2627){return Invalid("Članstvo nije spremljeno. Provjeri postoji li tim/projekt i ima li već člana s istim brojem radnika.");}
         return Success(id,"Članstvo i uloga su spremljeni.");
     }
@@ -104,7 +113,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
     {
         if(kind is not ("team" or "project")||!await permissions.CanManageMembers(User,kind,scopeId))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
         if(kind is not ("team" or "project"))return BadRequest();
-        try{await store.Execute(kind=="team"?"DELETE dbo.Members WHERE TeamId=@s AND UserId=@u":"DELETE dbo.ProjectMembers WHERE ProjectId=@s AND UserId=@u",P("@s",scopeId),P("@u",id));}
+        try{await store.ExecuteAudited(new(UserId,"membership.remove",Person.EmployeeNumber,$"{kind} #{scopeId}"),kind=="team"?"DELETE dbo.Members WHERE TeamId=@s AND UserId=@u":"DELETE dbo.ProjectMembers WHERE ProjectId=@s AND UserId=@u",P("@s",scopeId),P("@u",id));}
         catch(SqlException ex) when(ex.Number==547){return Invalid("Član ima dodijeljene zadatke. Najprije ih preraspodijeli.");}
         return Success(id,"Članstvo je uklonjeno.");
     }
@@ -133,7 +142,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
     {
         if(!User.IsInRole("roles.manage"))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
         if(!Roles.Any(x=>x.Name==role))return Invalid("Nepostojeća rola.");
-        try{await permissions.Assign(id,role,remove);}
+        try{await permissions.Assign(UserId,id,role,remove);}
         catch(SqlException ex) when(ex.Number==51001){return Invalid("Mora ostati barem jedan puni administrator.");}
         return Success(id,"Globalne role su spremljene.");
     }

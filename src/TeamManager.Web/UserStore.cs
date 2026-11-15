@@ -39,6 +39,12 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     {
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand(sql,c);cmd.Parameters.AddRange(parameters);await cmd.ExecuteNonQueryAsync();
     }
+    public async Task ExecuteAudited(AuditChange change, string sql, params SqlParameter[] parameters)
+    {
+        await using var connection = Connect();
+        await AdministrationAuditStore.Execute(connection, change, sql, parameters);
+    }
+
     public async Task<List<DirectoryEntry>> Directory()
     {
         await using var c=Connect();await c.OpenAsync();
@@ -93,10 +99,11 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand(sql,c);cmd.Parameters.Add(P("@id",id));
         await using var r=await cmd.ExecuteReaderAsync();var result=new List<Membership>();while(await r.ReadAsync())result.Add(new(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetInt32(3)==1));return result;
     }
-    public async Task Create(string employee,string name,string job,int? unit,string password,bool admin=false)
+    public async Task Create(string employee,string name,string job,int? unit,string password,bool admin=false,int? actorId=null)
     {
         var user=new AppUser(0,employee,name,job,unit,"",admin);
-        await Execute("INSERT dbo.AppUsers(EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator) VALUES(@e,@n,@j,@o,@p,@a)",P("@e",employee),P("@n",name),P("@j",job),P("@o",unit),P("@p",hasher.HashPassword(user,password)),P("@a",admin));
+        await using var connection = Connect();
+        await AdministrationAuditStore.Execute(connection,actorId is int actor ? new(actor,"account.create",employee) : null,"INSERT dbo.AppUsers(EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator) VALUES(@e,@n,@j,@o,@p,@a)",P("@e",employee),P("@n",name),P("@j",job),P("@o",unit),P("@p",hasher.HashPassword(user,password)),P("@a",admin));
     }
     public async Task Bootstrap()
     {

@@ -83,14 +83,17 @@ public sealed class Permissions(IConfiguration config)
             await command.ExecuteNonQueryAsync();
         });
 
-    public async Task Save(string name,string description,string[] rights,bool create)
+    public async Task Save(int actorId,string name,string description,string[] rights,bool create)
     {
         await Mutate(async(c,tx)=>{
             await using var cmd=new SqlCommand(create?"INSERT dbo.Roles(Name,Description) VALUES(@name,@description)":"UPDATE dbo.Roles SET Description=@description WHERE Name=@name; DELETE dbo.RolePermissions WHERE RoleName=@name",c,tx);cmd.Parameters.Add(P("@name",name));cmd.Parameters.Add(P("@description",description));await cmd.ExecuteNonQueryAsync();
             foreach(var right in rights.Distinct()){await using var add=new SqlCommand("INSERT dbo.RolePermissions VALUES(@name,@right)",c,tx);add.Parameters.Add(P("@name",name));add.Parameters.Add(P("@right",right));await add.ExecuteNonQueryAsync();}
+            await AdministrationAuditStore.Write(c,tx,new(actorId,create?"role.create":"role.update",name,string.Join(", ",rights.Distinct().Order())));
         });
     }
-    public async Task Assign(int userId,string role,bool remove)=>await Mutate(async(c,tx)=>{
-        await using var cmd=new SqlCommand(remove?"DELETE dbo.UserRoles WHERE UserId=@id AND RoleName=@role":"IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles WHERE UserId=@id AND RoleName=@role) INSERT dbo.UserRoles VALUES(@id,@role)",c,tx);cmd.Parameters.Add(P("@id",userId));cmd.Parameters.Add(P("@role",role));await cmd.ExecuteNonQueryAsync();
+    public async Task Assign(int actorId,int userId,string role,bool remove)=>await Mutate(async(c,tx)=>{
+        await using var cmd=new SqlCommand(remove?"DELETE dbo.UserRoles WHERE UserId=@id AND RoleName=@role":"IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles WHERE UserId=@id AND RoleName=@role) INSERT dbo.UserRoles VALUES(@id,@role)",c,tx);cmd.Parameters.Add(P("@id",userId));cmd.Parameters.Add(P("@role",role));
+        if(await cmd.ExecuteNonQueryAsync()>0)
+            await AdministrationAuditStore.Write(c,tx,new(actorId,remove?"role.revoke":"role.assign",$"#{userId}",role));
     });
 }

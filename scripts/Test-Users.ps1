@@ -115,6 +115,13 @@ try {
     [void]$cmd.Parameters.AddWithValue('@actor',$AdminEmployee)
     [void]$cmd.Parameters.AddWithValue('@subject',$employee)
     Assert ($cmd.ExecuteScalar() -eq 4) 'Exactly one record per successful administrator action; rejected actions leave no entry'
+    $cmd=$db.CreateCommand()
+    $cmd.CommandText="SELECT COUNT(DISTINCT Action) FROM dbo.AdministrationAudit WHERE ActorEmployeeNumber=@actor AND Action IN ('account.create','role.create','role.assign','role.revoke','group.create','group.role.add','group.role.remove','group.member.add','group.member.remove','membership.role.add','membership.role.remove')"
+    [void]$cmd.Parameters.AddWithValue('@actor',$AdminEmployee)
+    Assert ($cmd.ExecuteScalar() -eq 11) 'Audit covers account creation, global roles, groups, and scoped roles'
+    $cmd=$db.CreateCommand()
+    $cmd.CommandText="SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Action='role.update' AND Subject=N'Administrator' AND Details=N'users.manage'"
+    Assert ($cmd.ExecuteScalar() -eq 0) 'Rejected last-administrator change rolls back its audit entry'
 } finally {
     $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

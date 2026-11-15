@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
@@ -7,6 +8,7 @@ using static TeamManager.Web.UserStore;
 namespace TeamManager.Web.Pages;
 public class UsersModel(UserStore store):PageModel
 {
+    private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public List<DirectoryEntry> Entries {get;set;}=[];
     public List<Team> Units {get;set;}=[];
     public List<Team> Teams {get;set;}=[];
@@ -18,7 +20,7 @@ public class UsersModel(UserStore store):PageModel
         employee=employee?.Trim().ToLowerInvariant();name=name?.Trim();job=job?.Trim()??"";
         if(!ModelState.IsValid||!Regex.IsMatch(employee??"",@"^[a-z0-9._-]{1,30}$")||string.IsNullOrWhiteSpace(name)||name.Length>100||job.Length>100||password is null||password.Length<7||password.Length>200)
             return await Invalid("Provjeri broj radnika, ime i lozinku (najmanje 7 znakova).");
-        try{await store.Create(employee!,name,job,unit,password);}
+        try{await store.Create(employee!,name,job,unit,password,actorId:UserId);}
         catch(SqlException ex) when(ex.Number is 2601 or 2627 or 547){return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana.");}
         return RedirectToPage();
     }
@@ -27,7 +29,7 @@ public class UsersModel(UserStore store):PageModel
         if(!User.IsInRole("organization.manage"))return Forbid();
         name=name?.Trim();var table=kind switch {"unit"=>"OrganizationUnits","team"=>"Teams","project"=>"Projects",_=>null};
         if(table is null||string.IsNullOrWhiteSpace(name)||name.Length>100)return await Invalid("Unesi valjan naziv do 100 znakova.");
-        try{await store.Execute($"INSERT dbo.{table}(Name) VALUES(@name)",P("@name",name));}
+        try{await store.ExecuteAudited(new(UserId,$"organization.{kind}.create",name),$"INSERT dbo.{table}(Name) VALUES(@name)",P("@name",name));}
         catch(SqlException ex) when(ex.Number is 2601 or 2627){return await Invalid("Taj naziv već postoji.");}
         return RedirectToPage();
     }

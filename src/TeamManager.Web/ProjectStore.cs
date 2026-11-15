@@ -39,10 +39,11 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions)
     public async Task SetModules(int user,int id,bool issues,bool time,int revision)
     {
         if(!await CanManage(user,id))throw new UnauthorizedAccessException();
-        await using var c=Connect();await c.OpenAsync();
-        await using var cmd=new SqlCommand("UPDATE dbo.Projects SET IssuesEnabled=@issues,TimeEnabled=@time,Revision=Revision+1 WHERE Id=@id AND Revision=@revision",c);
-        cmd.Parameters.AddRange([P("@issues",issues),P("@time",time),P("@id",id),P("@revision",revision)]);
-        if(await cmd.ExecuteNonQueryAsync()!=1)throw new InvalidOperationException("Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
+        await using var c=Connect();
+        var rows=await AdministrationAuditStore.Execute(c,new(user,"project.modules",$"#{id}",$"Zadaci: {issues}; vrijeme: {time}"),
+            "UPDATE dbo.Projects SET IssuesEnabled=@issues,TimeEnabled=@time,Revision=Revision+1 WHERE Id=@id AND Revision=@revision",
+            P("@issues",issues),P("@time",time),P("@id",id),P("@revision",revision));
+        if(rows!=1)throw new InvalidOperationException("Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
     }
     public async Task<int> Save(int user,int? id,ProjectInput input)
     {
@@ -81,6 +82,7 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions)
         var saved=await cmd.ExecuteScalarAsync();if(saved is null)throw new InvalidOperationException("Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
         var result=Convert.ToInt32(saved);
         if(id is null){await using var member=new SqlCommand("INSERT dbo.ProjectMembers(ProjectId,UserId,Role) VALUES(@p,@u,N'Voditelj')",c,tx);member.Parameters.AddRange([P("@p",result),P("@u",user)]);await member.ExecuteNonQueryAsync();}
+        await AdministrationAuditStore.Write(c,tx,new(user,id is null?"project.create":"project.update",input.Name.Trim(),$"Projekt #{result}; stanje: {input.State}"));
         await tx.CommitAsync();return result;
     }
 }

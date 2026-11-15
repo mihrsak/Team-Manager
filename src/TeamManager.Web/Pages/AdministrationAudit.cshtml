@@ -11,7 +11,7 @@ else
     <div class="card table">
         <table>
             <caption>Zadnjih @Model.Entries.Count zapisa</caption>
-            <thead><tr><th>Vrijeme (UTC)</th><th>Administrator</th><th>Radnja</th><th>Račun</th></tr></thead>
+            <thead><tr><th>Vrijeme (UTC)</th><th>Administrator</th><th>Radnja</th><th>Stavka</th><th>Detalji</th></tr></thead>
             <tbody>
                 @foreach (var entry in Model.Entries)
                 {
@@ -19,7 +19,7 @@ else
                         <td>@entry.At.ToString("dd.MM.yyyy HH:mm:ss")</td>
                         <td>@entry.Actor</td>
                         <td>@AdministrationAuditModel.Label(entry.Action)</td>
-                        <td>@entry.Subject</td>
+                        <td>@entry.Subject</td><td>@entry.Details</td>
                     </tr>
                 }
             </tbody>
