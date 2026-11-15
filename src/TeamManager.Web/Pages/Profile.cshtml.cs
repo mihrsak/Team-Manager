@@ -146,5 +146,12 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         catch(SqlException ex) when(ex.Number==51001){return Invalid("Mora ostati barem jedan puni administrator.");}
         return Success(id,"Globalne role su spremljene.");
     }
+    public async Task<IActionResult> OnPostThemeAsync(string? theme)
+    {
+        if (theme is not ("light" or "dark" or "system")) return BadRequest();
+        await store.SetTheme(UserId, theme);
+        return RedirectToPage(new { id = UserId });
+    }
+
     private IActionResult Success(int id,string text){TempData["Notice"]=text;return RedirectToPage(new{id});}
 }

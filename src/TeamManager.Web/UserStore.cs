@@ -141,14 +141,22 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         return await command.ExecuteNonQueryAsync() == 1;
     }
 
-    public async Task<bool> IsSessionValid(int userId, int version)
+    public const string ThemeClaim = "display_theme";
+
+    public async Task SetTheme(int userId, string theme)
+    {
+        await Execute("UPDATE dbo.AppUsers SET DisplayTheme=@theme WHERE Id=@id AND IsActive=1",
+            P("@theme", theme), P("@id", userId));
+    }
+
+    public async Task<string?> SessionTheme(int userId, int version)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
-            "SELECT 1 FROM dbo.AppUsers WHERE Id=@id AND IsActive=1 AND SessionVersion=@version", connection);
+            "SELECT DisplayTheme FROM dbo.AppUsers WHERE Id=@id AND IsActive=1 AND SessionVersion=@version", connection);
         command.Parameters.Add(P("@id", userId));
         command.Parameters.Add(P("@version", version));
-        return await command.ExecuteScalarAsync() is not null;
+        return await command.ExecuteScalarAsync() as string;
     }
 }

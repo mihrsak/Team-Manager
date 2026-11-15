@@ -1,6 +1,29 @@
-<!doctype html><html lang="hr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Team Manager</title>
+<!doctype html><html lang="hr" data-theme="@(User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light")"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Team Manager</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#182b44;font:15px 'Segoe UI',sans-serif}nav{background:#122c48;padding:18px 5%;display:flex;gap:24px;align-items:center;color:white}nav a{color:white;text-decoration:none}nav strong{margin-right:auto}main{max-width:1180px;margin:36px auto;padding:0 24px}h1{font-size:32px}h2{font-size:20px}.card{background:white;border:1px solid #dde5ed;border-radius:12px;padding:24px;margin:20px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}label{display:block;margin:12px 0;color:#42556a}input,select{display:block;width:100%;padding:10px;border:1px solid #b6c7d6;border-radius:6px;margin-top:6px;font:inherit}button,.button{background:#176a70;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px 8px;border-bottom:1px solid #e1e8f0}.table{overflow:auto}a{color:#176a70}.muted{color:#607086}.validation-summary-errors,.error{color:#a22626;background:#fff0f0;padding:12px}.notice{background:#def3ec;padding:14px;border-radius:6px}.inline{display:inline}nav form{margin:0}.badge{padding:4px 8px;border-radius:6px;background:#e9f0f6}.actions{display:flex;gap:10px;align-items:center}
+html {
+    color-scheme: light;
+    --page: #f3f6fa; --surface: #fff; --text: #182b44; --secondary: #42556a;
+    --muted: #607086; --line: #dde5ed; --field-line: #b6c7d6; --link: #176a70;
+    --nav: #122c48; --badge: #e9f0f6; --notice: #def3ec;
+    --error: #a22626; --error-surface: #fff0f0;
+}
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #131d29; --surface: #1d2b3a; --text: #e3edf8; --secondary: #cad7e6;
+    --muted: #a4b5c7; --line: #394d61; --field-line: #647d93; --link: #8fddd9;
+    --nav: #0e1825; --badge: #30445a; --notice: #244539;
+    --error: #ffc8c8; --error-surface: #4d2c32;
+}
+@@media (prefers-color-scheme: dark) {
+    html[data-theme="system"] {
+        color-scheme: dark;
+        --page: #131d29; --surface: #1d2b3a; --text: #e3edf8; --secondary: #cad7e6;
+        --muted: #a4b5c7; --line: #394d61; --field-line: #647d93; --link: #8fddd9;
+        --nav: #0e1825; --badge: #30445a; --notice: #244539;
+        --error: #ffc8c8; --error-surface: #4d2c32;
+    }
+}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:15px 'Segoe UI',sans-serif}nav{background:var(--nav);padding:18px 5%;display:flex;flex-wrap:wrap;gap:16px;align-items:center;color:white}nav a{color:white;text-decoration:none}nav strong{margin-right:auto}main{max-width:1180px;margin:36px auto;padding:0 24px}h1{font-size:32px}h2{font-size:20px}.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;margin:20px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}label{display:block;margin:12px 0;color:var(--secondary)}input,select,textarea{background:var(--surface);color:var(--text);display:block;width:100%;padding:10px;border:1px solid var(--field-line);border-radius:6px;margin-top:6px;font:inherit}button,.button{background:#176a70;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;font:inherit}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px 8px;border-bottom:1px solid var(--line)}.table{overflow:auto}a{color:var(--link)}.muted{color:var(--muted)}.validation-summary-errors,.error{color:var(--error);background:var(--error-surface);padding:12px}.notice{background:var(--notice);padding:14px;border-radius:6px}.inline{display:inline}nav form{margin:0}.badge{padding:4px 8px;border-radius:6px;background:var(--badge)}.actions{display:flex;gap:10px;align-items:center}
 </style></head><body>
 <nav><strong>TEAM MANAGER</strong>@if(User.Identity?.IsAuthenticated==true){<a asp-page="/Dashboard">Moji zadaci</a><a asp-page="/Search">Pretraga</a><a href="/Projects">Projekti</a><a href="/Issues">Zadaci</a><a asp-page="/Calendar">Kalendar</a><a asp-page="/Activity">Aktivnosti</a><a asp-page="/Notifications">Obavijesti</a><a asp-page="/TimeReport">Izvještaj o vremenu</a><a href="/Users">Korisnici</a><a href="/Profile">Moj profil</a><span>@User.Identity.Name</span><form method="post" asp-page="/Logout"><button>Odjava</button></form>}</nav>
 <main>@if(User.IsInRole("roles.manage")){<a href="/Roles">Role i ovlasti</a>} @if(User.IsInRole("workflow.manage")){<a href="/Workflow">Tijek rada</a>} @RenderBody()</main></body></html>

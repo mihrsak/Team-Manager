@@ -3,6 +3,23 @@
 <p class="muted">KORISNICI / PROFIL</p><h1>@Model.Person!.DisplayName</h1><p>Broj radnika: <strong>@Model.Person.EmployeeNumber</strong></p>
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
 <div asp-validation-summary="All"></div>
+@if (Model.IsSelf)
+{
+    var theme = User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light";
+    <section class="card">
+        <h2>Tema prikaza</h2>
+        <form method="post" asp-page-handler="Theme">
+            <label>Tema
+                <select name="theme">
+                    <option value="light" selected="@(theme == "light")">Svijetla</option>
+                    <option value="dark" selected="@(theme == "dark")">Tamna</option>
+                    <option value="system" selected="@(theme == "system")">Prema postavci uređaja</option>
+                </select>
+            </label>
+            <button>Spremi temu</button>
+        </form>
+    </section>
+}
 @if (User.IsInRole("*") && !Model.IsSelf)
 {
     <section class="card">

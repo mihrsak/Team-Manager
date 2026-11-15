@@ -43,13 +43,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         if(!int.TryParse(id,out var userId)){context.RejectPrincipal();return;}
         var version = context.Principal?.FindFirst("session_version")?.Value;
         var store = context.HttpContext.RequestServices.GetRequiredService<UserStore>();
-        if (!int.TryParse(version, out var sessionVersion) || !await store.IsSessionValid(userId, sessionVersion))
+        var theme = int.TryParse(version, out var sessionVersion) ? await store.SessionTheme(userId, sessionVersion) : null;
+        if (theme is null)
         {
             context.RejectPrincipal();
             return;
         }
         var rights = await context.HttpContext.RequestServices.GetRequiredService<Permissions>().Effective(userId);
         var identity = (System.Security.Claims.ClaimsIdentity)context.Principal!.Identity!;
+        foreach (var claim in identity.FindAll(UserStore.ThemeClaim).ToList()) identity.RemoveClaim(claim);
+        identity.AddClaim(new(UserStore.ThemeClaim, theme));
         foreach(var claim in identity.FindAll(System.Security.Claims.ClaimTypes.Role).ToList())identity.RemoveClaim(claim);
         foreach(var right in rights.Contains("*") ? Permissions.Catalog.Keys.ToList() : rights)
             identity.AddClaim(new(System.Security.Claims.ClaimTypes.Role,right));

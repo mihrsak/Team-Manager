@@ -122,6 +122,23 @@ try {
     $cmd=$db.CreateCommand()
     $cmd.CommandText="SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Action='role.update' AND Subject=N'Administrator' AND Details=N'users.manage'"
     Assert ($cmd.ExecuteScalar() -eq 0) 'Rejected last-administrator change rolls back its audit entry'
+    $page=Get-Page '/Profile' $fresh
+    Assert ($page.Content.Contains('data-theme="light"')) 'Existing account uses the default light theme'
+    $page=Post-Page '/Profile?handler=Theme' $fresh @{theme='dark'}
+    Assert ($page.Content.Contains('data-theme="dark"')) 'Theme selection takes effect immediately'
+    $page=Get-Page '/Users' $admin
+    Assert ($page.Content.Contains('data-theme="light"')) 'Theme selection is isolated per account'
+    $themed=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $page=Post-Page '/Login' $themed @{EmployeeNumber=$employee;Password="Reset$testPassword"}
+    Assert ($page.Content.Contains('data-theme="dark"')) 'Theme survives a new login session'
+    $page=Post-Page '/Profile?handler=Theme' $themed @{theme='system'}
+    Assert ($page.Content.Contains('data-theme="system"') -and $page.Content.Contains('prefers-color-scheme: dark')) 'Device theme selection uses the browser preference'
+    try {
+        Post-Page '/Profile?handler=Theme' $themed @{theme='invalid'} | Out-Null
+        throw 'Invalid theme was accepted'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 400) 'Invalid theme is rejected'
+    }
 } finally {
     $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

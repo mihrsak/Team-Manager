@@ -101,3 +101,7 @@ Nakon migracije `028-project-documents.sql` na detaljima projekta otvorite **Dok
 ## Projektni forum
 
 Nakon migracije `029-project-forums.sql` na detaljima projekta otvorite **Forum**. Pregled prati vidljivost projekta. Za otvaranje teme i objavu odgovora potrebna je ovlast `forum.post`, a za zaključavanje i otključavanje `forum.moderate`. Zaključana tema ostaje dostupna za čitanje. Na zatvorenim i arhiviranim projektima forum je dostupan za čitanje.
+
+## Tema prikaza
+
+Nakon migracije `030-account-display-theme.sql` na stranici **Moj profil** odaberite svijetlu temu, tamnu temu ili postavku uređaja. Odabir se sprema na korisnički račun i primjenjuje pri sljedećem zahtjevu, uključujući prijave iz drugih preglednika. Zadana je svijetla tema.
