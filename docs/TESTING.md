@@ -97,3 +97,7 @@ Nakon migracije `027-issue-attachments.sql` na detaljima zadatka možete dodavat
 ## Dokumenti projekta
 
 Nakon migracije `028-project-documents.sql` na detaljima projekta otvorite **Dokumenti**. Korisnici s pravom upravljanja aktivnim projektom mogu dodati dokument s naslovom, opisom i datotekom do 10 MiB ili ga ukloniti. Pregled zbirke i preuzimanje prate vidljivost projekta. Datoteke se pohranjuju u SQL bazi i preuzimaju kao privitci. Zatvoreni i arhivirani projekti zadržavaju pregled i preuzimanje dokumenata.
+
+## Projektni forum
+
+Nakon migracije `029-project-forums.sql` na detaljima projekta otvorite **Forum**. Pregled prati vidljivost projekta. Za otvaranje teme i objavu odgovora potrebna je ovlast `forum.post`, a za zaključavanje i otključavanje `forum.moderate`. Zaključana tema ostaje dostupna za čitanje. Na zatvorenim i arhiviranim projektima forum je dostupan za čitanje.

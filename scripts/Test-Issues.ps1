@@ -562,6 +562,32 @@ try {
     Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$parent" | Out-Null
     $response=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
     Assert ($response.StatusCode -eq 303 -and (Sql "SELECT COUNT(*) FROM dbo.ProjectDocuments WHERE Id=$documentId") -eq 0) 'Project manager can remove an active project document'
+    $admin.MaximumRedirection=5
+    $page=Post "/Forum?handler=Create&projectId=$project" $regular @{title='Forbidden';body='No posting permission'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public forum access does not grant posting'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$project;role='Developer'}
+    $page=Post "/Forum?handler=Create&projectId=$project" $regular @{title='QA forum topic';body='QA <forum topic>'}
+    $topicId=Sql "SELECT Id FROM dbo.ForumTopics WHERE ProjectId=$project AND Title=N'QA forum topic'"
+    Assert ($page.Content.Contains('QA &lt;forum topic&gt;')) 'Forum member can create a topic with escaped content'
+    $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $regular @{body='QA forum reply'}
+    Assert ($page.Content.Contains('QA forum reply')) 'Forum member can reply'
+    $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $regular @{locked='true'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Posting role cannot lock topics'
+    $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $admin @{locked='true'}
+    Assert ((Sql "SELECT CAST(IsLocked AS int) FROM dbo.ForumTopics WHERE Id=$topicId") -eq 1) 'Moderator can lock a topic'
+    $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $admin @{body='Forbidden while locked'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Locked topics reject new replies even from administrators'
+    $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $admin @{locked='false'}
+    $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $regular @{body='QA reopened reply'}
+    Assert ($page.Content.Contains('QA reopened reply')) 'Unlocking restores posting'
+    $page=Post "/Forum?handler=Create&projectId=$parent" $admin @{title='QA private forum topic';body='Private topic'}
+    $privateTopic=Sql "SELECT Id FROM dbo.ForumTopics WHERE ProjectId=$parent AND Title=N'QA private forum topic'"
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Forum?projectId=$project&topicId=$privateTopic" -WebSession $regular | Out-Null
+        throw 'Private forum topic was visible through public project'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Forum topic cannot be accessed under a different project'
+    }
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment
