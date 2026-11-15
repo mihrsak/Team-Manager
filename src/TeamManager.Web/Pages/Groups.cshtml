@@ -1,0 +1,45 @@
+@page
+@model TeamManager.Web.Pages.GroupsModel
+<h1>Grupe korisnika</h1>
+<p>Članovi grupe dobivaju njezine globalne uloge.</p>
+<div asp-validation-summary="All"></div>
+<section class="card">
+    <h2>Nova grupa</h2>
+    <form method="post" asp-page-handler="Create">
+        <label>Naziv<input name="name" required maxlength="100"></label>
+        <button>Kreiraj grupu</button>
+    </form>
+</section>
+@foreach (var group in Model.Directory.Groups)
+{
+    var assignments = Model.Directory.Assignments.Where(a => a.GroupId == group.Id).ToList();
+    <section class="card">
+        <h2>@group.Name</h2>
+        <form method="post" asp-page-handler="Member" asp-route-groupId="@group.Id">
+            <label>Korisnik
+                <select name="userId" required>
+                    @foreach (var entry in Model.Users)
+                    {
+                        var member = assignments.Any(a => a.UserId == entry.User.Id);
+                        <option value="@entry.User.Id">@entry.User.DisplayName (@entry.User.EmployeeNumber)@(member ? " · član" : "")</option>
+                    }
+                </select>
+            </label>
+            <button>Dodaj člana</button>
+            <button name="remove" value="true">Ukloni člana</button>
+        </form>
+        <form method="post" asp-page-handler="Role" asp-route-groupId="@group.Id">
+            <label>Globalna uloga
+                <select name="role" required>
+                    @foreach (var role in Model.Roles)
+                    {
+                        var assigned = assignments.Any(a => a.RoleName == role.Name);
+                        <option value="@role.Name">@role.Name@(assigned ? " · dodijeljena" : "")</option>
+                    }
+                </select>
+            </label>
+            <button>Dodijeli ulogu grupi</button>
+            <button name="remove" value="true">Ukloni ulogu iz grupe</button>
+        </form>
+    </section>
+}

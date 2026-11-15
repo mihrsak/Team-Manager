@@ -45,6 +45,22 @@ try {
     Assert (-not $page.Content.Contains('Novi korisnik')) 'Revoked permission takes effect immediately'
     $page=Post-Page '/Users?handler=Create' $regular @{employee="blocked$suffix";name='Forbidden';password=$testPassword}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Forged user-create request is rejected by server'
+    $page=Get-Page '/Groups' $regular
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Regular user cannot manage groups'
+    $page=Post-Page '/Groups?handler=Create' $admin @{name=$role}
+    Assert ($page.Content.Contains($role)) 'Administrator can create a group'
+    $cmd=$db.CreateCommand();$cmd.CommandText='SELECT Id FROM dbo.UserGroups WHERE Name=@name';[void]$cmd.Parameters.AddWithValue('@name',$role);$groupId=[int]$cmd.ExecuteScalar()
+    $page=Post-Page "/Groups?handler=Role&groupId=$groupId" $admin @{role=$role}
+    $page=Post-Page "/Groups?handler=Member&groupId=$groupId" $admin @{userId=$id}
+    $page=Get-Page '/Users' $regular
+    Assert ($page.Content.Contains('Novi korisnik')) 'Group membership grants global role permission'
+    $page=Post-Page "/Groups?handler=Role&groupId=$groupId" $admin @{role=$role;remove='true'}
+    $page=Get-Page '/Users' $regular
+    Assert (-not $page.Content.Contains('Novi korisnik')) 'Removing group role revokes permission'
+    $page=Post-Page "/Groups?handler=Role&groupId=$groupId" $admin @{role=$role}
+    $page=Post-Page "/Groups?handler=Member&groupId=$groupId" $admin @{userId=$id;remove='true'}
+    $page=Get-Page '/Users' $regular
+    Assert (-not $page.Content.Contains('Novi korisnik')) 'Removing group member revokes permission'
     $cmd=$db.CreateCommand();$cmd.CommandText="INSERT dbo.Projects(Name) OUTPUT inserted.Id VALUES(@name)";[void]$cmd.Parameters.AddWithValue('@name',$role);$projectId=[int]$cmd.ExecuteScalar()
     $page=Post-Page "/Profile?id=$id&handler=Membership" $admin @{kind='project';scopeId=$projectId;role='Moderator'}
     $page=Post-Page "/Profile?id=$id&handler=Membership" $regular @{kind='project';scopeId=$projectId;role='Moderator'}
@@ -91,5 +107,5 @@ try {
     $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="Reset$testPassword"}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Reset password works'
 } finally {
-    $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
+    $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

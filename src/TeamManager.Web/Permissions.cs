@@ -30,7 +30,7 @@ public sealed class Permissions(IConfiguration config)
     }
     public async Task<List<string>> Effective(int userId,string? kind=null,int? scope=null)
     {
-        await using var c=Connect();await c.OpenAsync();var sql="SELECT DISTINCT p.Permission FROM dbo.RolePermissions p JOIN dbo.UserRoles u ON u.RoleName=p.RoleName WHERE u.UserId=@id";
+        await using var c=Connect();await c.OpenAsync();var sql="SELECT DISTINCT p.Permission FROM dbo.RolePermissions p JOIN dbo.EffectiveUserRoles u ON u.RoleName=p.RoleName WHERE u.UserId=@id";
         if(kind=="team")sql+=" UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.Members m ON m.Role=p.RoleName WHERE m.UserId=@id AND m.TeamId=@scope UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.TeamMemberRoles r ON r.RoleName=p.RoleName JOIN dbo.Members m ON m.Id=r.MemberId WHERE m.UserId=@id AND m.TeamId=@scope";
         if(kind=="project")sql+=" UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.ProjectMembers m ON m.Role=p.RoleName WHERE m.UserId=@id AND m.ProjectId=@scope UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.ProjectMemberRoles r ON r.RoleName=p.RoleName WHERE r.UserId=@id AND r.ProjectId=@scope";
         await using var cmd=new SqlCommand(sql,c);cmd.Parameters.Add(P("@id",userId));cmd.Parameters.Add(P("@scope",scope));await using var r=await cmd.ExecuteReaderAsync();var result=new List<string>();while(await r.ReadAsync())result.Add(r.GetString(0));return result;
@@ -52,7 +52,7 @@ public sealed class Permissions(IConfiguration config)
         {
             const string sql = """
                 IF @actor=@target OR NOT EXISTS(
-                    SELECT 1 FROM dbo.UserRoles u
+                    SELECT 1 FROM dbo.EffectiveUserRoles u
                     JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName
                     JOIN dbo.AppUsers a ON a.Id=u.UserId
                     WHERE a.Id=@actor AND a.IsActive=1 AND p.Permission='*')

@@ -18,6 +18,7 @@ builder.Services.AddScoped<ProjectStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<Permissions>();
+builder.Services.AddScoped<GroupStore>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => {
     options.LoginPath = "/Login";

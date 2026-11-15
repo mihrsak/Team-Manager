@@ -37,3 +37,7 @@ U popisu korisnika otvori **Profil** testnog korisnika. Puni administrator može
 ## Više uloga po članstvu
 
 Migracija `011-membership-roles.sql` zadržava postojeću ulogu kao osnovnu. Na profilu korisnika moguće je dodati ili ukloniti dodatnu ulogu te zamijeniti osnovnu. Prava svih dodijeljenih uloga zbrajaju se unutar pripadajućeg tima ili projekta. Uklanjanjem članstva uklanjaju se i njegove dodatne uloge.
+
+## Grupe korisnika
+
+Nakon migracije `012-user-groups.sql`, puni administrator može otvoriti **Role i ovlasti → Grupe korisnika**, kreirati grupu te dodavati i uklanjati članove i globalne uloge. Grupne uloge zbrajaju se s izravno dodijeljenim globalnim ulogama. Izmjene se primjenjuju pri sljedećem zahtjevu. Za zaštitu od gubitka administrativnog pristupa u aplikaciji mora ostati barem jedan aktivan korisnik s izravno dodijeljenom punom administracijom.
