@@ -37,7 +37,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | PLAN-01 | Verzije, prekretnice i roadmap | Backlog |
 | PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Backlog |
 | TIME-01 | Unos sati po zadatku i pregled zapisa | Gotovo |
-| TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Backlog |
+| TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Gotovo |
 | FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Backlog |
 | DOC-01 | Dokumenti, datoteke i kontrolirani prilozi | Backlog |
 | WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Backlog |

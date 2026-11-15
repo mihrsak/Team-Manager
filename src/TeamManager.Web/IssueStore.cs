@@ -18,7 +18,8 @@ public sealed class IssueInput
 public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate);
 public record IssueDetail(int Id,int ProjectId,IssueInput Input);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
-public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note);
+public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity);
+public record TimeReportRow(string Project,string Person,string EmployeeNumber,string Activity,decimal Hours);
 public sealed class IssueStore(IConfiguration config,Permissions permissions,WorkflowStore workflow)
 {
     public static readonly string[] Types=["Zadatak","Greška","Zahtjev"];
@@ -88,13 +89,50 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"issues.comment"))throw new UnauthorizedAccessException();if(string.IsNullOrWhiteSpace(text)||text.Length>4000)throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
         await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
     }
-    public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note)
+    public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note,string? activity=null)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"time.log"))throw new UnauthorizedAccessException();if(hours<=0||hours>24||decimal.Round(hours,2)!=hours||date.Year<1753||(note?.Length??0)>1000)throw new ArgumentException("Unesi datum i sate od 0,01 do 24 (najviše dvije decimale).");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note) VALUES(@id,@user,@date,@hours,@note)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??"")]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
+        activity = string.IsNullOrWhiteSpace(activity) ? "Općenito" : activity.Trim();
+        if (activity.Length > 60) throw new ArgumentException("Aktivnost može imati najviše 60 znakova.");
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note,Activity) VALUES(@id,@user,@date,@hours,@note,@activity)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??""),P("@activity",activity)]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
     }
     public async Task<(List<IssueEvent> Events,List<TimeEntry> Time)> Activity(int user,int id)
     {
-        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3)));return(events,time);
+        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4)));return(events,time);
+    }
+
+    public async Task<List<TimeReportRow>> TimeReport(
+        IEnumerable<int> projectIds, DateTime? from, DateTime? to, string? person, string? activity)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            SELECT p.Name,u.DisplayName,u.EmployeeNumber,t.Activity,SUM(t.Hours)
+            FROM dbo.TimeEntries t
+            JOIN dbo.Issues i ON i.Id=t.IssueId
+            JOIN dbo.Projects p ON p.Id=i.ProjectId
+            JOIN dbo.AppUsers u ON u.Id=t.UserId
+            JOIN OPENJSON(@projects) WITH (Id int '$') permitted ON permitted.Id=p.Id
+            WHERE p.IssuesEnabled=1 AND p.TimeEnabled=1
+              AND (@from IS NULL OR t.WorkDate>=@from) AND (@to IS NULL OR t.WorkDate<=@to)
+              AND (@person='' OR CHARINDEX(@person,u.DisplayName)>0 OR CHARINDEX(@person,u.EmployeeNumber)>0)
+              AND (@activity='' OR CHARINDEX(@activity,t.Activity)>0)
+            GROUP BY p.Name,u.Id,u.DisplayName,u.EmployeeNumber,t.Activity
+            ORDER BY p.Name,u.DisplayName,u.EmployeeNumber,t.Activity
+            """, connection);
+        command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
+            { Value = JsonSerializer.Serialize(projectIds) });
+        command.Parameters.Add(new SqlParameter("@from", System.Data.SqlDbType.Date)
+            { Value = (object?)from ?? DBNull.Value });
+        command.Parameters.Add(new SqlParameter("@to", System.Data.SqlDbType.Date)
+            { Value = (object?)to ?? DBNull.Value });
+        command.Parameters.Add(P("@person", person ?? ""));
+        command.Parameters.Add(P("@activity", activity ?? ""));
+
+        var rows = new List<TimeReportRow>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            rows.Add(new(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDecimal(4)));
+        return rows;
     }
 }

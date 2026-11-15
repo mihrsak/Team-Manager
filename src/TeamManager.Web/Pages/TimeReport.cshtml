@@ -1,0 +1,48 @@
+@page
+@model TeamManager.Web.Pages.TimeReportModel
+<h1>Izvještaj o utrošenom vremenu</h1>
+
+<section class="card">
+    <form method="get">
+        <div asp-validation-summary="All"></div>
+        <div class="grid">
+            <label>Projekt
+                <select asp-for="ProjectId">
+                    <option value="">Svi dostupni projekti</option>
+                    @foreach (var project in Model.Projects)
+                    {
+                        <option value="@project.Id">@project.Name</option>
+                    }
+                </select>
+            </label>
+            <label>Osoba ili broj radnika<input asp-for="Person" maxlength="100"></label>
+            <label>Aktivnost<input asp-for="Activity" maxlength="60"></label>
+            <label>Od datuma<input asp-for="From" type="date"></label>
+            <label>Do datuma<input asp-for="To" type="date"></label>
+        </div>
+        <button>Prikaži izvještaj</button>
+    </form>
+</section>
+
+@if (ViewData.ModelState.IsValid)
+{
+    @if (Model.Rows.Count == 0)
+    {
+        <p>Za odabrane filtre nema zapisa o utrošenom vremenu.</p>
+    }
+    else
+    {
+        <div class="card table">
+            <table>
+                <caption>Ukupno @Model.Rows.Sum(row => row.Hours).ToString("0.00") h</caption>
+                <thead><tr><th>Projekt</th><th>Osoba</th><th>Aktivnost</th><th>Sati</th></tr></thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr><td>@row.Project</td><td>@row.Person (@row.EmployeeNumber)</td><td>@row.Activity</td><td>@row.Hours.ToString("0.00")</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}

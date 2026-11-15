@@ -38,12 +38,12 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;
         try{await store.Comment(UserId,id,text??"");return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
     }
-    public async Task<IActionResult> OnPostTimeAsync(int id,DateTime? date,string? hours,string? note)
+    public async Task<IActionResult> OnPostTimeAsync(int id,DateTime? date,string? hours,string? note,string? activity)
     {
         var parsed=decimal.TryParse(hours?.Replace(',','.'),System.Globalization.NumberStyles.AllowDecimalPoint,System.Globalization.CultureInfo.InvariantCulture,out var value);
         var valid=date is not null&&parsed&&!ModelState.Any(x=>x.Key=="date" && x.Value!.Errors.Count>0);
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;if(!valid){ModelState.AddModelError("","Unesi valjan datum i broj sati.");return Page();}
-        try{await store.LogTime(UserId,id,date!.Value,value,note);return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
+        try{await store.LogTime(UserId,id,date!.Value,value,note,activity);return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
     }
     public IActionResult OnPost()=>BadRequest();
 }

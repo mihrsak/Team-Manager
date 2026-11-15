@@ -46,7 +46,7 @@ try {
     Assert ((Sql "SELECT Title FROM dbo.Issues WHERE Id=$id") -eq 'QA changed') 'Stale edit cannot overwrite concurrent update'
     $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='<script>alert(1)</script>'}
     Assert ($page.Content.Contains('&lt;script&gt;')) 'Comment content is HTML encoded'
-    $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='1.5';note='QA time'}
+    $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='1.5';note='QA time';activity='QA analysis'}
     Assert ((Sql "SELECT SUM(Hours) FROM dbo.TimeEntries WHERE IssueId=$id") -eq 1.5) 'Time entry persisted'
     $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='25';note='invalid'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id") -eq 1) 'Invalid hours rejected'
@@ -72,6 +72,12 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Workflow" -WebSession $regular
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project developer cannot modify global workflow'
     try{Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Comment" -WebSession $regular -Method Post -Body @{text='no token'}|Out-Null;throw 'CSRF accepted'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 400) 'Missing antiforgery token rejected'}
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport?ProjectId=$project&Person=admin&Activity=QA%20analysis&From=2026-11-08&To=2026-11-08" -WebSession $admin
+    Assert ($report.Content.Contains('QA analysis') -and $report.Content -match '1[.,]50 h') 'Time report filters and totals matching entries'
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport?ProjectId=$project&Activity=QA%20analysis&From=2026-11-09" -WebSession $admin
+    Assert (-not $report.Content.Contains('<td>QA analysis</td>')) 'Time report excludes entries outside date range'
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport?ProjectId=$project&Person=unknownperson" -WebSession $admin
+    Assert (-not $report.Content.Contains('<td>QA analysis</td>')) 'Time report excludes other people when filtered'
     # Project lifecycle and hierarchy regression tests (PROJ-02).
     $projectInput=@{'Input.Name'='QA parent';'Input.Description'='<b>plain description</b>';'Input.State'='Active';'Input.IsPublic'='false';'Input.Revision'='0'}
     $page=Post '/Project' $admin $projectInput
@@ -93,6 +99,8 @@ try {
     Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$project AND UserId=$uid" | Out-Null
     try{Invoke-WebRequest -UseBasicParsing "$base/Project?id=$project" -WebSession $regular|Out-Null;throw 'Private project exposed'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 404) 'Private project settings are hidden from nonmembers'}
     $name=Sql "SELECT Name FROM dbo.Projects WHERE Id=$project"
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport" -WebSession $regular
+    Assert (-not $report.Content.Contains('QA analysis')) 'Time report hides private project entries from nonmembers'
     $projectInput=@{'Input.Name'=$name;'Input.Description'='Public demo';'Input.State'='Active';'Input.IsPublic'='true';'Input.Revision'='1'}
     $page=Post "/Project?id=$project" $admin $projectInput
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $regular
@@ -140,6 +148,8 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
     Assert (-not $page.Content.Contains('QA time') -and -not $page.Content.Contains('name="hours"')) 'Disabled time module hides entries history and input form'
     $beforeTime=Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id"
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport" -WebSession $admin
+    Assert (-not $report.Content.Contains('QA analysis')) 'Time report hides entries when the time module is disabled'
     $page=Post "/Issue?id=$id&handler=Time" $admin @{date='2026-11-08';hours='2';note='disabled module write'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id") -eq $beforeTime) 'Disabled time module rejects direct POST even from administrator'
     $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='Comment with time module disabled'}

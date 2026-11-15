@@ -41,3 +41,9 @@ Migracija `011-membership-roles.sql` zadržava postojeću ulogu kao osnovnu. Na 
 ## Grupe korisnika
 
 Nakon migracije `012-user-groups.sql`, puni administrator može otvoriti **Role i ovlasti → Grupe korisnika**, kreirati grupu te dodavati i uklanjati članove i globalne uloge. Grupne uloge zbrajaju se s izravno dodijeljenim globalnim ulogama. Izmjene se primjenjuju pri sljedećem zahtjevu. Za zaštitu od gubitka administrativnog pristupa u aplikaciji mora ostati barem jedan aktivan korisnik s izravno dodijeljenom punom administracijom.
+
+## Izvještaj o utrošenom vremenu
+
+Migracija `014-time-entry-activity.sql` postojećim zapisima dodjeljuje aktivnost **Općenito**. Pri unosu vremena na zadatku može se navesti aktivnost do 60 znakova. U navigaciji **Izvještaj o vremenu** odaberite projekt, osobu, aktivnost ili datumski raspon. Izvještaj zbraja sate po projektu, osobi i aktivnosti te prikazuje sveukupne sate za odabrane filtre. Oba datuma uključena su u raspon.
+
+Izvještaj prati postojeća pravila pregleda utrošenog vremena, uključujući javne projekte dostupne prijavljenim korisnicima. U izvještaj ulaze samo projekti s uključenim modulima zadataka i vremena.
