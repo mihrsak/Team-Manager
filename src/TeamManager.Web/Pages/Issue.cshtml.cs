@@ -37,7 +37,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
-            CustomFields = await fields.List(ProjectId,id.Value);
+            CustomFields = await fields.ForIssue(UserId,ProjectId,id.Value);
             Attachments = await attachments.List(id.Value, ProjectId);
             PrivateNotes = await personal.Notes(UserId, id.Value, ProjectId);
             CanAddPrivateNote = await personal.CanAddNote(ProjectId);

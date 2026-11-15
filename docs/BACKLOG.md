@@ -21,7 +21,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ROLE-01 | Prilagodljive role, zbroj globalnih ovlasti, serverske provjere | Gotovo |
 | ROLE-02 | Članstva po timu/projektu, izolacija ovlasti između projekata | Gotovo |
 | ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Gotovo: više rola po članstvu, grupe s globalnim rolama i opcionalno nasljeđivanje projektnih rola |
-| ROLE-04 | Pravila vidljivosti privatnih zadataka i pojedinih polja | Backlog |
+| ROLE-04 | Pravila vidljivosti privatnih zadataka i pojedinih polja | Djelomično: vidljivost prilagodljivih polja zadataka; preostaju privatni zadaci |
 | ORG-01 | Unos organizacijskih jedinica, timova i projekata | Gotovo |
 | PROJ-01 | Pregled projekata i pripadajućih zadataka prema ovlastima | Gotovo |
 | PROJ-02 | Hijerarhija, opis, zatvaranje/arhiviranje, privatni/javni projekti | Gotovo: javno prijavljenim korisnicima; stanje po projektu |

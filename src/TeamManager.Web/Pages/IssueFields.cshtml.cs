@@ -17,11 +17,26 @@ public sealed class IssueFieldsModel(ProjectStore projects, IssueFieldStore fiel
         if (project is null) return NotFound();
         if (!await projects.CanManage(UserId, projectId)) return Forbid();
         Project = project;
-        Fields = await fields.List(projectId);
+        Fields = await fields.Definitions(projectId);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostCreateAsync(int projectId, string? name)
+    public async Task<IActionResult> OnPostVisibilityAsync(int projectId, int fieldId, bool? managersOnly)
+    {
+        if (fieldId <= 0 || managersOnly is null) return BadRequest();
+        var result = await OnGetAsync(projectId);
+        if (result is not PageResult) return result;
+        if (Project.Input.State != "Active") return Forbid();
+        try
+        {
+            if (!await fields.SetVisibility(UserId, projectId, fieldId, managersOnly.Value))
+                return NotFound();
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        return RedirectToPage(new { projectId });
+    }
+
+    public async Task<IActionResult> OnPostCreateAsync(int projectId, string? name, bool managersOnly)
     {
         var result = await OnGetAsync(projectId);
         if (result is not PageResult) return result;
@@ -32,7 +47,7 @@ public sealed class IssueFieldsModel(ProjectStore projects, IssueFieldStore fiel
             ModelState.AddModelError("", "Unesi valjan naziv do 100 znakova.");
             return Page();
         }
-        try { await fields.Create(UserId, projectId, name); }
+        try { await fields.Create(UserId, projectId, name, managersOnly); }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {

@@ -649,6 +649,27 @@ try {
     } catch [System.Net.WebException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Time fields respect the disabled time module'
     }
+    $page=Post "/IssueFields?projectId=$project&handler=Create" $admin @{name='QA visibility field'}
+    $visibilityField=Sql "SELECT Id FROM dbo.ProjectIssueFields WHERE ProjectId=$project AND Name=N'QA visibility field'"
+    $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$publicIssue"
+    $page=Post "/Issue?id=$publicIssue&handler=SetField" $admin @{fieldId=$visibilityField;revision=$revision;fieldValue='QA restricted value'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
+    Assert ($page.Content.Contains('QA restricted value')) 'Ordinary issue fields remain visible to issue editors by default'
+    $page=Post "/IssueFields?projectId=$project&handler=Visibility&fieldId=$visibilityField" $admin @{managersOnly='true'}
+    Assert ($page.Content.Contains('Project managers only')) 'Field visibility administration renders English labels'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
+    Assert (-not $page.Content.Contains('QA visibility field') -and -not $page.Content.Contains('QA restricted value')) 'Restricted field name and value are hidden from ordinary issue editors'
+    $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$publicIssue"
+    $page=Post "/Issue?id=$publicIssue&handler=SetField" $regular @{fieldId=$visibilityField;revision=$revision;fieldValue='QA forbidden write'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Server rejects direct edits to a restricted field'
+    $page=Post "/Issue?id=$publicIssue&handler=SetField" $regular @{fieldId=2147483647;revision=$revision;fieldValue='QA unknown field'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Ordinary editor cannot distinguish a restricted field from an unknown field'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $admin
+    Assert ($page.Content.Contains('QA restricted value')) 'Project manager can still read the restricted field'
+    $page=Post "/IssueFields?projectId=$project&handler=Visibility&fieldId=$visibilityField" $admin @{managersOnly='false'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
+    Assert ($page.Content.Contains('QA restricted value')) 'Restoring standard visibility exposes the existing value'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Subject=N'#$visibilityField' AND Action IN ('project.issue-field.restrict','project.issue-field.share')") -eq 2) 'Field visibility changes are audited'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

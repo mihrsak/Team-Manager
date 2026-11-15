@@ -51,6 +51,8 @@ public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : P
         "custom-field.create" => "Dodavanje prilagodljivog polja",
         "registration.approve" => "Odobrenje registracije",
         "registration.reject" => "Odbijanje registracije",
+        "project.issue-field.restrict" => "Ograničavanje vidljivosti polja zadatka",
+        "project.issue-field.share" => "Dijeljenje polja zadatka",
         _ => action
     };
 }

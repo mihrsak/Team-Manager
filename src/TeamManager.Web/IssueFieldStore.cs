@@ -3,41 +3,60 @@ using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web;
 
-public sealed record IssueField(int Id, string Name, string? Value);
+public sealed record IssueField(int Id, string Name, string? Value, bool ManagersOnly);
 
 public sealed class IssueFieldStore(IConfiguration configuration, IssueStore issues, ProjectStore projects)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
-    public async Task<List<IssueField>> List(int project, int? issue = null)
+    public Task<List<IssueField>> Definitions(int project) => List(project, null, true);
+
+    public async Task<List<IssueField>> ForIssue(int user, int project, int issue)
+        => await List(project, issue, await projects.CanManage(user, project));
+
+    private async Task<List<IssueField>> List(int project, int? issue, bool canSeeRestricted)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
-            SELECT f.Id,f.Name,v.Value FROM dbo.ProjectIssueFields f
+            SELECT f.Id,f.Name,v.Value,f.ManagersOnly FROM dbo.ProjectIssueFields f
             LEFT JOIN dbo.IssueFieldValues v ON v.FieldId=f.Id AND v.IssueId=@issue
-            WHERE f.ProjectId=@project
+            WHERE f.ProjectId=@project AND (f.ManagersOnly=0 OR @canSeeRestricted=1)
               AND (@issue IS NULL OR EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@issue AND i.ProjectId=@project))
             ORDER BY f.Name
             """, connection);
-        command.Parameters.AddRange([P("@project", project), P("@issue", issue)]);
+        command.Parameters.AddRange([P("@project", project), P("@issue", issue), P("@canSeeRestricted", canSeeRestricted)]);
         await using var reader = await command.ExecuteReaderAsync();
         var fields = new List<IssueField>();
         while (await reader.ReadAsync())
-            fields.Add(new(reader.GetInt32(0),reader.GetString(1),reader.IsDBNull(2)?null:reader.GetString(2)));
+            fields.Add(new(reader.GetInt32(0),reader.GetString(1),reader.IsDBNull(2)?null:reader.GetString(2),reader.GetBoolean(3)));
         return fields;
     }
 
-    public async Task Create(int user, int project, string name)
+    public async Task Create(int user, int project, string name, bool managersOnly)
     {
         if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         var affected = await AdministrationAuditStore.Execute(connection,
             new(user,"project.issue-field.create",name,$"#{project}"),"""
-            INSERT dbo.ProjectIssueFields(ProjectId,Name)
-            SELECT Id,@name FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@project AND State='Active'
-            """, P("@project", project), P("@name", name));
+            INSERT dbo.ProjectIssueFields(ProjectId,Name,ManagersOnly)
+            SELECT Id,@name,@restricted FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@project AND State='Active'
+            """, P("@project", project), P("@name", name), P("@restricted", managersOnly));
         if (affected != 1) throw new UnauthorizedAccessException();
+    }
+
+    public async Task<bool> SetVisibility(int user, int project, int field, bool managersOnly)
+    {
+        if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
+        await using var connection = Connect();
+        var action = managersOnly ? "project.issue-field.restrict" : "project.issue-field.share";
+        var affected = await AdministrationAuditStore.Execute(connection,
+            new(user,action,$"#{field}",$"#{project}"),"""
+            UPDATE f SET ManagersOnly=@restricted
+            FROM dbo.ProjectIssueFields f JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=f.ProjectId
+            WHERE f.Id=@field AND f.ProjectId=@project AND p.State='Active'
+            """, P("@field",field),P("@project",project),P("@restricted",managersOnly));
+        return affected == 1;
     }
 
     public async Task SetValue(int user, int id, int field, int revision, string? value)
@@ -53,10 +72,13 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
         await IssueStore.RequireActive(connection, transaction, issue.ProjectId);
         await using var check = new SqlCommand("""
-            SELECT 1 FROM dbo.ProjectIssueFields WHERE Id=@field AND ProjectId=@project
+            SELECT ManagersOnly FROM dbo.ProjectIssueFields WITH(HOLDLOCK) WHERE Id=@field AND ProjectId=@project
             """, connection, transaction);
         check.Parameters.AddRange([P("@field", field), P("@project", issue.ProjectId)]);
-        if (await check.ExecuteScalarAsync() is null)
+        var visibility = await check.ExecuteScalarAsync();
+        if (visibility is not false && !await projects.CanManage(user, issue.ProjectId))
+            throw new UnauthorizedAccessException();
+        if (visibility is null)
             throw new ArgumentException("Odaberi polje ovog projekta.");
 
         await using var update = new SqlCommand("""

@@ -11,6 +11,7 @@
         <h2>@Text["Novo tekstualno polje"]</h2>
         <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id">
             <label>@Text["Naziv"]<input name="name" maxlength="100" required></label>
+            <label><input type="checkbox" name="managersOnly" value="true"> @Text["Samo upravitelji projekta"]</label>
             <button>@Text["Dodaj polje"]</button>
         </form>
     </section>
@@ -23,6 +24,19 @@
 else
 {
     <ul class="card">
-        @foreach (var field in Model.Fields) { <li>@field.Name</li> }
+        @foreach (var field in Model.Fields)
+        {
+            <li class="actions">
+                <span>@field.Name · @Text[field.ManagersOnly ? "Samo upravitelji projekta" : "Svi s pristupom zadatku"]</span>
+                @if (Model.Project.Input.State == "Active")
+                {
+                    <form method="post" asp-page-handler="Visibility" asp-route-projectId="@Model.Project.Id" asp-route-fieldId="@field.Id">
+                        <button name="managersOnly" value="@(field.ManagersOnly ? "false" : "true")">
+                            @Text[field.ManagersOnly ? "Prikaži svima s pristupom" : "Ograniči na upravitelje"]
+                        </button>
+                    </form>
+                }
+            </li>
+        }
     </ul>
 }
