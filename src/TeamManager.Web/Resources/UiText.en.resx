@@ -1,50 +1,1232 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
-  <resheader name="version"><value>2.0</value></resheader>
-  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
-  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="Moji zadaci" xml:space="preserve"><value>My tasks</value></data>
-  <data name="Pretraga" xml:space="preserve"><value>Search</value></data>
-  <data name="Projekti" xml:space="preserve"><value>Projects</value></data>
-  <data name="Zadaci" xml:space="preserve"><value>Issues</value></data>
-  <data name="Kalendar" xml:space="preserve"><value>Calendar</value></data>
-  <data name="Aktivnosti" xml:space="preserve"><value>Activity</value></data>
-  <data name="Obavijesti" xml:space="preserve"><value>Notifications</value></data>
-  <data name="Izvještaj o vremenu" xml:space="preserve"><value>Time report</value></data>
-  <data name="Korisnici" xml:space="preserve"><value>Users</value></data>
-  <data name="Moj profil" xml:space="preserve"><value>My profile</value></data>
-  <data name="Odjava" xml:space="preserve"><value>Sign out</value></data>
-  <data name="Role i ovlasti" xml:space="preserve"><value>Roles and permissions</value></data>
-  <data name="Tijek rada" xml:space="preserve"><value>Workflow</value></data>
-  <data name="Rok je prošao" xml:space="preserve"><value>Overdue</value></data>
-  <data name="Predstojeći rokovi" xml:space="preserve"><value>Upcoming deadlines</value></data>
-  <data name="Bez roka" xml:space="preserve"><value>No deadline</value></data>
-  <data name="Pratim" xml:space="preserve"><value>Watching</value></data>
-  <data name="Nema zadataka u ovoj skupini." xml:space="preserve"><value>No issues in this group.</value></data>
-  <data name="Zadatak" xml:space="preserve"><value>Issue</value></data>
-  <data name="Projekt" xml:space="preserve"><value>Project</value></data>
-  <data name="Status" xml:space="preserve"><value>Status</value></data>
-  <data name="Prioritet" xml:space="preserve"><value>Priority</value></data>
-  <data name="Rok" xml:space="preserve"><value>Due date</value></data>
-  <data name="Tema prikaza" xml:space="preserve"><value>Appearance</value></data>
-  <data name="Tema" xml:space="preserve"><value>Theme</value></data>
-  <data name="Svijetla" xml:space="preserve"><value>Light</value></data>
-  <data name="Tamna" xml:space="preserve"><value>Dark</value></data>
-  <data name="Prema postavci uređaja" xml:space="preserve"><value>Use device setting</value></data>
-  <data name="Spremi temu" xml:space="preserve"><value>Save theme</value></data>
-  <data name="Jezik sučelja" xml:space="preserve"><value>Display language</value></data>
-  <data name="Spremi jezik" xml:space="preserve"><value>Save language</value></data>
-  <data name="Karta planova" xml:space="preserve"><value>Roadmap</value></data>
-  <data name="Novosti" xml:space="preserve"><value>News</value></data>
-  <data name="Wiki" xml:space="preserve"><value>Wiki</value></data>
-  <data name="Dokumenti" xml:space="preserve"><value>Documents</value></data>
-  <data name="Forum" xml:space="preserve"><value>Forum</value></data>
-  <data name="Pojam" xml:space="preserve"><value>Search term</value></data>
-  <data name="Modul" xml:space="preserve"><value>Module</value></data>
-  <data name="Svi moduli" xml:space="preserve"><value>All modules</value></data>
-  <data name="Verzije i prekretnice" xml:space="preserve"><value>Versions and milestones</value></data>
-  <data name="Pretraži" xml:space="preserve"><value>Search</value></data>
-  <data name="Nema rezultata za odabrani pojam." xml:space="preserve"><value>No matching results.</value></data>
-  <data name="Prikazano je najviše 20 rezultata po modulu." xml:space="preserve"><value>Showing up to 20 results per module.</value></data>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="Moji zadaci" xml:space="preserve">
+    <value>My tasks</value>
+  </data>
+  <data name="Pretraga" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Projekti" xml:space="preserve">
+    <value>Projects</value>
+  </data>
+  <data name="Zadaci" xml:space="preserve">
+    <value>Issues</value>
+  </data>
+  <data name="Kalendar" xml:space="preserve">
+    <value>Calendar</value>
+  </data>
+  <data name="Aktivnosti" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="Obavijesti" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="Izvještaj o vremenu" xml:space="preserve">
+    <value>Time report</value>
+  </data>
+  <data name="Korisnici" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Moj profil" xml:space="preserve">
+    <value>My profile</value>
+  </data>
+  <data name="Odjava" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Role i ovlasti" xml:space="preserve">
+    <value>Roles and permissions</value>
+  </data>
+  <data name="Tijek rada" xml:space="preserve">
+    <value>Workflow</value>
+  </data>
+  <data name="Rok je prošao" xml:space="preserve">
+    <value>Overdue</value>
+  </data>
+  <data name="Predstojeći rokovi" xml:space="preserve">
+    <value>Upcoming deadlines</value>
+  </data>
+  <data name="Bez roka" xml:space="preserve">
+    <value>No deadline</value>
+  </data>
+  <data name="Pratim" xml:space="preserve">
+    <value>Watching</value>
+  </data>
+  <data name="Nema zadataka u ovoj skupini." xml:space="preserve">
+    <value>No issues in this group.</value>
+  </data>
+  <data name="Zadatak" xml:space="preserve">
+    <value>Issue</value>
+  </data>
+  <data name="Projekt" xml:space="preserve">
+    <value>Project</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Prioritet" xml:space="preserve">
+    <value>Priority</value>
+  </data>
+  <data name="Rok" xml:space="preserve">
+    <value>Due date</value>
+  </data>
+  <data name="Tema prikaza" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Tema" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Svijetla" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="Tamna" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="Prema postavci uređaja" xml:space="preserve">
+    <value>Use device setting</value>
+  </data>
+  <data name="Spremi temu" xml:space="preserve">
+    <value>Save theme</value>
+  </data>
+  <data name="Jezik sučelja" xml:space="preserve">
+    <value>Display language</value>
+  </data>
+  <data name="Spremi jezik" xml:space="preserve">
+    <value>Save language</value>
+  </data>
+  <data name="Karta planova" xml:space="preserve">
+    <value>Roadmap</value>
+  </data>
+  <data name="Novosti" xml:space="preserve">
+    <value>News</value>
+  </data>
+  <data name="Wiki" xml:space="preserve">
+    <value>Wiki</value>
+  </data>
+  <data name="Dokumenti" xml:space="preserve">
+    <value>Documents</value>
+  </data>
+  <data name="Forum" xml:space="preserve">
+    <value>Forum</value>
+  </data>
+  <data name="Pojam" xml:space="preserve">
+    <value>Search term</value>
+  </data>
+  <data name="Modul" xml:space="preserve">
+    <value>Module</value>
+  </data>
+  <data name="Svi moduli" xml:space="preserve">
+    <value>All modules</value>
+  </data>
+  <data name="Verzije i prekretnice" xml:space="preserve">
+    <value>Versions and milestones</value>
+  </data>
+  <data name="Pretraži" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Nema rezultata za odabrani pojam." xml:space="preserve">
+    <value>No matching results.</value>
+  </data>
+  <data name="Prikazano je najviše 20 rezultata po modulu." xml:space="preserve">
+    <value>Showing up to 20 results per module.</value>
+  </data>
+  <data name="Aktivnost" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="Akcija" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="Aktivan" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Aktivan račun" xml:space="preserve">
+    <value>Active account</value>
+  </data>
+  <data name="Aktiviraj račun" xml:space="preserve">
+    <value>Activate account</value>
+  </data>
+  <data name="Aktivnosti zadatka" xml:space="preserve">
+    <value>Issue activity</value>
+  </data>
+  <data name="Aktivnost zadatka" xml:space="preserve">
+    <value>Issue activity</value>
+  </data>
+  <data name="Administrator" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="Arhiviran" xml:space="preserve">
+    <value>Archived</value>
+  </data>
+  <data name="Bez nadređenog projekta" xml:space="preserve">
+    <value>No parent project</value>
+  </data>
+  <data name="Bez grupiranja" xml:space="preserve">
+    <value>No grouping</value>
+  </data>
+  <data name="Bez stavke plana" xml:space="preserve">
+    <value>No roadmap item</value>
+  </data>
+  <data name="Bilješka vidljiva samo tebi" xml:space="preserve">
+    <value>Note visible only to you</value>
+  </data>
+  <data name="Blokira" xml:space="preserve">
+    <value>Blocks</value>
+  </data>
+  <data name="Blokiran zadatkom" xml:space="preserve">
+    <value>Blocked by</value>
+  </data>
+  <data name="Broj drugog zadatka" xml:space="preserve">
+    <value>Other issue number</value>
+  </data>
+  <data name="Broj radnika" xml:space="preserve">
+    <value>Employee number</value>
+  </data>
+  <data name="Broj zadatka" xml:space="preserve">
+    <value>Issue number</value>
+  </data>
+  <data name="Brojevi radnika, funkcije i organizacijske jedinice." xml:space="preserve">
+    <value>Employee numbers, job titles, and organizational units.</value>
+  </data>
+  <data name="Ciljni datum" xml:space="preserve">
+    <value>Target date</value>
+  </data>
+  <data name="Datoteka (do 10 MiB)" xml:space="preserve">
+    <value>File (up to 10 MiB)</value>
+  </data>
+  <data name="Datum" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Deaktiviran" xml:space="preserve">
+    <value>Deactivated</value>
+  </data>
+  <data name="Deaktiviran račun" xml:space="preserve">
+    <value>Deactivated account</value>
+  </data>
+  <data name="Deaktiviraj račun" xml:space="preserve">
+    <value>Deactivate account</value>
+  </data>
+  <data name="Detalji" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Do datuma" xml:space="preserve">
+    <value>To date</value>
+  </data>
+  <data name="DOBRO DOŠLI" xml:space="preserve">
+    <value>WELCOME</value>
+  </data>
+  <data name="Dodaj" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Dodaj člana" xml:space="preserve">
+    <value>Add member</value>
+  </data>
+  <data name="Dodaj dokument" xml:space="preserve">
+    <value>Add document</value>
+  </data>
+  <data name="Dodaj komentar" xml:space="preserve">
+    <value>Add comment</value>
+  </data>
+  <data name="Dodaj korisnika" xml:space="preserve">
+    <value>Add user</value>
+  </data>
+  <data name="Dodaj prijelaz" xml:space="preserve">
+    <value>Add transition</value>
+  </data>
+  <data name="Dodaj prilog" xml:space="preserve">
+    <value>Add attachment</value>
+  </data>
+  <data name="Dodaj ulogu" xml:space="preserve">
+    <value>Add role</value>
+  </data>
+  <data name="Dodaj vezu" xml:space="preserve">
+    <value>Add link</value>
+  </data>
+  <data name="Dodaj vrijednost" xml:space="preserve">
+    <value>Add value</value>
+  </data>
+  <data name="Dodijeli" xml:space="preserve">
+    <value>Assign</value>
+  </data>
+  <data name="Dodijeli ulogu grupi" xml:space="preserve">
+    <value>Assign role to group</value>
+  </data>
+  <data name="Dodatni stupci" xml:space="preserve">
+    <value>Additional columns</value>
+  </data>
+  <data name="Dokumenti projekta" xml:space="preserve">
+    <value>Project documents</value>
+  </data>
+  <data name="Dopušteni prijelaz" xml:space="preserve">
+    <value>Allowed transition</value>
+  </data>
+  <data name="Dovršeno" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="Druga verzija" xml:space="preserve">
+    <value>Second revision</value>
+  </data>
+  <data name="Duplikat" xml:space="preserve">
+    <value>Duplicate</value>
+  </data>
+  <data name="Evidencija vremena" xml:space="preserve">
+    <value>Time tracking</value>
+  </data>
+  <data name="Filtriraj" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="Funkcija" xml:space="preserve">
+    <value>Job title</value>
+  </data>
+  <data name="Ganttov prikaz" xml:space="preserve">
+    <value>Gantt view</value>
+  </data>
+  <data name="Globalna uloga" xml:space="preserve">
+    <value>Global role</value>
+  </data>
+  <data name="Globalne role" xml:space="preserve">
+    <value>Global roles</value>
+  </data>
+  <data name="Grupe korisnika" xml:space="preserve">
+    <value>User groups</value>
+  </data>
+  <data name="Grupiranje" xml:space="preserve">
+    <value>Group by</value>
+  </data>
+  <data name="Ime i prezime" xml:space="preserve">
+    <value>Full name</value>
+  </data>
+  <data name="Iz" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Iz statusa" xml:space="preserve">
+    <value>From status</value>
+  </data>
+  <data name="Izmjena zadatka" xml:space="preserve">
+    <value>Issue updated</value>
+  </data>
+  <data name="Izvezi CSV" xml:space="preserve">
+    <value>Export CSV</value>
+  </data>
+  <data name="Izvještaj o utrošenom vremenu" xml:space="preserve">
+    <value>Time spent report</value>
+  </data>
+  <data name="Javni" xml:space="preserve">
+    <value>Public</value>
+  </data>
+  <data name="Javni projekt (svim prijavljenim korisnicima)" xml:space="preserve">
+    <value>Public project (all signed-in users)</value>
+  </data>
+  <data name="Javni projekti vidljivi su svim prijavljenim korisnicima. Zatvoreni i arhivirani projekti čuvaju podatke, a zadaci su dostupni samo za čitanje." xml:space="preserve">
+    <value>All signed-in users can see public projects. Issues in closed and archived projects remain available for reading.</value>
+  </data>
+  <data name="Kalendar rokova" xml:space="preserve">
+    <value>Deadline calendar</value>
+  </data>
+  <data name="Komentar" xml:space="preserve">
+    <value>Comment</value>
+  </data>
+  <data name="Komentari" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="Konfigurirani prijelazi" xml:space="preserve">
+    <value>Configured transitions</value>
+  </data>
+  <data name="Kopiraj zadatak" xml:space="preserve">
+    <value>Copy issue</value>
+  </data>
+  <data name="Kopiranje i premještanje" xml:space="preserve">
+    <value>Copy and move</value>
+  </data>
+  <data name="Kopija počinje u statusu Novo, bez nositelja i povijesti." xml:space="preserve">
+    <value>The copy starts in the initial status, with no assignee or history.</value>
+  </data>
+  <data name="Korisnički račun" xml:space="preserve">
+    <value>User account</value>
+  </data>
+  <data name="Korisnik" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="Kreiraj grupu" xml:space="preserve">
+    <value>Create group</value>
+  </data>
+  <data name="Kreiraj rolu" xml:space="preserve">
+    <value>Create role</value>
+  </data>
+  <data name="Kreiraj rolu i odaberi prava koja daje. Globalne role vrijede u cijeloj aplikaciji; role članstva samo u dodijeljenom timu ili projektu." xml:space="preserve">
+    <value>Create a role and select its permissions. Global roles apply throughout the app. Membership roles apply within the assigned team or project.</value>
+  </data>
+  <data name="Lozinka" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Mjesec" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="Moduli projekta" xml:space="preserve">
+    <value>Project modules</value>
+  </data>
+  <data name="Moje privatne bilješke" xml:space="preserve">
+    <value>My private notes</value>
+  </data>
+  <data name="Moji spremljeni upiti" xml:space="preserve">
+    <value>My saved queries</value>
+  </data>
+  <data name="Najbliži rok" xml:space="preserve">
+    <value>Earliest deadline</value>
+  </data>
+  <data name="Najnoviji prvo" xml:space="preserve">
+    <value>Newest first</value>
+  </data>
+  <data name="Najstariji prvo" xml:space="preserve">
+    <value>Oldest first</value>
+  </data>
+  <data name="Nadređeni projekt" xml:space="preserve">
+    <value>Parent project</value>
+  </data>
+  <data name="Nadređeni zadatak" xml:space="preserve">
+    <value>Parent issue</value>
+  </data>
+  <data name="Nakon kreiranja, članstvo i ulogu dodijeli na profilu korisnika." xml:space="preserve">
+    <value>Assign membership and roles from the user's profile after creation.</value>
+  </data>
+  <data name="Napomena" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Napredak povezanih zadataka" xml:space="preserve">
+    <value>Progress of linked issues</value>
+  </data>
+  <data name="Naslijedi uloge nadređenog projekta" xml:space="preserve">
+    <value>Inherit roles from the parent project</value>
+  </data>
+  <data name="Naslov" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Naslov A–Ž" xml:space="preserve">
+    <value>Title A–Z</value>
+  </data>
+  <data name="Naziv" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Naziv upita" xml:space="preserve">
+    <value>Query name</value>
+  </data>
+  <data name="Nedostupan projekt" xml:space="preserve">
+    <value>Unavailable project</value>
+  </data>
+  <data name="Nema aktivnosti u odabranim projektima." xml:space="preserve">
+    <value>No activity in the selected projects.</value>
+  </data>
+  <data name="Nema dostupnih projekata. Administrator može kreirati projekt i dodijeliti članstvo." xml:space="preserve">
+    <value>No projects available. An administrator can create a project and assign membership.</value>
+  </data>
+  <data name="Nema globalnih rola" xml:space="preserve">
+    <value>No global roles</value>
+  </data>
+  <data name="Nema obavijesti za praćene zadatke." xml:space="preserve">
+    <value>No notifications for watched issues.</value>
+  </data>
+  <data name="Nema objavljenih novosti." xml:space="preserve">
+    <value>No news published.</value>
+  </data>
+  <data name="Nema povezanih zadataka." xml:space="preserve">
+    <value>No linked issues.</value>
+  </data>
+  <data name="Nema zadataka s planiranim datumom u ovom mjesecu." xml:space="preserve">
+    <value>No scheduled issues in this month.</value>
+  </data>
+  <data name="Nema zadataka za odabrane filtre." xml:space="preserve">
+    <value>No issues match the selected filters.</value>
+  </data>
+  <data name="Nema zabilježenih administrativnih radnji." xml:space="preserve">
+    <value>No administrative actions recorded.</value>
+  </data>
+  <data name="Nemaš ovlasti za ovu radnju." xml:space="preserve">
+    <value>You do not have permission for this action.</value>
+  </data>
+  <data name="Nije dodijeljen" xml:space="preserve">
+    <value>Unassigned</value>
+  </data>
+  <data name="Nije dodijeljena" xml:space="preserve">
+    <value>Unassigned</value>
+  </data>
+  <data name="Nositelj" xml:space="preserve">
+    <value>Assignee</value>
+  </data>
+  <data name="Nova grupa" xml:space="preserve">
+    <value>New group</value>
+  </data>
+  <data name="Nova lozinka" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="Nova objava" xml:space="preserve">
+    <value>New post</value>
+  </data>
+  <data name="Nova rola" xml:space="preserve">
+    <value>New role</value>
+  </data>
+  <data name="Nova tema" xml:space="preserve">
+    <value>New topic</value>
+  </data>
+  <data name="Nova verzija ili prekretnica" xml:space="preserve">
+    <value>New version or milestone</value>
+  </data>
+  <data name="Nova wiki stranica" xml:space="preserve">
+    <value>New wiki page</value>
+  </data>
+  <data name="Novi dokument" xml:space="preserve">
+    <value>New document</value>
+  </data>
+  <data name="Novi korisnik" xml:space="preserve">
+    <value>New user</value>
+  </data>
+  <data name="Novi projekt" xml:space="preserve">
+    <value>New project</value>
+  </data>
+  <data name="Novi zadatak" xml:space="preserve">
+    <value>New issue</value>
+  </data>
+  <data name="Novi šifrarnik" xml:space="preserve">
+    <value>New lookup value</value>
+  </data>
+  <data name="Objavi" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="Objavi odgovor" xml:space="preserve">
+    <value>Post reply</value>
+  </data>
+  <data name="Očisti" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Od datuma" xml:space="preserve">
+    <value>From date</value>
+  </data>
+  <data name="Odaberi" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Odabir" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Odgovor" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="Odgovori" xml:space="preserve">
+    <value>Replies</value>
+  </data>
+  <data name="Opozovi sesije" xml:space="preserve">
+    <value>Revoke sessions</value>
+  </data>
+  <data name="Opis" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Općenito" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Organizacija, timovi i projekti" xml:space="preserve">
+    <value>Organization, teams, and projects</value>
+  </data>
+  <data name="Organizacijska jedinica" xml:space="preserve">
+    <value>Organizational unit</value>
+  </data>
+  <data name="Osnovni podaci" xml:space="preserve">
+    <value>Basic information</value>
+  </data>
+  <data name="Osoba" xml:space="preserve">
+    <value>Person</value>
+  </data>
+  <data name="Osoba ili broj radnika" xml:space="preserve">
+    <value>Person or employee number</value>
+  </data>
+  <data name="Otključaj temu" xml:space="preserve">
+    <value>Unlock topic</value>
+  </data>
+  <data name="Otvori temu" xml:space="preserve">
+    <value>Create topic</value>
+  </data>
+  <data name="Ovisnosti" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
+  <data name="Označi do 100 zadataka na popisu." xml:space="preserve">
+    <value>Select up to 100 issues in the list.</value>
+  </data>
+  <data name="Označi kao pročitano" xml:space="preserve">
+    <value>Mark as read</value>
+  </data>
+  <data name="Planirano" xml:space="preserve">
+    <value>Planned</value>
+  </data>
+  <data name="Početak" xml:space="preserve">
+    <value>Start date</value>
+  </data>
+  <data name="Početna lozinka" xml:space="preserve">
+    <value>Initial password</value>
+  </data>
+  <data name="Podzadatak" xml:space="preserve">
+    <value>Subtask</value>
+  </data>
+  <data name="Ponedjeljak" xml:space="preserve">
+    <value>Monday</value>
+  </data>
+  <data name="Utorak" xml:space="preserve">
+    <value>Tuesday</value>
+  </data>
+  <data name="Srijeda" xml:space="preserve">
+    <value>Wednesday</value>
+  </data>
+  <data name="Četvrtak" xml:space="preserve">
+    <value>Thursday</value>
+  </data>
+  <data name="Petak" xml:space="preserve">
+    <value>Friday</value>
+  </data>
+  <data name="Subota" xml:space="preserve">
+    <value>Saturday</value>
+  </data>
+  <data name="Nedjelja" xml:space="preserve">
+    <value>Sunday</value>
+  </data>
+  <data name="Ponovi novu lozinku" xml:space="preserve">
+    <value>Confirm new password</value>
+  </data>
+  <data name="Posljednjih" xml:space="preserve">
+    <value>Latest</value>
+  </data>
+  <data name="Povezan s" xml:space="preserve">
+    <value>Related to</value>
+  </data>
+  <data name="Povijest i komentari" xml:space="preserve">
+    <value>History and comments</value>
+  </data>
+  <data name="Povijest verzija" xml:space="preserve">
+    <value>Revision history</value>
+  </data>
+  <data name="Povratak na korisnike" xml:space="preserve">
+    <value>Back to users</value>
+  </data>
+  <data name="Prati zadatak" xml:space="preserve">
+    <value>Watch issue</value>
+  </data>
+  <data name="Prekretnica" xml:space="preserve">
+    <value>Milestone</value>
+  </data>
+  <data name="Premjesti zadatak" xml:space="preserve">
+    <value>Move issue</value>
+  </data>
+  <data name="Premještanje zadatka" xml:space="preserve">
+    <value>Issue moved</value>
+  </data>
+  <data name="Prestani pratiti" xml:space="preserve">
+    <value>Unwatch</value>
+  </data>
+  <data name="Prethodni mjesec" xml:space="preserve">
+    <value>Previous month</value>
+  </data>
+  <data name="Prijava" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Prijavi se" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Prijavi se svojim brojem radnika." xml:space="preserve">
+    <value>Sign in with your employee number.</value>
+  </data>
+  <data name="Prikaži" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Prikaži izvještaj" xml:space="preserve">
+    <value>Show report</value>
+  </data>
+  <data name="Prikazani su projekti za koje imaš ovlast pregleda zadataka." xml:space="preserve">
+    <value>These are the projects where you have permission to view issues.</value>
+  </data>
+  <data name="Primijeni" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Privatni" xml:space="preserve">
+    <value>Private</value>
+  </data>
+  <data name="Pročitano" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="Profil" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="Projekt još nema dokumenata." xml:space="preserve">
+    <value>This project has no documents yet.</value>
+  </data>
+  <data name="Projekt još nema verzija ni prekretnica." xml:space="preserve">
+    <value>This project has no versions or milestones yet.</value>
+  </data>
+  <data name="Projekt još nema wiki stranica." xml:space="preserve">
+    <value>This project has no wiki pages yet.</value>
+  </data>
+  <data name="Projekt za kopiju" xml:space="preserve">
+    <value>Destination for copy</value>
+  </data>
+  <data name="Projekt za premještanje" xml:space="preserve">
+    <value>Destination for move</value>
+  </data>
+  <data name="Projektne novosti" xml:space="preserve">
+    <value>Project news</value>
+  </data>
+  <data name="Projektni forum" xml:space="preserve">
+    <value>Project forum</value>
+  </data>
+  <data name="Projektni wiki" xml:space="preserve">
+    <value>Project wiki</value>
+  </data>
+  <data name="Projektni zadaci" xml:space="preserve">
+    <value>Project issues</value>
+  </data>
+  <data name="← Projektni zadaci" xml:space="preserve">
+    <value>← Project issues</value>
+  </data>
+  <data name="Promijeni lozinku" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Promjena lozinke" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Promjena zadatka" xml:space="preserve">
+    <value>Issue change</value>
+  </data>
+  <data name="Prva verzija" xml:space="preserve">
+    <value>First revision</value>
+  </data>
+  <data name="Radnja" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="Reset lozinke" xml:space="preserve">
+    <value>Password reset</value>
+  </data>
+  <data name="Resetiraj lozinku" xml:space="preserve">
+    <value>Reset password</value>
+  </data>
+  <data name="Revizijski zapis" xml:space="preserve">
+    <value>Audit log</value>
+  </data>
+  <data name="Rola" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="Sati" xml:space="preserve">
+    <value>Hours</value>
+  </data>
+  <data name="Skupno uređivanje" xml:space="preserve">
+    <value>Bulk edit</value>
+  </data>
+  <data name="Sljedeći mjesec" xml:space="preserve">
+    <value>Next month</value>
+  </data>
+  <data name="Sortiranje" xml:space="preserve">
+    <value>Sort</value>
+  </data>
+  <data name="Spremi bilješku" xml:space="preserve">
+    <value>Save note</value>
+  </data>
+  <data name="Spremi filtre i prikaz" xml:space="preserve">
+    <value>Save filters and layout</value>
+  </data>
+  <data name="Spremi izmjene" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="Spremi module" xml:space="preserve">
+    <value>Save modules</value>
+  </data>
+  <data name="Spremi odabrane zadatke" xml:space="preserve">
+    <value>Save selected issues</value>
+  </data>
+  <data name="Spremi ovlasti" xml:space="preserve">
+    <value>Save permissions</value>
+  </data>
+  <data name="Spremi podatke" xml:space="preserve">
+    <value>Save profile</value>
+  </data>
+  <data name="Spremi projekt" xml:space="preserve">
+    <value>Save project</value>
+  </data>
+  <data name="Spremi stranicu" xml:space="preserve">
+    <value>Save page</value>
+  </data>
+  <data name="Spremi vrijeme" xml:space="preserve">
+    <value>Save time</value>
+  </data>
+  <data name="Spremi zadatak" xml:space="preserve">
+    <value>Save issue</value>
+  </data>
+  <data name="Stanje" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="Stavka" xml:space="preserve">
+    <value>Item</value>
+  </data>
+  <data name="Sve novosti projekta" xml:space="preserve">
+    <value>All project news</value>
+  </data>
+  <data name="Sve teme" xml:space="preserve">
+    <value>All topics</value>
+  </data>
+  <data name="Sve wiki stranice" xml:space="preserve">
+    <value>All wiki pages</value>
+  </data>
+  <data name="Svi dostupni projekti" xml:space="preserve">
+    <value>All accessible projects</value>
+  </data>
+  <data name="Svi projekti" xml:space="preserve">
+    <value>All projects</value>
+  </data>
+  <data name="Svi statusi" xml:space="preserve">
+    <value>All statuses</value>
+  </data>
+  <data name="Šifrarnici i tijek rada" xml:space="preserve">
+    <value>Lookup values and workflow</value>
+  </data>
+  <data name="Tekst" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Tekst objave" xml:space="preserve">
+    <value>Post text</value>
+  </data>
+  <data name="Tekst teme" xml:space="preserve">
+    <value>Topic text</value>
+  </data>
+  <data name="Tema je zaključana." xml:space="preserve">
+    <value>This topic is locked.</value>
+  </data>
+  <data name="Tip" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Tip zadatka" xml:space="preserve">
+    <value>Issue type</value>
+  </data>
+  <data name="Tim" xml:space="preserve">
+    <value>Team</value>
+  </data>
+  <data name="Timovi" xml:space="preserve">
+    <value>Teams</value>
+  </data>
+  <data name="Trenutna lozinka" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="U" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="U status" xml:space="preserve">
+    <value>To status</value>
+  </data>
+  <data name="Ukupno" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="Ukupno zadataka" xml:space="preserve">
+    <value>Total issues</value>
+  </data>
+  <data name="Ukloni" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Ukloni člana" xml:space="preserve">
+    <value>Remove member</value>
+  </data>
+  <data name="Ukloni članstvo" xml:space="preserve">
+    <value>Remove membership</value>
+  </data>
+  <data name="Ukloni ulogu" xml:space="preserve">
+    <value>Remove role</value>
+  </data>
+  <data name="Ukloni ulogu iz grupe" xml:space="preserve">
+    <value>Remove role from group</value>
+  </data>
+  <data name="Ukloni vezu" xml:space="preserve">
+    <value>Remove link</value>
+  </data>
+  <data name="Uloga" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="Unos vremena" xml:space="preserve">
+    <value>Time logged</value>
+  </data>
+  <data name="Uredi stranicu" xml:space="preserve">
+    <value>Edit page</value>
+  </data>
+  <data name="Usporedi" xml:space="preserve">
+    <value>Compare</value>
+  </data>
+  <data name="Utrošeno vrijeme" xml:space="preserve">
+    <value>Time spent</value>
+  </data>
+  <data name="U ovom mjesecu nema rokova za odabrane projekte." xml:space="preserve">
+    <value>No deadlines in this month for the selected projects.</value>
+  </data>
+  <data name="Veze zadatka" xml:space="preserve">
+    <value>Issue links</value>
+  </data>
+  <data name="Verzija" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Verzija ili prekretnica" xml:space="preserve">
+    <value>Version or milestone</value>
+  </data>
+  <data name="Vidljivost" xml:space="preserve">
+    <value>Visibility</value>
+  </data>
+  <data name="Vrijeme (UTC)" xml:space="preserve">
+    <value>Time (UTC)</value>
+  </data>
+  <data name="Vrsta" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Vrsta veze" xml:space="preserve">
+    <value>Link type</value>
+  </data>
+  <data name="Za odabrane filtre nema zapisa o utrošenom vremenu." xml:space="preserve">
+    <value>No time entries match the selected filters.</value>
+  </data>
+  <data name="Zadaci i komentari" xml:space="preserve">
+    <value>Issues and comments</value>
+  </data>
+  <data name="Zadrži postojeći" xml:space="preserve">
+    <value>Keep current value</value>
+  </data>
+  <data name="Zaključaj temu" xml:space="preserve">
+    <value>Lock topic</value>
+  </data>
+  <data name="Zaključano" xml:space="preserve">
+    <value>Locked</value>
+  </data>
+  <data name="Zamijeni osnovnu ulogu" xml:space="preserve">
+    <value>Replace primary role</value>
+  </data>
+  <data name="Zatvoren" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="Zatvoreni status" xml:space="preserve">
+    <value>Closed status</value>
+  </data>
+  <data name="Zahtjev nije uspio." xml:space="preserve">
+    <value>The request failed.</value>
+  </data>
+  <data name="Pokušajte ponovno ili provjerite zapis aplikacije." xml:space="preserve">
+    <value>Try again or check the application log.</value>
+  </data>
+  <data name="Članovi grupe dobivaju njezine globalne uloge." xml:space="preserve">
+    <value>Group members receive its global roles.</value>
+  </data>
+  <data name="Forum još nema tema." xml:space="preserve">
+    <value>This forum has no topics yet.</value>
+  </data>
+  <data name="Sadržaj" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="Jedinice" xml:space="preserve">
+    <value>Units</value>
+  </data>
+  <data name="Tipovi" xml:space="preserve">
+    <value>Types</value>
+  </data>
+  <data name="Statusi" xml:space="preserve">
+    <value>Statuses</value>
+  </data>
+  <data name="Prioriteti" xml:space="preserve">
+    <value>Priorities</value>
+  </data>
+  <data name="ORGANIZACIJA / KORISNICI" xml:space="preserve">
+    <value>ORGANIZATION / USERS</value>
+  </data>
+  <data name="KORISNICI / PROFIL" xml:space="preserve">
+    <value>USERS / PROFILE</value>
+  </data>
+  <data name="PROJEKTI / ZADACI" xml:space="preserve">
+    <value>PROJECTS / ISSUES</value>
+  </data>
+  <data name="Želiš li promijeniti lozinku?" xml:space="preserve">
+    <value>Would you like to change your password?</value>
+  </data>
+  <data name="Ako preskočiš promjenu, ponovno ćemo je ponuditi pri sljedećoj prijavi s početnom lozinkom." xml:space="preserve">
+    <value>If you skip this step, you will see the reminder again when you sign in with the initial password.</value>
+  </data>
+  <data name="Za premještanje ili uključivanje nasljeđivanja trebaš ovlast upravljanja odabranim nadređenim projektom." xml:space="preserve">
+    <value>To move this project or enable inheritance, you need permission to manage the selected parent project.</value>
+  </data>
+  <data name="Isključivanje modula skriva njegove stranice i podatke te blokira nove unose. Podaci ostaju sačuvani. Evidencija vremena dostupna je samo dok je uključen i modul zadataka." xml:space="preserve">
+    <value>Disabling a module hides its pages and data and blocks new entries. Existing data is retained. Time tracking requires the issues module.</value>
+  </data>
+  <data name="Zadatak zadržava komentare, priloge, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta." xml:space="preserve">
+    <value>The issue keeps its comments, attachments, time entries, and history. The assignee is removed if they are not a member of the destination project.</value>
+  </data>
+  <data name="Do 50 obavijesti, nepročitane prve" xml:space="preserve">
+    <value>Up to 50 notifications, unread first</value>
+  </data>
+  <data name="Prijelazi definiraju koje promjene statusa dopušta rola za pojedini tip zadatka. Puna administracija može izvršiti svaki prijelaz. Novi zadaci počinju statusom Novo." xml:space="preserve">
+    <value>Transitions control which status changes each role can make for an issue type. Full administrators can make any transition. New issues start in the initial status.</value>
+  </data>
+  <data name="Prava za zadatke, dokumente i ostale module dodavat ćemo kada ti moduli budu implementirani. Posljednjem administratoru nije moguće ukloniti punu administraciju." xml:space="preserve">
+    <value>The last full administrator must retain full administrative access.</value>
+  </data>
+  <data name="Aktivacija računa" xml:space="preserve">
+    <value>Account activation</value>
+  </data>
+  <data name="Deaktivacija računa" xml:space="preserve">
+    <value>Account deactivation</value>
+  </data>
+  <data name="Kreiranje računa" xml:space="preserve">
+    <value>Account creation</value>
+  </data>
+  <data name="Uređivanje računa" xml:space="preserve">
+    <value>Account update</value>
+  </data>
+  <data name="Kreiranje uloge" xml:space="preserve">
+    <value>Role creation</value>
+  </data>
+  <data name="Izmjena ovlasti uloge" xml:space="preserve">
+    <value>Role permissions updated</value>
+  </data>
+  <data name="Dodjela globalne uloge" xml:space="preserve">
+    <value>Global role assigned</value>
+  </data>
+  <data name="Uklanjanje globalne uloge" xml:space="preserve">
+    <value>Global role removed</value>
+  </data>
+  <data name="Kreiranje grupe" xml:space="preserve">
+    <value>Group creation</value>
+  </data>
+  <data name="Dodavanje člana grupe" xml:space="preserve">
+    <value>Group member added</value>
+  </data>
+  <data name="Uklanjanje člana grupe" xml:space="preserve">
+    <value>Group member removed</value>
+  </data>
+  <data name="Dodjela uloge grupi" xml:space="preserve">
+    <value>Group role assigned</value>
+  </data>
+  <data name="Uklanjanje uloge grupe" xml:space="preserve">
+    <value>Group role removed</value>
+  </data>
+  <data name="Dodjela uloge u članstvu" xml:space="preserve">
+    <value>Membership role assigned</value>
+  </data>
+  <data name="Uklanjanje dodatne uloge" xml:space="preserve">
+    <value>Additional role removed</value>
+  </data>
+  <data name="Zamjena osnovne uloge" xml:space="preserve">
+    <value>Primary role replaced</value>
+  </data>
+  <data name="Uklanjanje članstva" xml:space="preserve">
+    <value>Membership removed</value>
+  </data>
+  <data name="Kreiranje organizacijske jedinice" xml:space="preserve">
+    <value>Organizational unit created</value>
+  </data>
+  <data name="Kreiranje tima" xml:space="preserve">
+    <value>Team created</value>
+  </data>
+  <data name="Kreiranje projekta iz imenika" xml:space="preserve">
+    <value>Project created from directory</value>
+  </data>
+  <data name="Kreiranje projekta" xml:space="preserve">
+    <value>Project created</value>
+  </data>
+  <data name="Izmjena postavki projekta" xml:space="preserve">
+    <value>Project settings updated</value>
+  </data>
+  <data name="Izmjena modula projekta" xml:space="preserve">
+    <value>Project modules updated</value>
+  </data>
+  <data name="Dodavanje vrijednosti šifrarnika" xml:space="preserve">
+    <value>Lookup value added</value>
+  </data>
+  <data name="Dodavanje prijelaza statusa" xml:space="preserve">
+    <value>Workflow transition added</value>
+  </data>
+  <data name="Uklanjanje prijelaza statusa" xml:space="preserve">
+    <value>Workflow transition removed</value>
+  </data>
+  <data name="Dodavanje stavke plana" xml:space="preserve">
+    <value>Roadmap item added</value>
+  </data>
+  <data name="Izmjena stavke plana" xml:space="preserve">
+    <value>Roadmap item updated</value>
+  </data>
+  <data name="Nastavi bez promjene" xml:space="preserve">
+    <value>Continue without changing</value>
+  </data>
+  <data name="POČETNI ADMINISTRATORSKI RAČUN" xml:space="preserve">
+    <value>INITIAL ADMINISTRATOR ACCOUNT</value>
+  </data>
+  <data name="Prijavljen si kao admin s početnom lozinkom. Možeš je sada promijeniti ili nastaviti s administracijom." xml:space="preserve">
+    <value>You are signed in as admin with the initial password. You can change it now or continue to administration.</value>
+  </data>
+  <data name="Zadnjih {0} zapisa" xml:space="preserve">
+    <value>Latest {0} entries</value>
+  </data>
+  <data name="Posljednjih {0} aktivnosti" xml:space="preserve">
+    <value>Latest {0} activities</value>
+  </data>
+  <data name="{0} od {1} zatvorenih zadataka ({2} %)" xml:space="preserve">
+    <value>{0} of {1} issues closed ({2}%)</value>
+  </data>
+  <data name="{0} zadataka" xml:space="preserve">
+    <value>{0} issues</value>
+  </data>
+  <data name="Ukloni prilog {0}" xml:space="preserve">
+    <value>Remove attachment {0}</value>
+  </data>
+  <data name="Ukloni upit {0}" xml:space="preserve">
+    <value>Remove query {0}</value>
+  </data>
+  <data name="Ukloni dokument {0}" xml:space="preserve">
+    <value>Remove document {0}</value>
+  </data>
+  <data name="Odaberi zadatak {0}" xml:space="preserve">
+    <value>Select issue {0}</value>
+  </data>
+  <data name="Plna administracija" xml:space="preserve">
+    <value>Full administration</value>
+  </data>
+  <data name="Kreiranje i uređivanje korisnika" xml:space="preserve">
+    <value>Create and edit users</value>
+  </data>
+  <data name="Kreiranje jedinica, timova i projekata" xml:space="preserve">
+    <value>Create units, teams, and projects</value>
+  </data>
+  <data name="Uređivanje rola i dodjela globalnih ovlasti" xml:space="preserve">
+    <value>Edit roles and assign global permissions</value>
+  </data>
+  <data name="Upravljanje članovima timova i projekata" xml:space="preserve">
+    <value>Manage team and project members</value>
+  </data>
+  <data name="Uređivanje postavki projekta" xml:space="preserve">
+    <value>Edit project settings</value>
+  </data>
+  <data name="Pregled projektnih zadataka" xml:space="preserve">
+    <value>View project issues</value>
+  </data>
+  <data name="Kreiranje projektnih zadataka" xml:space="preserve">
+    <value>Create project issues</value>
+  </data>
+  <data name="Uređivanje projektnih zadataka" xml:space="preserve">
+    <value>Edit project issues</value>
+  </data>
+  <data name="Komentiranje projektnih zadataka" xml:space="preserve">
+    <value>Comment on project issues</value>
+  </data>
+  <data name="Evidentiranje vremena na zadacima" xml:space="preserve">
+    <value>Log time on issues</value>
+  </data>
+  <data name="Uređivanje šifrarnika i tijeka rada" xml:space="preserve">
+    <value>Edit lookup values and workflow</value>
+  </data>
+  <data name="Uređivanje projektnog wikija" xml:space="preserve">
+    <value>Edit project wiki</value>
+  </data>
+  <data name="Objavljivanje tema i odgovora na forumu" xml:space="preserve">
+    <value>Post forum topics and replies</value>
+  </data>
+  <data name="Moderiranje projektnog foruma" xml:space="preserve">
+    <value>Moderate project forum</value>
+  </data>
+  <data name="Komentiranje projektnih novosti" xml:space="preserve">
+    <value>Comment on project news</value>
+  </data>
+  <data name="Prilozi" xml:space="preserve"><value>Attachments</value></data>
+  <data name="Nema dodijeljenih članstava." xml:space="preserve"><value>No memberships assigned.</value></data>
+  <data name="Uloga vrijedi samo unutar odabranog tima ili projekta. Administracija korisnika zasebna je ovlast." xml:space="preserve"><value>Membership roles apply within their team or project. User administration requires a separate permission.</value></data>
+  <data name="Verzija plana" xml:space="preserve"><value>Version</value></data>
+  <data name="Spremljene su promjene za {0} zadataka." xml:space="preserve"><value>Changes saved for {0} issues.</value></data>
+  <data name="Zadatak je spremljen." xml:space="preserve"><value>Issue saved.</value></data>
+  <data name="Zadatak je premješten." xml:space="preserve"><value>Issue moved.</value></data>
+  <data name="Zadatak je kopiran." xml:space="preserve"><value>Issue copied.</value></data>
+  <data name="Upit je spremljen." xml:space="preserve"><value>Query saved.</value></data>
+  <data name="Spremljeni upit je uklonjen." xml:space="preserve"><value>Saved query removed.</value></data>
+  <data name="Podaci su spremljeni." xml:space="preserve"><value>Profile saved.</value></data>
+  <data name="Lozinka je promijenjena. Ponovno se prijavi." xml:space="preserve"><value>Password changed. Sign in again.</value></data>
+  <data name="Članstvo i uloga su spremljeni." xml:space="preserve"><value>Membership and role saved.</value></data>
+  <data name="Članstvo je uklonjeno." xml:space="preserve"><value>Membership removed.</value></data>
+  <data name="Radnja je izvršena. Prethodne sesije su opozvane." xml:space="preserve"><value>Action completed. Previous sessions were revoked.</value></data>
+  <data name="Globalne role su spremljene." xml:space="preserve"><value>Global roles saved.</value></data>
+  <data name="Nedavne aktivnosti na dostupnim zadacima" xml:space="preserve"><value>Recent activity on accessible issues</value></data>
+  <data name="Team Manager · Aktivnosti" xml:space="preserve"><value>Team Manager · Activity</value></data>
+  <data name="Zadatak #{0}" xml:space="preserve"><value>Issue #{0}</value></data>
+  <data name="{0} h" xml:space="preserve"><value>{0} h</value></data>
+  <data name="član" xml:space="preserve"><value>member</value></data>
+  <data name="dodijeljena" xml:space="preserve"><value>assigned</value></data>
+  <data name="Završen" xml:space="preserve"><value>Completed</value></data>
+  <data name="Uklonjeno" xml:space="preserve"><value>Removed</value></data>
+  <data name="Naziv već postoji ili odabrana grupa, korisnik ili uloga više nisu dostupni." xml:space="preserve"><value>The name already exists or the selected group, user, or role is no longer available.</value></data>
+  <data name="Provjeri unesene podatke." xml:space="preserve"><value>Check the information you entered.</value></data>
+  <data name="Unesi valjan datum i broj sati." xml:space="preserve"><value>Enter a valid date and number of hours.</value></data>
+  <data name="Podzadatak već ima nadređeni zadatak." xml:space="preserve"><value>The subtask already has a parent issue.</value></data>
+  <data name="Ova bi veza stvorila ciklus." xml:space="preserve"><value>This link would create a cycle.</value></data>
+  <data name="Veze se trenutačno uređuju. Pokušaj ponovno." xml:space="preserve"><value>Links are being edited. Try again.</value></data>
+  <data name="Provjeri naziv i filtre upita." xml:space="preserve"><value>Check the query name and filters.</value></data>
+  <data name="Odaberi valjan status." xml:space="preserve"><value>Select a valid status.</value></data>
+  <data name="Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan." xml:space="preserve"><value>A query with that name already exists or a selected filter is unavailable.</value></data>
+  <data name="Neispravna prijava ili privremeno zaključan račun. Nakon više pokušaja pričekajte pet minuta." xml:space="preserve"><value>Sign-in failed or the account is temporarily locked. After repeated attempts, wait five minutes.</value></data>
+  <data name="Unesi ime i funkciju do 100 znakova." xml:space="preserve"><value>Enter a name and job title of up to 100 characters.</value></data>
+  <data name="Organizacijska jedinica nije valjana." xml:space="preserve"><value>The organizational unit is invalid.</value></data>
+  <data name="Nova lozinka mora imati najmanje 10 znakova, a potvrda mora biti jednaka." xml:space="preserve"><value>The new password must have at least 10 characters and match the confirmation.</value></data>
+  <data name="Trenutna lozinka nije ispravna ili je račun privremeno zaključan." xml:space="preserve"><value>The current password is incorrect or the account is temporarily locked.</value></data>
+  <data name="Račun je u međuvremenu promijenjen. Ponovno se prijavi." xml:space="preserve"><value>The account has changed. Sign in again.</value></data>
+  <data name="Odaberi tim ili projekt i valjanu ulogu." xml:space="preserve"><value>Select a team or project and a valid role.</value></data>
+  <data name="Članstvo nije spremljeno. Provjeri postoji li tim/projekt i ima li već člana s istim brojem radnika." xml:space="preserve"><value>Membership could not be saved. Check that the team or project exists and the employee number is unique.</value></data>
+  <data name="Član ima dodijeljene zadatke. Najprije ih preraspodijeli." xml:space="preserve"><value>This member has assigned issues. Reassign them first.</value></data>
+  <data name="Odaberi valjanu radnju za račun." xml:space="preserve"><value>Select a valid account action.</value></data>
+  <data name="Nova lozinka mora imati od 10 do 200 znakova." xml:space="preserve"><value>The new password must have 10 to 200 characters.</value></data>
+  <data name="Mora ostati barem jedan aktivan puni administrator." xml:space="preserve"><value>At least one active full administrator is required.</value></data>
+  <data name="Mora ostati barem jedan puni administrator." xml:space="preserve"><value>At least one full administrator is required.</value></data>
+  <data name="Nepostojeća rola." xml:space="preserve"><value>The role does not exist.</value></data>
+  <data name="Projekt s tim nazivom već postoji." xml:space="preserve"><value>A project with that name already exists.</value></data>
+  <data name="Unesi naslov do 150 znakova i opis do 2000 znakova." xml:space="preserve"><value>Enter a title up to 150 characters and a description up to 2,000 characters.</value></data>
+  <data name="Unesi naslov do 150 znakova i tekst do 4000 znakova." xml:space="preserve"><value>Enter a title up to 150 characters and text up to 4,000 characters.</value></data>
+  <data name="Unesi komentar do 2000 znakova." xml:space="preserve"><value>Enter a comment up to 2,000 characters.</value></data>
+  <data name="Unesi odgovor do 4000 znakova." xml:space="preserve"><value>Enter a reply up to 4,000 characters.</value></data>
+  <data name="Provjeri vrstu, naziv, opis i datum." xml:space="preserve"><value>Check the type, name, description, and date.</value></data>
+  <data name="Taj naziv već postoji za odabranu vrstu." xml:space="preserve"><value>That name already exists for the selected type.</value></data>
+  <data name="Provjeri naziv i odabrane ovlasti." xml:space="preserve"><value>Check the name and selected permissions.</value></data>
+  <data name="Naziv već postoji ili bi promjena uklonila posljednjeg punog administratora." xml:space="preserve"><value>The name already exists or the change would remove the last full administrator.</value></data>
+  <data name="Odaberi valjan modul." xml:space="preserve"><value>Select a valid module.</value></data>
+  <data name="Početni datum mora biti prije završnog datuma ili jednak njemu." xml:space="preserve"><value>The start date must be on or before the end date.</value></data>
+  <data name="Provjeri broj radnika, ime i lozinku (najmanje 7 znakova)." xml:space="preserve"><value>Check the employee number, name, and password of at least seven characters.</value></data>
+  <data name="Broj radnika već postoji ili organizacijska jedinica nije valjana." xml:space="preserve"><value>The employee number already exists or the organizational unit is invalid.</value></data>
+  <data name="Unesi valjan naziv do 100 znakova." xml:space="preserve"><value>Enter a valid name up to 100 characters.</value></data>
+  <data name="Taj naziv već postoji." xml:space="preserve"><value>That name already exists.</value></data>
+  <data name="Unesi naslov do 120 znakova i sadržaj do 20 000 znakova." xml:space="preserve"><value>Enter a title up to 120 characters and content up to 20,000 characters.</value></data>
+  <data name="Stranica je u međuvremenu izmijenjena. Pregledaj najnoviju verziju prije ponovnog uređivanja." xml:space="preserve"><value>The page has changed. Review the latest revision before editing again.</value></data>
+  <data name="Stranica s tim naslovom već postoji u projektu." xml:space="preserve"><value>A page with that title already exists in the project.</value></data>
+  <data name="Naziv nije valjan ili već postoji." xml:space="preserve"><value>The name is invalid or already exists.</value></data>
+  <data name="Odaberi valjanu rolu, tip i različite statuse." xml:space="preserve"><value>Select a valid role, type, and two different statuses.</value></data>
+  <data name="Prijelaz već postoji." xml:space="preserve"><value>The transition already exists.</value></data>
+  <data name="Odaberi drugi zadatak i valjanu vrstu veze." xml:space="preserve"><value>Select another issue and a valid link type.</value></data>
+  <data name="Bilješka mora imati od 1 do 4000 znakova." xml:space="preserve"><value>The note must contain 1 to 4,000 characters.</value></data>
+  <data name="Provjeri polja zadatka." xml:space="preserve"><value>Check the issue fields.</value></data>
+  <data name="Početak mora biti valjan datum i ne može biti poslije roka." xml:space="preserve"><value>Enter a valid start date on or before the due date.</value></data>
+  <data name="Novi zadatak mora početi statusom Novo." xml:space="preserve"><value>A new issue must start in the New status.</value></data>
+  <data name="Nositelj mora biti član projekta." xml:space="preserve"><value>The assignee must be a project member.</value></data>
+  <data name="Odaberi verziju ili prekretnicu ovog projekta." xml:space="preserve"><value>Select a version or milestone from this project.</value></data>
+  <data name="Zadatak više ne postoji." xml:space="preserve"><value>The issue no longer exists.</value></data>
+  <data name="Tvoja rola ne dopušta taj prijelaz statusa za ovaj tip zadatka." xml:space="preserve"><value>Your role does not allow this status transition for the issue type.</value></data>
+  <data name="Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu." xml:space="preserve"><value>The issue has changed. Reopen the page.</value></data>
+  <data name="Odaberi od 1 do 100 zadataka i barem jednu promjenu." xml:space="preserve"><value>Select 1 to 100 issues and at least one change.</value></data>
+  <data name="Odaberi valjan status ili prioritet." xml:space="preserve"><value>Select a valid status or priority.</value></data>
+  <data name="Neki su zadaci u međuvremenu izmijenjeni. Osvježi popis." xml:space="preserve"><value>Some issues have changed. Refresh the list.</value></data>
+  <data name="Odaberi drugi projekt za premještanje." xml:space="preserve"><value>Select a different destination project.</value></data>
+  <data name="Zadatak je u međuvremenu izmijenjen. Osvježi stranicu." xml:space="preserve"><value>The issue has changed. Refresh the page.</value></data>
+  <data name="Komentar mora imati 1–4000 znakova." xml:space="preserve"><value>The comment must contain 1 to 4,000 characters.</value></data>
+  <data name="Unesi datum i sate od 0,01 do 24 (najviše dvije decimale)." xml:space="preserve"><value>Enter a date and 0.01 to 24 hours with up to two decimal places.</value></data>
+  <data name="Aktivnost može imati najviše 60 znakova." xml:space="preserve"><value>The activity can contain up to 60 characters.</value></data>
+  <data name="Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu." xml:space="preserve"><value>The project has changed. Reopen the page.</value></data>
+  <data name="Provjeri naziv, opis i stanje projekta." xml:space="preserve"><value>Check the project name, description, and state.</value></data>
+  <data name="Za nasljeđivanje uloga odaberi nadređeni projekt." xml:space="preserve"><value>Select a parent project to inherit roles.</value></data>
+  <data name="Projekt ne može biti vlastiti nadređeni projekt niti potomak svojeg potprojekta." xml:space="preserve"><value>A project cannot be its own parent or a descendant of one of its subprojects.</value></data>
+  <data name="Nadređeni projekt ne postoji." xml:space="preserve"><value>The parent project does not exist.</value></data>
+  <data name="Plan je u međuvremenu izmijenjen ili projekt više nije aktivan." xml:space="preserve"><value>The plan has changed or the project is no longer active.</value></data>
+  <data name="Odaberi datoteku veličine od 1 bajta do 10 MiB." xml:space="preserve"><value>Select a file between 1 byte and 10 MiB.</value></data>
+  <data name="Naziv datoteke nije valjan." xml:space="preserve"><value>The file name is invalid.</value></data>
+  <data name="Datoteka nije učitana u cijelosti." xml:space="preserve"><value>The upload did not complete.</value></data>
 </root>

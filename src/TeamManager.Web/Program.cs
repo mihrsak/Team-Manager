@@ -7,9 +7,11 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
+builder.Services.AddScoped<LocalizedValidationFilter>();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSingleton<IProjectNavigationExtension, ConfiguredProjectLinks>();
 builder.Services.AddRazorPages(options => {
+    options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.ServiceFilterAttribute(typeof(LocalizedValidationFilter)));
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
     options.Conventions.AllowAnonymousToPage("/Error");
@@ -102,7 +104,16 @@ app.UseAuthentication();
 app.Use(async (context, next) =>
 {
     var previous = System.Globalization.CultureInfo.CurrentUICulture;
-    var language = context.User.FindFirst(UserStore.LanguageClaim)?.Value == "en" ? "en" : "hr";
+    var language = context.User.FindFirst(UserStore.LanguageClaim)?.Value;
+    if (language is null)
+    {
+        context.Response.Headers.Append("Vary", "Accept-Language");
+        language = context.Request.GetTypedHeaders().AcceptLanguage
+            .Where(candidate => candidate.Quality is null or > 0)
+            .OrderByDescending(candidate => candidate.Quality ?? 1)
+            .Select(candidate => candidate.Value.ToString().Split('-', 2)[0].ToLowerInvariant())
+            .FirstOrDefault(candidate => candidate is "en" or "hr") ?? "hr";
+    }
     try
     {
         System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(language);

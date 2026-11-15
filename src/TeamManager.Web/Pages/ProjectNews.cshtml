@@ -1,12 +1,13 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.ProjectNewsModel
 <p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
-<h1>Projektne novosti</h1>
+<h1>@Text["Projektne novosti"]</h1>
 <div asp-validation-summary="All"></div>
 
 @if (Model.NewsId is int selected)
 {
-    <p><a asp-page="/ProjectNews" asp-route-projectId="@Model.Project.Id">Sve novosti projekta</a></p>
+    <p><a asp-page="/ProjectNews" asp-route-projectId="@Model.Project.Id">@Text["Sve novosti projekta"]</a></p>
     var item = Model.Items[0];
     <article class="card">
         <h2>@item.Title</h2>
@@ -15,7 +16,7 @@
     </article>
 
     <section class="card">
-        <h2>Komentari (@Model.Comments.Count)</h2>
+        <h2>@Text["Komentari"] (@Model.Comments.Count)</h2>
         @foreach (var comment in Model.Comments)
         {
             <article>
@@ -26,8 +27,8 @@
         @if (Model.CanComment)
         {
             <form method="post" asp-page-handler="Comment" asp-route-projectId="@Model.Project.Id" asp-route-newsId="@selected">
-                <label>Komentar<textarea name="body" rows="3" maxlength="2000" required></textarea></label>
-                <button>Dodaj komentar</button>
+                <label>@Text["Komentar"]<textarea name="body" rows="3" maxlength="2000" required></textarea></label>
+                <button>@Text["Dodaj komentar"]</button>
             </form>
         }
     </section>
@@ -37,18 +38,18 @@ else
     @if (Model.CanPublish)
     {
         <section class="card">
-            <h2>Nova objava</h2>
+            <h2>@Text["Nova objava"]</h2>
             <form method="post" asp-page-handler="Publish" asp-route-projectId="@Model.Project.Id">
-                <label>Naslov<input name="title" maxlength="150" required></label>
-                <label>Tekst objave<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
-                <button>Objavi</button>
+                <label>@Text["Naslov"]<input name="title" maxlength="150" required></label>
+                <label>@Text["Tekst objave"]<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
+                <button>@Text["Objavi"]</button>
             </form>
         </section>
     }
 
     @if (Model.Items.Count == 0)
     {
-        <p>Nema objavljenih novosti.</p>
+        <p>@Text["Nema objavljenih novosti."]</p>
     }
     else
     {

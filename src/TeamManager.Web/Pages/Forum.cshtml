@@ -1,26 +1,27 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.ForumModel
 <p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
-<h1>Projektni forum</h1>
+<h1>@Text["Projektni forum"]</h1>
 <div asp-validation-summary="All"></div>
 
 @if (Model.Selected is { } topic)
 {
-    <p><a asp-page="/Forum" asp-route-projectId="@Model.Project.Id">Sve teme</a></p>
+    <p><a asp-page="/Forum" asp-route-projectId="@Model.Project.Id">@Text["Sve teme"]</a></p>
     <article class="card">
         <h2>@topic.Title</h2>
         <p>@topic.Author · @topic.At.ToString("dd.MM.yyyy HH:mm") UTC</p>
         <p style="white-space:pre-wrap;overflow-wrap:anywhere">@topic.Body</p>
-        @if (topic.IsLocked) { <p>Tema je zaključana.</p> }
+        @if (topic.IsLocked) { <p>@Text["Tema je zaključana."]</p> }
         @if (Model.CanModerate)
         {
             <form method="post" asp-page-handler="Lock" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@topic.Id">
-                <button name="locked" value="@(topic.IsLocked ? "false" : "true")">@(topic.IsLocked ? "Otključaj temu" : "Zaključaj temu")</button>
+                <button name="locked" value="@(topic.IsLocked ? "false" : "true")">@(topic.IsLocked ? Text["Otključaj temu"].Value : Text["Zaključaj temu"].Value)</button>
             </form>
         }
     </article>
     <section class="card">
-        <h2>Odgovori (@Model.Replies.Count)</h2>
+        <h2>@Text["Odgovori"] (@Model.Replies.Count)</h2>
         @foreach (var reply in Model.Replies)
         {
             <article>
@@ -31,8 +32,8 @@
         @if (Model.CanPost && !topic.IsLocked)
         {
             <form method="post" asp-page-handler="Reply" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@topic.Id">
-                <label>Odgovor<textarea name="body" rows="4" maxlength="4000" required></textarea></label>
-                <button>Objavi odgovor</button>
+                <label>@Text["Odgovor"]<textarea name="body" rows="4" maxlength="4000" required></textarea></label>
+                <button>@Text["Objavi odgovor"]</button>
             </form>
         }
     </section>
@@ -42,17 +43,17 @@ else
     @if (Model.CanPost)
     {
         <section class="card">
-            <h2>Nova tema</h2>
+            <h2>@Text["Nova tema"]</h2>
             <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id">
-                <label>Naslov<input name="title" maxlength="150" required></label>
-                <label>Tekst teme<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
-                <button>Otvori temu</button>
+                <label>@Text["Naslov"]<input name="title" maxlength="150" required></label>
+                <label>@Text["Tekst teme"]<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
+                <button>@Text["Otvori temu"]</button>
             </form>
         </section>
     }
     @if (Model.Topics.Count == 0)
     {
-        <p>Forum još nema tema.</p>
+        <p>@Text["Forum još nema tema."]</p>
     }
     else
     {

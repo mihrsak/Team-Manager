@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class ActivityModel(IssueStore issues) : PageModel
+public sealed class ActivityModel(IssueStore issues, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int? ProjectId { get; set; }
     public List<Team> Projects { get; private set; } = [];
@@ -23,7 +23,7 @@ public sealed class ActivityModel(IssueStore issues) : PageModel
         XNamespace atom = "http://www.w3.org/2005/Atom";
         var feed = new XElement(atom + "feed",
             new XElement(atom + "id", PageUrl("/Activity", new { ProjectId })),
-            new XElement(atom + "title", "Team Manager · Aktivnosti"),
+            new XElement(atom + "title", text["Team Manager · Aktivnosti"].Value),
             new XElement(atom + "author", new XElement(atom + "name", "Team Manager")),
             new XElement(atom + "link", new XAttribute("rel", "self"),
                 new XAttribute("href", PageUrl("/Activity", new { handler = "Atom", ProjectId }))),
@@ -43,9 +43,9 @@ public sealed class ActivityModel(IssueStore issues) : PageModel
 
         var feed = new XElement("rss", new XAttribute("version", "2.0"),
             new XElement("channel",
-                new XElement("title", "Team Manager · Aktivnosti"),
+                new XElement("title", text["Team Manager · Aktivnosti"].Value),
                 new XElement("link", PageUrl("/Activity", new { ProjectId })),
-                new XElement("description", "Nedavne aktivnosti na dostupnim zadacima"),
+                new XElement("description", text["Nedavne aktivnosti na dostupnim zadacima"].Value),
                 Entries.Select(entry => new XElement("item",
                     new XElement("title", XmlText(EntryTitle(entry))),
                     new XElement("guid", new XAttribute("isPermaLink", "false"), EntryUrl(entry)),
@@ -69,7 +69,7 @@ public sealed class ActivityModel(IssueStore issues) : PageModel
 
     private string PageUrl(string page, object route) => Url.Page(page, pageHandler: null, values: route, protocol: Request.Scheme)!;
     private string EntryUrl(ActivityRow entry) => PageUrl("/Issue", new { id = entry.IssueId }) + $"#activity-{entry.Id}";
-    private static string EntryTitle(ActivityRow entry) => $"{KindLabel(entry.Kind)} · {entry.Title}";
+    private string EntryTitle(ActivityRow entry) => $"{text[KindLabel(entry.Kind)]} · {entry.Title}";
 
     private static string XmlText(string value) => string.Concat(value.EnumerateRunes()
         .Where(rune => rune.Value is 9 or 10 or 13 or (>= 32 and <= 0xD7FF) or (>= 0xE000 and <= 0xFFFD) or >= 0x10000));

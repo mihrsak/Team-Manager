@@ -153,6 +153,37 @@ try {
         Assert ($page.Content.Contains($env:ProjectExtensions__Links__0__EnglishLabel)) 'Configured project extension renders localized navigation'
         Assert (-not $page.Content.Contains('QA rejected extension')) 'Unsafe URL scheme is omitted from navigation'
     }
+    $englishPages=@{
+        '/Projects'='Projects'
+        '/Issues'='Project issues'
+        '/Calendar'='Deadline calendar'
+        '/Gantt'='Gantt view'
+        '/Activity'='Activity'
+        '/Notifications'='Notifications'
+        '/TimeReport'='Time spent report'
+        '/Users'='Users'
+        "/Roadmap?projectId=$projectId"='Roadmap'
+        "/ProjectNews?projectId=$projectId"='Project news'
+        "/ProjectDocuments?projectId=$projectId"='Project documents'
+        "/Wiki?projectId=$projectId"='Project wiki'
+        "/Forum?projectId=$projectId"='Project forum'
+    }
+    foreach ($path in $englishPages.Keys) {
+        $page=Get-Page $path $newLanguageSession
+        Assert ($page.Content.Contains("<h1>$($englishPages[$path])</h1>")) "$path renders its English heading"
+    }
+    $page=Post-Page '/Profile?handler=Language' $admin @{language='en'}
+    $page=Get-Page '/Roles' $admin
+    Assert ($page.Content.Contains('<h1>Roles and permissions</h1>') -and $page.Content.Contains('Edit project wiki')) 'Administration shows English headings and permissions'
+    $page=Get-Page '/AdministrationAudit' $admin
+    Assert ($page.Content.Contains('Audit log') -and $page.Content.Contains('Password reset')) 'Audit event labels use English'
+    $page=Post-Page '/Profile?handler=Language' $admin @{language='hr'}
+    $browserEnglish=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $browserEnglish.Headers['Accept-Language']='en-US'
+    $page=Get-Page '/Login' $browserEnglish
+    Assert ($page.Content.Contains('<h1>Sign in</h1>')) 'Sign-in uses the preferred browser language before authentication'
+    $page=Post-Page '/Login' $browserEnglish @{EmployeeNumber=$employee;Password='invalid-password'}
+    Assert ($page.Content.Contains('Sign-in failed or the account is temporarily locked.')) 'Form validation displays a translated error'
     $page=Post-Page '/Profile?handler=Language' $newLanguageSession @{language='hr'}
     Assert ($page.Content.Contains('<html lang="hr"')) 'User can restore Croatian UI'
 } finally {

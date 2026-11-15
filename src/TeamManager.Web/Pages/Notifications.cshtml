@@ -1,33 +1,34 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.NotificationsModel
 @using TeamManager.Web.Pages
-<h1>Obavijesti</h1>
+<h1>@Text["Obavijesti"]</h1>
 @if (Model.Entries.Count == 0)
 {
-    <p>Nema obavijesti za praćene zadatke.</p>
+    <p>@Text["Nema obavijesti za praćene zadatke."]</p>
 }
 else
 {
     <div class="card table">
         <table>
-            <caption>Do 50 obavijesti, nepročitane prve</caption>
-            <thead><tr><th>Zadatak</th><th>Aktivnost</th><th>Vrijeme (UTC)</th><th>Status</th></tr></thead>
+            <caption>@Text["Do 50 obavijesti, nepročitane prve"]</caption>
+            <thead><tr><th>@Text["Zadatak"]</th><th>@Text["Aktivnost"]</th><th>@Text["Vrijeme (UTC)"]</th><th>@Text["Status"]</th></tr></thead>
             <tbody>
                 @foreach (var entry in Model.Entries)
                 {
                     <tr>
                         <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a> · @entry.Project</td>
-                        <td>@ActivityModel.KindLabel(entry.Kind)</td>
+                        <td>@Text[ActivityModel.KindLabel(entry.Kind)]</td>
                         <td>@entry.At.ToString("dd.MM.yyyy HH:mm")</td>
                         <td>
                             @if (entry.IsRead)
                             {
-                                <span>Pročitano</span>
+                                <span>@Text["Pročitano"]</span>
                             }
                             else
                             {
                                 <form method="post" asp-page-handler="Read" asp-route-eventId="@entry.EventId">
-                                    <button>Označi kao pročitano</button>
+                                    <button>@Text["Označi kao pročitano"]</button>
                                 </form>
                             }
                         </td>

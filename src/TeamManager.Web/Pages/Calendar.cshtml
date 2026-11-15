@@ -1,27 +1,28 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.CalendarModel
-<h1>Kalendar rokova</h1>
-<p><a asp-page="/Gantt" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">Ganttov prikaz</a></p>
+<h1>@Text["Kalendar rokova"]</h1>
+<p><a asp-page="/Gantt" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">@Text["Ganttov prikaz"]</a></p>
 
 <section class="card">
     <form method="get" class="grid">
-        <label>Mjesec<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
-        <label>Projekt
+        <label>@Text["Mjesec"]<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
+        <label>@Text["Projekt"]
             <select asp-for="ProjectId">
-                <option value="">Svi dostupni projekti</option>
+                <option value="">@Text["Svi dostupni projekti"]</option>
                 @foreach (var project in Model.Projects) { <option value="@project.Id">@project.Name</option> }
             </select>
         </label>
-        <div><button>Prikaži</button></div>
+        <div><button>@Text["Prikaži"]</button></div>
     </form>
     <div class="actions">
         @if (Model.Previous is not null)
         {
-            <a asp-page="/Calendar" asp-route-month="@Model.Previous" asp-route-projectId="@Model.ProjectId">Prethodni mjesec</a>
+            <a asp-page="/Calendar" asp-route-month="@Model.Previous" asp-route-projectId="@Model.ProjectId">@Text["Prethodni mjesec"]</a>
         }
         @if (Model.Next is not null)
         {
-            <a asp-page="/Calendar" asp-route-month="@Model.Next" asp-route-projectId="@Model.ProjectId">Sljedeći mjesec</a>
+            <a asp-page="/Calendar" asp-route-month="@Model.Next" asp-route-projectId="@Model.ProjectId">@Text["Sljedeći mjesec"]</a>
         }
     </div>
 </section>
@@ -32,7 +33,7 @@
         <thead><tr>
             @foreach (var day in new[] { "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja" })
             {
-                <th scope="col">@day</th>
+                <th scope="col">@Text[day]</th>
             }
         </tr></thead>
         <tbody>
@@ -64,7 +65,7 @@
     </table>
     @if (Model.Deadlines.Count == 0)
     {
-        <p>U ovom mjesecu nema rokova za odabrane projekte.</p>
+        <p>@Text["U ovom mjesecu nema rokova za odabrane projekte."]</p>
     }
 </div>
 

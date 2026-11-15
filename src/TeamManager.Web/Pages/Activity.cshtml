@@ -1,19 +1,20 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.ActivityModel
 @using TeamManager.Web.Pages
-<h1>Aktivnosti</h1>
+<h1>@Text["Aktivnosti"]</h1>
 <section class="card">
     <form method="get" class="actions">
-        <label>Projekt
+        <label>@Text["Projekt"]
             <select asp-for="ProjectId">
-                <option value="">Svi dostupni projekti</option>
+                <option value="">@Text["Svi dostupni projekti"]</option>
                 @foreach (var project in Model.Projects)
                 {
                     <option value="@project.Id">@project.Name</option>
                 }
             </select>
         </label>
-        <button>Prikaži</button>
+        <button>@Text["Prikaži"]</button>
     </form>
     <p>
         <a asp-page-handler="Atom" asp-route-projectId="@Model.ProjectId">Atom</a> ·
@@ -23,20 +24,20 @@
 
 @if (Model.Entries.Count == 0)
 {
-    <p>Nema aktivnosti u odabranim projektima.</p>
+    <p>@Text["Nema aktivnosti u odabranim projektima."]</p>
 }
 else
 {
     <div class="card table">
         <table>
-            <caption>Posljednjih @Model.Entries.Count aktivnosti</caption>
-            <thead><tr><th>Vrijeme (UTC)</th><th>Aktivnost</th><th>Zadatak</th><th>Projekt</th><th>Korisnik</th></tr></thead>
+            <caption>@Text["Posljednjih {0} aktivnosti", Model.Entries.Count]</caption>
+            <thead><tr><th>@Text["Vrijeme (UTC)"]</th><th>@Text["Aktivnost"]</th><th>@Text["Zadatak"]</th><th>@Text["Projekt"]</th><th>@Text["Korisnik"]</th></tr></thead>
             <tbody>
                 @foreach (var entry in Model.Entries)
                 {
                     <tr>
                         <td><time datetime="@entry.At.ToString("O")">@entry.At.ToString("dd.MM.yyyy HH:mm")</time></td>
-                        <td>@ActivityModel.KindLabel(entry.Kind)</td>
+                        <td>@Text[ActivityModel.KindLabel(entry.Kind)]</td>
                         <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a></td>
                         <td>@entry.Project</td><td>@entry.Author</td>
                     </tr>

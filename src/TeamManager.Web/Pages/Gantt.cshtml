@@ -1,24 +1,25 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.GanttModel
-<h1>Ganttov prikaz</h1>
-<p><a asp-page="/Calendar" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">Kalendar rokova</a></p>
+<h1>@Text["Ganttov prikaz"]</h1>
+<p><a asp-page="/Calendar" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">@Text["Kalendar rokova"]</a></p>
 
 <section class="card">
     <form method="get" class="grid">
-        <label>Mjesec<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
-        <label>Projekt
+        <label>@Text["Mjesec"]<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
+        <label>@Text["Projekt"]
             <select asp-for="ProjectId">
-                <option value="">Svi dostupni projekti</option>
+                <option value="">@Text["Svi dostupni projekti"]</option>
                 @foreach (var project in Model.Projects) { <option value="@project.Id">@project.Name</option> }
             </select>
         </label>
-        <div><button>Prikaži</button></div>
+        <div><button>@Text["Prikaži"]</button></div>
     </form>
 </section>
 
 @if (Model.Tasks.Count == 0)
 {
-    <p>Nema zadataka s planiranim datumom u ovom mjesecu.</p>
+    <p>@Text["Nema zadataka s planiranim datumom u ovom mjesecu."]</p>
 }
 else
 {
@@ -27,12 +28,12 @@ else
             <caption>@Model.Caption</caption>
             <thead>
                 <tr>
-                    <th scope="col">Zadatak</th>
+                    <th scope="col">@Text["Zadatak"]</th>
                     @for (var day = 1; day <= Model.Days; day++)
                     {
                         <th class="gantt-day" scope="col">@day</th>
                     }
-                    <th scope="col">Ovisnosti</th>
+                    <th scope="col">@Text["Ovisnosti"]</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,7 +57,7 @@ else
                         <td>
                             @foreach (var blocker in Model.Dependencies[task.Issue.Id])
                             {
-                                <div>Blokiran zadatkom <a href="#task-@blocker">#@blocker</a></div>
+                                <div>@Text["Blokiran zadatkom"] <a href="#task-@blocker">#@blocker</a></div>
                             }
                         </td>
                     </tr>

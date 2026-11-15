@@ -1,13 +1,14 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.RoadmapModel
 @using System.Globalization
 <p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
-<h1>Karta planova</h1>
+<h1>@Text["Karta planova"]</h1>
 <div asp-validation-summary="All"></div>
 
 @if (Model.Items.Count == 0)
 {
-    <p>Projekt još nema verzija ni prekretnica.</p>
+    <p>@Text["Projekt još nema verzija ni prekretnica."]</p>
 }
 
 @{
@@ -18,10 +19,10 @@
 @foreach (var item in entries)
 {
     <section class="card" id="@(item.Id > 0 ? $"plan-{item.Id}" : null)">
-        <h2>@(item.Id == 0 ? "Nova verzija ili prekretnica" : item.Name)</h2>
+        <h2>@(item.Id == 0 ? Text["Nova verzija ili prekretnica"].Value : item.Name)</h2>
         @if (item.Id != 0)
         {
-            <p>@(item.Kind == "version" ? "Verzija" : "Prekretnica") · @(item.IsComplete ? "Dovršeno" : "Planirano")
+            <p>@(item.Kind == "version" ? Text["Verzija"].Value : Text["Prekretnica"].Value) · @(item.IsComplete ? Text["Dovršeno"].Value : Text["Planirano"].Value)
                 @if (item.TargetDate is DateTime date)
                 {
                     <span>· @date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
@@ -34,12 +35,12 @@
                 var closed = counts.Where(count => count.IsClosed).Sum(count => count.Count);
                 if (total == 0)
                 {
-                    <p>Nema povezanih zadataka.</p>
+                    <p>@Text["Nema povezanih zadataka."]</p>
                 }
                 else
                 {
-                    <p>@closed od @total zatvorenih zadataka (@((100m * closed / total).ToString("0")) %)</p>
-                    <progress value="@closed" max="@total" aria-label="Napredak povezanih zadataka"></progress>
+                    <p>@Text["{0} od {1} zatvorenih zadataka ({2} %)", closed, total, (100m * closed / total).ToString("0")]</p>
+                    <progress value="@closed" max="@total" aria-label="@Text["Napredak povezanih zadataka"]"></progress>
                     <ul>
                         @foreach (var count in counts)
                         {
@@ -59,18 +60,18 @@
                 <input type="hidden" name="itemId" value="@item.Id">
                 <input type="hidden" name="revision" value="@item.Revision">
                 <div class="grid">
-                    <label>Vrsta
+                    <label>@Text["Vrsta"]
                         <select name="kind">
-                            <option value="version" selected="@(item.Kind == "version")">Verzija</option>
-                            <option value="milestone" selected="@(item.Kind == "milestone")">Prekretnica</option>
+                            <option value="version" selected="@(item.Kind == "version")">@Text["Verzija"]</option>
+                            <option value="milestone" selected="@(item.Kind == "milestone")">@Text["Prekretnica"]</option>
                         </select>
                     </label>
-                    <label>Naziv<input name="name" value="@item.Name" maxlength="100" required></label>
-                    <label>Ciljni datum<input type="date" name="targetDate" value="@item.TargetDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></label>
+                    <label>@Text["Naziv"]<input name="name" value="@item.Name" maxlength="100" required></label>
+                    <label>@Text["Ciljni datum"]<input type="date" name="targetDate" value="@item.TargetDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></label>
                 </div>
-                <label>Opis<textarea name="description" maxlength="1000" rows="3">@item.Description</textarea></label>
-                <label><input type="checkbox" name="isComplete" value="true" checked="@item.IsComplete"> Dovršeno</label>
-                <button>@(item.Id == 0 ? "Dodaj" : "Spremi izmjene")</button>
+                <label>@Text["Opis"]<textarea name="description" maxlength="1000" rows="3">@item.Description</textarea></label>
+                <label><input type="checkbox" name="isComplete" value="true" checked="@item.IsComplete"> @Text["Dovršeno"]</label>
+                <button>@(item.Id == 0 ? Text["Dodaj"].Value : Text["Spremi izmjene"].Value)</button>
             </form>
         }
     </section>

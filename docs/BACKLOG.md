@@ -49,7 +49,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | FEED-01 | Feed aktivnosti i Atom/RSS | Gotovo: zadnjih 50 aktivnosti zadataka, projektni filtar, Atom/RSS uz prijavu |
 | SEARCH-01 | Pretraživanje kroz module i osobna nadzorna ploča | Gotovo: osobni pregled otvorenih zadataka i rokova te pretraga projekata, zadataka, verzija, prekretnica i korisnika |
 | API-01 | Dokumentirani REST API i pristupni tokeni | Backlog |
-| EXT-01 | Proširenja, teme i lokalizacija | Djelomično: teme, HR/EN za navigaciju, osobni pregled, pretragu i postavke prikaza te proširenja poveznicama; preostaju prijevodi ostalih modula |
+| EXT-01 | Proširenja, teme i lokalizacija | Gotovo: teme po računu, HR/EN sučelje implementiranih modula i proširenja projektne navigacije |
 | AUDIT-01 | Revizijski zapisi administracije i promjena ovlasti | Gotovo: računi, uloge i ovlasti, grupe, članstva, organizacija, postavke projekata, tijek rada i karta planova |
 | OPS-01 | Verzijske SQL skripte, ponovljiva instalacija i odvojeni demo podaci | Gotovo, provjereno na zasebnim bazama |
 | OPS-02 | Konfiguracija JSON/env, Windows publish paket i upute za IIS | Paket provjeren; ciljni IIS nije testiran |

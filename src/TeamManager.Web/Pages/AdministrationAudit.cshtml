@@ -1,24 +1,25 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.AdministrationAuditModel
 @using TeamManager.Web.Pages
-<h1>Revizijski zapis</h1>
+<h1>@Text["Revizijski zapis"]</h1>
 @if (Model.Entries.Count == 0)
 {
-    <p>Nema zabilježenih administrativnih radnji.</p>
+    <p>@Text["Nema zabilježenih administrativnih radnji."]</p>
 }
 else
 {
     <div class="card table">
         <table>
-            <caption>Zadnjih @Model.Entries.Count zapisa</caption>
-            <thead><tr><th>Vrijeme (UTC)</th><th>Administrator</th><th>Radnja</th><th>Stavka</th><th>Detalji</th></tr></thead>
+            <caption>@Text["Zadnjih {0} zapisa", Model.Entries.Count]</caption>
+            <thead><tr><th>@Text["Vrijeme (UTC)"]</th><th>@Text["Administrator"]</th><th>@Text["Radnja"]</th><th>@Text["Stavka"]</th><th>@Text["Detalji"]</th></tr></thead>
             <tbody>
                 @foreach (var entry in Model.Entries)
                 {
                     <tr>
                         <td>@entry.At.ToString("dd.MM.yyyy HH:mm:ss")</td>
                         <td>@entry.Actor</td>
-                        <td>@AdministrationAuditModel.Label(entry.Action)</td>
+                        <td>@Text[AdministrationAuditModel.Label(entry.Action)]</td>
                         <td>@entry.Subject</td><td>@entry.Details</td>
                     </tr>
                 }

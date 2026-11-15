@@ -1,26 +1,27 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.TimeReportModel
-<h1>Izvještaj o utrošenom vremenu</h1>
+<h1>@Text["Izvještaj o utrošenom vremenu"]</h1>
 
 <section class="card">
     <form method="get">
         <div asp-validation-summary="All"></div>
         <div class="grid">
-            <label>Projekt
+            <label>@Text["Projekt"]
                 <select asp-for="ProjectId">
-                    <option value="">Svi dostupni projekti</option>
+                    <option value="">@Text["Svi dostupni projekti"]</option>
                     @foreach (var project in Model.Projects)
                     {
                         <option value="@project.Id">@project.Name</option>
                     }
                 </select>
             </label>
-            <label>Osoba ili broj radnika<input asp-for="Person" maxlength="100"></label>
-            <label>Aktivnost<input asp-for="Activity" maxlength="60"></label>
-            <label>Od datuma<input asp-for="From" type="date"></label>
-            <label>Do datuma<input asp-for="To" type="date"></label>
+            <label>@Text["Osoba ili broj radnika"]<input asp-for="Person" maxlength="100"></label>
+            <label>@Text["Aktivnost"]<input asp-for="Activity" maxlength="60"></label>
+            <label>@Text["Od datuma"]<input asp-for="From" type="date"></label>
+            <label>@Text["Do datuma"]<input asp-for="To" type="date"></label>
         </div>
-        <button>Prikaži izvještaj</button>
+        <button>@Text["Prikaži izvještaj"]</button>
     </form>
 </section>
 
@@ -28,14 +29,14 @@
 {
     @if (Model.Rows.Count == 0)
     {
-        <p>Za odabrane filtre nema zapisa o utrošenom vremenu.</p>
+        <p>@Text["Za odabrane filtre nema zapisa o utrošenom vremenu."]</p>
     }
     else
     {
         <div class="card table">
             <table>
-                <caption>Ukupno @Model.Rows.Sum(row => row.Hours).ToString("0.00") h</caption>
-                <thead><tr><th>Projekt</th><th>Osoba</th><th>Aktivnost</th><th>Sati</th></tr></thead>
+                <caption>@Text["Ukupno"] @Model.Rows.Sum(row => row.Hours).ToString("0.00") h</caption>
+                <thead><tr><th>@Text["Projekt"]</th><th>@Text["Osoba"]</th><th>@Text["Aktivnost"]</th><th>@Text["Sati"]</th></tr></thead>
                 <tbody>
                     @foreach (var row in Model.Rows)
                     {

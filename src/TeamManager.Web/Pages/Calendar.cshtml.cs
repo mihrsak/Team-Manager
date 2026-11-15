@@ -7,7 +7,7 @@ namespace TeamManager.Web.Pages;
 
 public sealed class CalendarModel(IssueStore issues) : PageModel
 {
-    private static readonly CultureInfo CalendarCulture = CultureInfo.GetCultureInfo("hr-HR");
+    private static CultureInfo CalendarCulture => CultureInfo.GetCultureInfo(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "en" ? "en-GB" : "hr-HR");
     private static readonly DateTime FirstMonth = new(1753, 1, 1);
     private static readonly DateTime LastMonth = new(9999, 12, 1);
 

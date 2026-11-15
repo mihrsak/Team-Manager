@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 namespace TeamManager.Web.Pages;
-public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQueryStore savedQueries):PageModel
+public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQueryStore savedQueries,Microsoft.Extensions.Localization.IStringLocalizer<UiText> text):PageModel
 {
     [BindProperty(SupportsGet=true)]public int? ProjectId{get;set;}
     [BindProperty(SupportsGet=true)]public string? Status{get;set;}
@@ -158,7 +158,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         try
         {
             await store.UpdateMany(user, revisions, bulkStatus, bulkPriority);
-            TempData["Notice"] = $"Spremljene su promjene za {revisions.Count} zadataka.";
+            TempData["Notice"] = text["Spremljene su promjene za {0} zadataka.", revisions.Count].Value;
             return RedirectToPage(IssueRoute);
         }
         catch (UnauthorizedAccessException) { return Forbid(); }

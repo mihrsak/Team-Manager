@@ -2,8 +2,8 @@
 @inject IEnumerable<IProjectNavigationExtension> ProjectExtensions
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.ProjectModel
-<p><a asp-page="/Projects">Svi projekti</a></p><h1>@(Model.Id is null?"Novi projekt":Model.Input.Name)</h1>
-@if(Model.Id is not null&&Model.Input.IssuesEnabled){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">Projektni zadaci</a>}
+<p><a asp-page="/Projects">@Text["Svi projekti"]</a></p><h1>@(Model.Id is null?Text["Novi projekt"].Value:Model.Input.Name)</h1>
+@if(Model.Id is not null&&Model.Input.IssuesEnabled){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">@Text["Projektni zadaci"]</a>}
 @if (Model.Id is not null) { <p lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"><a asp-page="/Roadmap" asp-route-projectId="@Model.Id">@Text["Karta planova"]</a> · <a asp-page="/ProjectNews" asp-route-projectId="@Model.Id">@Text["Novosti"]</a> · <a asp-page="/Wiki" asp-route-projectId="@Model.Id">@Text["Wiki"]</a> · <a asp-page="/ProjectDocuments" asp-route-projectId="@Model.Id">@Text["Dokumenti"]</a> · <a asp-page="/Forum" asp-route-projectId="@Model.Id">@Text["Forum"]</a></p> }
 @if (Model.Id is int projectId)
 {
@@ -17,24 +17,24 @@
 <div class="card"><form method="post" asp-route-id="@Model.Id">
 <div asp-validation-summary="All"></div><input type="hidden" asp-for="Input.Revision">
 <fieldset disabled="@(!Model.CanEdit)">
-<label>Naziv<input asp-for="Input.Name" maxlength="100" required></label>
-<label>Opis<textarea asp-for="Input.Description" maxlength="4000" rows="6"></textarea></label>
-<label>Nadređeni projekt<select asp-for="Input.ParentId"><option value="">Bez nadređenog projekta</option>@foreach(var p in Model.Parents){<option value="@p.Id">@p.Input.Name</option>}</select></label>
-<label><input type="checkbox" asp-for="Input.IsPublic"> Javni projekt (svim prijavljenim korisnicima)</label>
-<label>Stanje<select asp-for="Input.State"><option value="Active">Aktivan</option><option value="Closed">Zatvoren</option><option value="Archived">Arhiviran</option></select></label>
-<label><input type="checkbox" asp-for="Input.InheritParentRoles"> Naslijedi uloge nadređenog projekta</label>
-<p>Za premještanje ili uključivanje nasljeđivanja trebaš ovlast upravljanja odabranim nadređenim projektom.</p>
-@if(Model.CanEdit){<button>Spremi projekt</button>}
+<label>@Text["Naziv"]<input asp-for="Input.Name" maxlength="100" required></label>
+<label>@Text["Opis"]<textarea asp-for="Input.Description" maxlength="4000" rows="6"></textarea></label>
+<label>@Text["Nadređeni projekt"]<select asp-for="Input.ParentId"><option value="">@Text["Bez nadređenog projekta"]</option>@foreach(var p in Model.Parents){<option value="@p.Id">@p.Input.Name</option>}</select></label>
+<label><input type="checkbox" asp-for="Input.IsPublic"> @Text["Javni projekt (svim prijavljenim korisnicima)"]</label>
+<label>@Text["Stanje"]<select asp-for="Input.State"><option value="Active">@Text["Aktivan"]</option><option value="Closed">@Text["Zatvoren"]</option><option value="Archived">@Text["Arhiviran"]</option></select></label>
+<label><input type="checkbox" asp-for="Input.InheritParentRoles"> @Text["Naslijedi uloge nadređenog projekta"]</label>
+<p>@Text["Za premještanje ili uključivanje nasljeđivanja trebaš ovlast upravljanja odabranim nadređenim projektom."]</p>
+@if(Model.CanEdit){<button>@Text["Spremi projekt"]</button>}
 </fieldset></form></div>
 
 @if(Model.Id is not null){
-<section class="card"><h2>Moduli projekta</h2>
-<p>Isključivanje modula skriva njegove stranice i podatke te blokira nove unose. Podaci ostaju sačuvani. Evidencija vremena dostupna je samo dok je uključen i modul zadataka.</p>
+<section class="card"><h2>@Text["Moduli projekta"]</h2>
+<p>@Text["Isključivanje modula skriva njegove stranice i podatke te blokira nove unose. Podaci ostaju sačuvani. Evidencija vremena dostupna je samo dok je uključen i modul zadataka."]</p>
 <form method="post" asp-page-handler="Modules" asp-route-id="@Model.Id">
 <input type="hidden" name="revision" value="@Model.Input.Revision">
 <fieldset disabled="@(!Model.CanEdit)">
-<label><input type="checkbox" name="issuesEnabled" value="true" checked="@Model.Input.IssuesEnabled"> Zadaci i komentari</label>
-<label><input type="checkbox" name="timeEnabled" value="true" checked="@Model.Input.TimeEnabled"> Evidencija vremena</label>
-@if(Model.CanEdit){<button>Spremi module</button>}
+<label><input type="checkbox" name="issuesEnabled" value="true" checked="@Model.Input.IssuesEnabled"> @Text["Zadaci i komentari"]</label>
+<label><input type="checkbox" name="timeEnabled" value="true" checked="@Model.Input.TimeEnabled"> @Text["Evidencija vremena"]</label>
+@if(Model.CanEdit){<button>@Text["Spremi module"]</button>}
 </fieldset></form></section>
 }

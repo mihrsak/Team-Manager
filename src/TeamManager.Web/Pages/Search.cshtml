@@ -1,7 +1,6 @@
 @page
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.SearchModel
-@{ ViewData["LocalizedBody"] = true; }
 <h1>@Text["Pretraga"]</h1>
 <section class="card">
     <form method="get" class="grid">

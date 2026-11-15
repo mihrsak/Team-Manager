@@ -88,7 +88,7 @@ Dok aplikacija radi, pozadinska SQL provjera bilježi početno stanje i svaku pr
 
 ## Jezik sučelja i proširenja projektne navigacije
 
-Nakon migracije `031-account-language.sql` korisnik pod **Moj profil** može odabrati hrvatski ili engleski. Odabir se sprema po računu. Prijevod pokriva glavnu i projektnu navigaciju, osobni pregled, pretragu i postavke jezika i teme. Ostali moduli nastavljaju prikazivati hrvatsko sučelje. Prevedeni tekstovi koriste ASP.NET Core lokalizaciju i resurse `UiText.en.resx`.
+Nakon migracije `031-account-language.sql` korisnik pod **Moj profil** može odabrati hrvatski ili engleski. Odabir se sprema po računu. Prijevod pokriva navigaciju, stranice implementiranih modula i poruke provjere obrazaca. Prije prijave koristi se podržani jezik iz postavki preglednika, uz hrvatski kao zadani jezik. Sadržaj projekata i vrijednosti šifrarnika prikazuju se kako su spremljeni. Prevedeni tekstovi koriste ASP.NET Core lokalizaciju i resurse `UiText.en.resx`.
 
 Projektne poveznice mogu se dodati u `appsettings.Local.json` pod `ProjectExtensions:Links`. Primjer konfiguracije:
 

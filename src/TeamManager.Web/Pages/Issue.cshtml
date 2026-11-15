@@ -1,35 +1,36 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.IssueModel
-<a href="/Issues">← Projektni zadaci</a><h1>@(Model.Id is null?"Novi zadatak":$"Zadatak #{Model.Id}")</h1><p>@Model.ProjectName</p>
+<a href="/Issues">@Text["← Projektni zadaci"]</a><h1>@(Model.Id is null?Text["Novi zadatak"].Value:Text["Zadatak #{0}", Model.Id!].Value)</h1><p>@Model.ProjectName</p>
 @if (Model.Id is not null)
 {
     <form method="post" asp-page-handler="Watch" asp-route-id="@Model.Id">
-        <button name="watch" value="@(Model.IsWatching ? "false" : "true")">@(Model.IsWatching ? "Prestani pratiti" : "Prati zadatak")</button>
+        <button name="watch" value="@(Model.IsWatching ? "false" : "true")">@(Model.IsWatching ? Text["Prestani pratiti"].Value : Text["Prati zadatak"].Value)</button>
     </form>
 }
-@if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}<div asp-validation-summary="All"></div>
+@if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}<div asp-validation-summary="All"></div>
 <section class="card"><form method="post" asp-page-handler="Save" asp-route-id="@Model.Id" asp-route-projectId="@Model.ProjectId">
-<input type="hidden" asp-for="Input.Revision"><fieldset disabled="@(!Model.CanEdit)" style="border:0;padding:0"><label>Naslov<input asp-for="Input.Title" required maxlength="200"></label><label>Opis<textarea asp-for="Input.Description" rows="5" maxlength="4000" style="width:100%"></textarea></label>
-<div class="grid"><label>Tip<select asp-for="Input.Type">@foreach(var v in Model.Types){<option>@v</option>}</select></label><label>Status<select asp-for="Input.Status">@foreach(var v in Model.Statuses){<option>@v</option>}</select></label><label>Prioritet<select asp-for="Input.Priority">@foreach(var v in Model.Priorities){<option>@v</option>}</select></label><label>Nositelj<select asp-for="Input.AssigneeId"><option value="">Nije dodijeljen</option>@foreach(var u in Model.Assignees){<option value="@u.Id">@u.Name</option>}</select></label><label>Verzija ili prekretnica<select asp-for="Input.RoadmapItemId"><option value="">Bez stavke plana</option>@foreach(var item in Model.RoadmapItems){<option value="@item.Id">@(item.Kind == "version" ? "Verzija" : "Prekretnica") · @item.Name</option>}</select></label><label>Početak<input asp-for="Input.StartDate" type="date"></label><label>Rok<input asp-for="Input.DueDate" type="date"></label></div>
-@if(Model.CanEdit){<button>Spremi zadatak</button>}</fieldset></form></section>
+<input type="hidden" asp-for="Input.Revision"><fieldset disabled="@(!Model.CanEdit)" style="border:0;padding:0"><label>@Text["Naslov"]<input asp-for="Input.Title" required maxlength="200"></label><label>@Text["Opis"]<textarea asp-for="Input.Description" rows="5" maxlength="4000" style="width:100%"></textarea></label>
+<div class="grid"><label>@Text["Tip"]<select asp-for="Input.Type">@foreach(var v in Model.Types){<option>@v</option>}</select></label><label>@Text["Status"]<select asp-for="Input.Status">@foreach(var v in Model.Statuses){<option>@v</option>}</select></label><label>@Text["Prioritet"]<select asp-for="Input.Priority">@foreach(var v in Model.Priorities){<option>@v</option>}</select></label><label>@Text["Nositelj"]<select asp-for="Input.AssigneeId"><option value="">@Text["Nije dodijeljen"]</option>@foreach(var u in Model.Assignees){<option value="@u.Id">@u.Name</option>}</select></label><label>@Text["Verzija ili prekretnica"]<select asp-for="Input.RoadmapItemId"><option value="">@Text["Bez stavke plana"]</option>@foreach(var item in Model.RoadmapItems){<option value="@item.Id">@(item.Kind == "version" ? Text["Verzija"].Value : Text["Prekretnica"].Value) · @item.Name</option>}</select></label><label>@Text["Početak"]<input asp-for="Input.StartDate" type="date"></label><label>@Text["Rok"]<input asp-for="Input.DueDate" type="date"></label></div>
+@if(Model.CanEdit){<button>@Text["Spremi zadatak"]</button>}</fieldset></form></section>
 @if (Model.Id is not null && Model.CopyProjects.Count > 0)
 {
     <section class="card">
-        <h2>Kopiranje i premještanje</h2>
+        <h2>@Text["Kopiranje i premještanje"]</h2>
         <form method="post" asp-page-handler="Transfer" asp-route-id="@Model.Id">
             <input type="hidden" name="revision" value="@Model.Input.Revision">
-            <label>Projekt za kopiju<select name="destination" required>@foreach(var project in Model.CopyProjects){<option value="@project.Id">@project.Name</option>}</select></label>
-            <p>Kopija počinje u statusu Novo, bez nositelja i povijesti.</p>
-            <button>Kopiraj zadatak</button>
+            <label>@Text["Projekt za kopiju"]<select name="destination" required>@foreach(var project in Model.CopyProjects){<option value="@project.Id">@project.Name</option>}</select></label>
+            <p>@Text["Kopija počinje u statusu Novo, bez nositelja i povijesti."]</p>
+            <button>@Text["Kopiraj zadatak"]</button>
         </form>
         @if (Model.MoveProjects.Count > 0)
         {
             <form method="post" asp-page-handler="Transfer" asp-route-id="@Model.Id">
                 <input type="hidden" name="revision" value="@Model.Input.Revision">
                 <input type="hidden" name="move" value="true">
-                <label>Projekt za premještanje<select name="destination" required>@foreach(var project in Model.MoveProjects){<option value="@project.Id">@project.Name</option>}</select></label>
-                <p>Zadatak zadržava komentare, priloge, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta.</p>
-                <button>Premjesti zadatak</button>
+                <label>@Text["Projekt za premještanje"]<select name="destination" required>@foreach(var project in Model.MoveProjects){<option value="@project.Id">@project.Name</option>}</select></label>
+                <p>@Text["Zadatak zadržava komentare, priloge, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta."]</p>
+                <button>@Text["Premjesti zadatak"]</button>
             </form>
         }
     </section>
@@ -37,7 +38,7 @@
 @if (Model.Id is not null)
 {
     <section class="card">
-        <h2>Veze zadatka</h2>
+        <h2>@Text["Veze zadatka"]</h2>
         @foreach (var link in Model.Links)
         {
             var relation = (link.Kind, link.Outgoing) switch
@@ -48,12 +49,12 @@
             };
             var label = relation switch
             {
-                "related" => "Povezan s",
-                "duplicate" => "Duplikat",
-                "blocks" => "Blokira",
-                "blockedBy" => "Blokiran zadatkom",
-                "parent" => "Podzadatak",
-                _ => "Nadređeni zadatak"
+                "related" => Text["Povezan s"].Value,
+                "duplicate" => Text["Duplikat"].Value,
+                "blocks" => Text["Blokira"].Value,
+                "blockedBy" => Text["Blokiran zadatkom"].Value,
+                "parent" => Text["Podzadatak"].Value,
+                _ => Text["Nadređeni zadatak"].Value
             };
             <div class="actions">
                 <span>@label · <a asp-page="/Issue" asp-route-id="@link.OtherId">#@link.OtherId @link.Title</a></span>
@@ -62,7 +63,7 @@
                     <form method="post" asp-page-handler="Link" asp-route-id="@Model.Id">
                         <input type="hidden" name="otherId" value="@link.OtherId">
                         <input type="hidden" name="relation" value="@relation">
-                        <button name="remove" value="true">Ukloni vezu</button>
+                        <button name="remove" value="true">@Text["Ukloni vezu"]</button>
                     </form>
                 }
             </div>
@@ -70,18 +71,18 @@
         @if (Model.CanEdit)
         {
             <form method="post" asp-page-handler="Link" asp-route-id="@Model.Id">
-                <label>Broj drugog zadatka<input name="otherId" type="number" min="1" required></label>
-                <label>Vrsta veze
+                <label>@Text["Broj drugog zadatka"]<input name="otherId" type="number" min="1" required></label>
+                <label>@Text["Vrsta veze"]
                     <select name="relation" required>
-                        <option value="related">Povezan s</option>
-                        <option value="duplicate">Duplikat</option>
-                        <option value="blocks">Blokira</option>
-                        <option value="blockedBy">Blokiran zadatkom</option>
-                        <option value="parent">Podzadatak</option>
-                        <option value="subtaskOf">Nadređeni zadatak</option>
+                        <option value="related">@Text["Povezan s"]</option>
+                        <option value="duplicate">@Text["Duplikat"]</option>
+                        <option value="blocks">@Text["Blokira"]</option>
+                        <option value="blockedBy">@Text["Blokiran zadatkom"]</option>
+                        <option value="parent">@Text["Podzadatak"]</option>
+                        <option value="subtaskOf">@Text["Nadređeni zadatak"]</option>
                     </select>
                 </label>
-                <button>Dodaj vezu</button>
+                <button>@Text["Dodaj vezu"]</button>
             </form>
         }
     </section>
@@ -89,7 +90,7 @@
 @if (Model.Id is not null)
 {
     <section class="card">
-        <h2>Moje privatne bilješke</h2>
+        <h2>@Text["Moje privatne bilješke"]</h2>
         @foreach (var note in Model.PrivateNotes)
         {
             <p style="white-space:pre-wrap">@note.Body <small>@note.CreatedAt.ToString("dd.MM.yyyy HH:mm") UTC</small></p>
@@ -97,8 +98,8 @@
         @if (Model.CanAddPrivateNote)
         {
             <form method="post" asp-page-handler="PrivateNote" asp-route-id="@Model.Id">
-                <label>Bilješka vidljiva samo tebi<textarea name="text" maxlength="4000" rows="3" required></textarea></label>
-                <button>Spremi bilješku</button>
+                <label>@Text["Bilješka vidljiva samo tebi"]<textarea name="text" maxlength="4000" rows="3" required></textarea></label>
+                <button>@Text["Spremi bilješku"]</button>
             </form>
         }
     </section>
@@ -106,7 +107,7 @@
 @if (Model.Id is not null)
 {
     <section class="card">
-        <h2>Prilozi</h2>
+        <h2>@Text["Prilozi"]</h2>
         @foreach (var attachment in Model.Attachments)
         {
             <div class="actions">
@@ -115,7 +116,7 @@
                 @if (Model.CanEdit)
                 {
                     <form method="post" asp-page-handler="RemoveAttachment" asp-route-id="@Model.Id" asp-route-attachmentId="@attachment.Id">
-                        <button aria-label="Ukloni prilog @attachment.Name">Ukloni</button>
+                        <button aria-label="@Text["Ukloni prilog {0}", attachment.Name]">@Text["Ukloni"]</button>
                     </form>
                 }
             </div>
@@ -123,14 +124,14 @@
         @if (Model.CanEdit)
         {
             <form method="post" asp-page-handler="Upload" asp-route-id="@Model.Id" enctype="multipart/form-data">
-                <label>Datoteka (do 10 MiB)<input name="attachment" type="file" required></label>
-                <button>Dodaj prilog</button>
+                <label>@Text["Datoteka (do 10 MiB)"]<input name="attachment" type="file" required></label>
+                <button>@Text["Dodaj prilog"]</button>
             </form>
         }
     </section>
 }
 @if(Model.Id is not null){<div class="grid">
-@if(Model.CanComment){<section class="card"><h2>Komentar</h2><form method="post" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>Tekst<textarea name="text" required maxlength="4000" rows="4" style="width:100%"></textarea></label><button>Dodaj komentar</button></form></section>}
-@if(Model.CanLogTime){<section class="card"><h2>Evidencija vremena</h2><form method="post" asp-page-handler="Time" asp-route-id="@Model.Id"><label>Datum<input name="date" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required></label><label>Sati<input name="hours" type="number" min="0.01" max="24" step="0.01" required></label><label>Aktivnost<input name="activity" maxlength="60" placeholder="Općenito"></label><label>Napomena<input name="note" maxlength="1000"></label><button>Spremi vrijeme</button></form></section>}
-</div>@if(Model.ShowTime){<section class="card"><h2>Utrošeno vrijeme: @Model.Time.Sum(x=>x.Hours) h</h2><table><thead><tr><th>Datum</th><th>Korisnik</th><th>Aktivnost</th><th>Sati</th><th>Napomena</th></tr></thead><tbody>@foreach(var t in Model.Time){<tr><td>@t.Date.ToString("dd.MM.yyyy")</td><td>@t.Author</td><td>@t.Activity</td><td>@t.Hours</td><td>@t.Note</td></tr>}</tbody></table></section>}
-<section class="card"><h2>Povijest i komentari</h2>@foreach(var e in Model.Events){<article style="border-bottom:1px solid #ddd;padding:12px 0"><small>@e.Author · @e.At.ToString("dd.MM.yyyy HH:mm") UTC · @e.Kind</small>@if(e.Kind is "created" or "updated"){<details><summary>Promjena zadatka</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@e.Body</pre></details>}else{<p style="white-space:pre-wrap">@e.Body</p>}</article>}</section>}
+@if(Model.CanComment){<section class="card"><h2>@Text["Komentar"]</h2><form method="post" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>@Text["Tekst"]<textarea name="text" required maxlength="4000" rows="4" style="width:100%"></textarea></label><button>@Text["Dodaj komentar"]</button></form></section>}
+@if(Model.CanLogTime){<section class="card"><h2>@Text["Evidencija vremena"]</h2><form method="post" asp-page-handler="Time" asp-route-id="@Model.Id"><label>@Text["Datum"]<input name="date" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required></label><label>@Text["Sati"]<input name="hours" type="number" min="0.01" max="24" step="0.01" required></label><label>@Text["Aktivnost"]<input name="activity" maxlength="60" placeholder="@Text["Općenito"]"></label><label>@Text["Napomena"]<input name="note" maxlength="1000"></label><button>@Text["Spremi vrijeme"]</button></form></section>}
+</div>@if(Model.ShowTime){<section class="card"><h2>@Text["Utrošeno vrijeme"]: @Model.Time.Sum(x=>x.Hours) h</h2><table><thead><tr><th>@Text["Datum"]</th><th>@Text["Korisnik"]</th><th>@Text["Aktivnost"]</th><th>@Text["Sati"]</th><th>@Text["Napomena"]</th></tr></thead><tbody>@foreach(var t in Model.Time){<tr><td>@t.Date.ToString("dd.MM.yyyy")</td><td>@t.Author</td><td>@t.Activity</td><td>@t.Hours</td><td>@t.Note</td></tr>}</tbody></table></section>}
+<section class="card"><h2>@Text["Povijest i komentari"]</h2>@foreach(var e in Model.Events){<article style="border-bottom:1px solid #ddd;padding:12px 0"><small>@e.Author · @e.At.ToString("dd.MM.yyyy HH:mm") UTC · @e.Kind</small>@if(e.Kind is "created" or "updated"){<details><summary>@Text["Promjena zadatka"]</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@e.Body</pre></details>}else{<p style="white-space:pre-wrap">@e.Body</p>}</article>}</section>}
