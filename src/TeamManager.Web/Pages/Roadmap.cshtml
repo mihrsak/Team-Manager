@@ -1,0 +1,56 @@
+@page
+@model TeamManager.Web.Pages.RoadmapModel
+@using System.Globalization
+<p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
+<h1>Karta planova</h1>
+<div asp-validation-summary="All"></div>
+
+@if (Model.Items.Count == 0)
+{
+    <p>Projekt još nema verzija ni prekretnica.</p>
+}
+
+@{
+    var entries = Model.CanEdit
+        ? Model.Items.Append(new RoadmapItem(0, "version", "", "", null, false, 0))
+        : Model.Items;
+}
+@foreach (var item in entries)
+{
+    <section class="card">
+        <h2>@(item.Id == 0 ? "Nova verzija ili prekretnica" : item.Name)</h2>
+        @if (item.Id != 0)
+        {
+            <p>@(item.Kind == "version" ? "Verzija" : "Prekretnica") · @(item.IsComplete ? "Dovršeno" : "Planirano")
+                @if (item.TargetDate is DateTime date)
+                {
+                    <span>· @date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
+                }
+            </p>
+            @if (item.Description.Length > 0)
+            {
+                <p style="white-space:pre-wrap">@item.Description</p>
+            }
+        }
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id">
+                <input type="hidden" name="itemId" value="@item.Id">
+                <input type="hidden" name="revision" value="@item.Revision">
+                <div class="grid">
+                    <label>Vrsta
+                        <select name="kind">
+                            <option value="version" selected="@(item.Kind == "version")">Verzija</option>
+                            <option value="milestone" selected="@(item.Kind == "milestone")">Prekretnica</option>
+                        </select>
+                    </label>
+                    <label>Naziv<input name="name" value="@item.Name" maxlength="100" required></label>
+                    <label>Ciljni datum<input type="date" name="targetDate" value="@item.TargetDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></label>
+                </div>
+                <label>Opis<textarea name="description" maxlength="1000" rows="3">@item.Description</textarea></label>
+                <label><input type="checkbox" name="isComplete" value="true" checked="@item.IsComplete"> Dovršeno</label>
+                <button>@(item.Id == 0 ? "Dodaj" : "Spremi izmjene")</button>
+            </form>
+        }
+    </section>
+}

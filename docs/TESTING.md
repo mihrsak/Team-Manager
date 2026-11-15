@@ -67,3 +67,7 @@ Migracija `017-saved-issue-query-layout.sql` omogućuje spremanje odabranih stup
 ## Kalendar i Gantt
 
 Nakon migracije `018-issue-start-dates.sql` zadatak može imati neobavezni datum početka. Na stranici **Kalendar rokova** otvorite **Ganttov prikaz** i odaberite mjesec i projekt. Gantt prikazuje zadatke koji se preklapaju s odabranim mjesecom. Ako je upisan samo jedan datum, zadatak se prikazuje kao jednodnevna oznaka. Ovisnosti su poveznice između zadataka koji su vidljivi u odabranom prikazu. Datumi se uređuju na detaljima zadatka.
+
+## Projektna karta planova
+
+Nakon migracije `019-project-milestones.sql` na detaljima projekta otvorite **Karta planova**. Korisnik s ovlasti upravljanja aktivnim projektom može dodavati i uređivati verzije i prekretnice, uključujući opcionalni ciljni datum i oznaku dovršenosti. Čitanje prati vidljivost projekta. Zatvoreni i arhivirani projekti zadržavaju pregled postojećih stavki.

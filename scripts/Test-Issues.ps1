@@ -308,6 +308,28 @@ try {
     Sql "UPDATE dbo.Issues SET DueDate='2026-12-03' WHERE Id=$publicIssue" | Out-Null
     $gantt=Invoke-WebRequest -UseBasicParsing "$base/Gantt?Month=2026-12" -WebSession $regular
     Assert ($gantt.Content.Contains("id=`"task-$publicIssue`"") -and -not $gantt.Content.Contains("href=`"#task-$copy`"")) 'Gantt hides dependencies on inaccessible tasks'
+    $roadmapData=@{kind='version';name='QA version';description='QA release plan';targetDate='2026-12-18'}
+    $page=Post "/Roadmap?handler=Save&projectId=$parent" $admin $roadmapData
+    Assert ($page.Content.Contains('QA version') -and $page.Content.Contains('18.12.2026')) 'Roadmap shows a saved version and target date'
+    $itemId=Sql "SELECT Id FROM dbo.ProjectMilestones WHERE ProjectId=$parent AND Name=N'QA version'"
+    $page=Post "/Roadmap?handler=Save&projectId=$parent" $admin @{kind='milestone';name='QA milestone'}
+    Assert ($page.Content.Contains('QA milestone')) 'Roadmap displays milestones alongside versions'
+    $roadmapData['itemId']=$itemId
+    $roadmapData['revision']=0
+    $roadmapData['isComplete']='true'
+    $page=Post "/Roadmap?handler=Save&projectId=$parent" $admin $roadmapData
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectMilestones WHERE Id=$itemId AND IsComplete=1 AND Revision=1") -eq 1) 'Roadmap manager can complete a version'
+    $roadmapData['name']='QA stale'
+    $page=Post "/Roadmap?handler=Save&projectId=$parent" $admin $roadmapData
+    Assert ((Sql "SELECT Name FROM dbo.ProjectMilestones WHERE Id=$itemId") -eq 'QA version') 'Roadmap rejects stale edits'
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Roadmap?projectId=$parent" -WebSession $regular | Out-Null
+        throw 'Private roadmap was visible'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private roadmap is hidden from nonmembers'
+    }
+    $page=Post "/Roadmap?handler=Save&projectId=$project" $regular @{kind='milestone';name='Unauthorized'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public roadmap still requires management permission to edit'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

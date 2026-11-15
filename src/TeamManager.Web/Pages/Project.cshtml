@@ -2,6 +2,7 @@
 @model TeamManager.Web.Pages.ProjectModel
 <p><a asp-page="/Projects">Svi projekti</a></p><h1>@(Model.Id is null?"Novi projekt":Model.Input.Name)</h1>
 @if(Model.Id is not null&&Model.Input.IssuesEnabled){<a asp-page="/Issues" asp-route-ProjectId="@Model.Id">Projektni zadaci</a>}
+@if (Model.Id is not null) { <p><a asp-page="/Roadmap" asp-route-projectId="@Model.Id">Karta planova</a></p> }
 <div class="card"><form method="post" asp-route-id="@Model.Id">
 <div asp-validation-summary="All"></div><input type="hidden" asp-for="Input.Revision">
 <fieldset disabled="@(!Model.CanEdit)">
