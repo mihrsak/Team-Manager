@@ -41,7 +41,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Backlog |
 | DOC-01 | Dokumenti, datoteke i kontrolirani prilozi | Backlog |
 | WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Backlog |
-| NEWS-01 | Novosti i komentari | Backlog |
+| NEWS-01 | Novosti i komentari | Gotovo: projektne objave i komentari s projektnim ovlastima |
 | FORUM-01 | Forumi, teme, odgovori i moderiranje | Backlog |
 | SCM-01 | Veze s Git repozitorijima, pregled commitova i razlika | Backlog |
 | NOTIFY-01 | SMTP obavijesti, podsjetnici, red slanja i ponavljanje | Backlog |

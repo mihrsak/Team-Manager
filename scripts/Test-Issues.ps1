@@ -426,6 +426,29 @@ try {
     Assert (-not $page.Content.Contains("href=`"/Issue?id=$id`"")) 'Notifications hide issues after access is revoked'
     Assert ((Sql "SELECT COUNT(DISTINCT Action) FROM dbo.AdministrationAudit WHERE ActorEmployeeNumber=N'admin' AND Action IN ('project.create','project.update','project.modules','workflow.value.create','workflow.transition.add','roadmap.create','roadmap.update')") -eq 7) 'Audit covers project settings, workflow, and roadmap administration'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Action='roadmap.update' AND Subject=N'QA stale'") -eq 0) 'Stale administrative update leaves no audit entry'
+    $page=Post "/ProjectNews?handler=Publish&projectId=$project" $admin @{title='QA public news';body='QA <b>release</b>'}
+    Assert ($page.Content.Contains('QA &lt;b&gt;release&lt;/b&gt;')) 'Manager can publish news with HTML-encoded content'
+    $newsId=Sql "SELECT Id FROM dbo.ProjectNews WHERE ProjectId=$project AND Title=N'QA public news'"
+    $page=Invoke-WebRequest -UseBasicParsing "$base/ProjectNews?projectId=$project&newsId=$newsId" -WebSession $regular
+    Assert ($page.Content.Contains('QA public news')) 'Authenticated user can read public project news'
+    $page=Post "/ProjectNews?handler=Publish&projectId=$project" $regular @{title='Unauthorized';body='Forbidden'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant publishing permission'
+    $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $regular @{body='Forbidden'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Comment submission requires the news permission'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$project;role='Developer'}
+    $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $regular @{body='QA <comment>'}
+    Assert ($page.Content.Contains('QA &lt;comment&gt;')) 'Member with news permission can comment'
+    $page=Post "/ProjectNews?handler=Publish&projectId=$parent" $admin @{title='QA private news';body='Private project news'}
+    $privateNews=Sql "SELECT Id FROM dbo.ProjectNews WHERE ProjectId=$parent AND Title=N'QA private news'"
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/ProjectNews?projectId=$project&newsId=$privateNews" -WebSession $regular | Out-Null
+        throw 'Private news was visible through the public project'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private news cannot be read using a public project ID'
+    }
+    Sql "UPDATE dbo.Projects SET State='Closed' WHERE Id=$project" | Out-Null
+    $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $admin @{body='Forbidden on closed project'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks new comments even for administrator'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

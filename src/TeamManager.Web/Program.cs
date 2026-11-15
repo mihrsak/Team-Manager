@@ -19,6 +19,7 @@ builder.Services.AddScoped<IssuePersonalStore>();
 builder.Services.AddScoped<SavedIssueQueryStore>();
 builder.Services.AddScoped<ProjectStore>();
 builder.Services.AddScoped<RoadmapStore>();
+builder.Services.AddScoped<ProjectNewsStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<Permissions>();

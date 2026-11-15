@@ -81,3 +81,7 @@ Nakon migracije `022-issue-notes-notifications.sql` privatne bilješke dostupne 
 ## Revizijski zapis administracije
 
 Puni administrator može otvoriti **Role i ovlasti → Revizijski zapis** i pregledati do 100 zadnjih zapisa. Migracije `023-administration-audit.sql` i `024-audit-details.sql` dodaju zapise o računima, ulogama, grupama, članstvima, organizaciji, projektima, tijeku rada i karti planova. Zapisi nastaju u istoj SQL transakciji s promjenom. Reset lozinke bilježi radnju i ciljni račun.
+
+## Projektne novosti
+
+Nakon migracije `025-project-news.sql` na detaljima projekta otvorite **Novosti**. Objavljivanje zahtijeva upravljanje aktivnim projektom, a komentiranje ovlast `news.comment`. Migracija je dodjeljuje postojećim standardnim ulogama Voditelj, Developer, Moderator i Član. Pregled prati vidljivost projekta. Na zatvorenim i arhiviranim projektima postojeće objave i komentari dostupni su za čitanje.
