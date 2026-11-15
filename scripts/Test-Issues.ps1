@@ -510,6 +510,58 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=RemoveAttachment&attachmentId=$attachmentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
     Assert ($page.StatusCode -eq 303) 'Removal redirects to the issue detail'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueAttachments WHERE Id=$attachmentId") -eq 0) 'Issue editor can remove attachment'
+    $library=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent" -WebSession $admin
+    $token=[regex]::Match($library.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    $documentUpload=@(
+        "--$boundary",
+        'Content-Disposition: form-data; name="__RequestVerificationToken"',
+        '',
+        [System.Net.WebUtility]::HtmlDecode($token),
+        "--$boundary",
+        'Content-Disposition: form-data; name="title"',
+        '',
+        'QA project document',
+        "--$boundary",
+        'Content-Disposition: form-data; name="description"',
+        '',
+        'QA <document description>',
+        "--$boundary",
+        'Content-Disposition: form-data; name="attachment"; filename="qa-project-document.txt"',
+        'Content-Type: text/plain',
+        '',
+        'Team Manager QA project document',
+        "--$boundary--",
+        ''
+    ) -join "`r`n"
+    $response=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent&handler=Add" -Method Post -WebSession $admin -Body $documentUpload -ContentType "multipart/form-data; boundary=$boundary" -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    Assert ($response.StatusCode -eq 303) 'Project manager can upload a document with a title and description'
+    $library=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent" -WebSession $admin
+    Assert ($library.Content.Contains('QA project document') -and $library.Content.Contains('QA &lt;document description&gt;')) 'Project library displays document metadata safely'
+    $documentId=Sql "SELECT Id FROM dbo.ProjectDocuments WHERE ProjectId=$parent AND Title=N'QA project document'"
+    $documentUrl="$base/ProjectDocuments?projectId=$parent&handler=Download&documentId=$documentId"
+    $response=Invoke-WebRequest -UseBasicParsing $documentUrl -WebSession $admin
+    Assert ([Text.Encoding]::ASCII.GetString($response.RawContentStream.ToArray()) -eq 'Team Manager QA project document' -and $response.Headers['Content-Disposition'] -match 'attachment') 'Project file download returns the original bytes as an attachment'
+    try {
+        Invoke-WebRequest -UseBasicParsing $documentUrl -WebSession $regular | Out-Null
+        throw 'Nonmember downloaded private project document'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private project document is hidden from nonmembers'
+    }
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$project&handler=Download&documentId=$documentId" -WebSession $admin | Out-Null
+        throw 'Document was served under another project'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Project document ID cannot be used under another project'
+    }
+    Sql "UPDATE dbo.Projects SET State='Closed' WHERE Id=$parent" | Out-Null
+    $response=Invoke-WebRequest -UseBasicParsing $documentUrl -WebSession $admin
+    Assert ($response.StatusCode -eq 200) 'Closed project documents remain downloadable'
+    $admin.MaximumRedirection=5
+    $response=Post "/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" $admin @{}
+    Assert ($response.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks document removal'
+    Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$parent" | Out-Null
+    $response=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    Assert ($response.StatusCode -eq 303 -and (Sql "SELECT COUNT(*) FROM dbo.ProjectDocuments WHERE Id=$documentId") -eq 0) 'Project manager can remove an active project document'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

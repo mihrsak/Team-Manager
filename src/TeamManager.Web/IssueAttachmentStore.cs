@@ -8,7 +8,6 @@ public sealed record AttachmentDownload(string Name, byte[] Content);
 
 public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStore issues)
 {
-    public const int MaxSize = 10 * 1024 * 1024;
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
     public async Task<List<AttachmentInfo>> List(int issue, int project)
@@ -49,21 +48,11 @@ public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStor
     public async Task Add(int user, int issue, IFormFile? file, CancellationToken cancellationToken)
     {
         var project = await EditableProject(user, issue);
-        if (file is null || file.Length is < 1 or > MaxSize)
-            throw new ArgumentException("Odaberi datoteku veličine od 1 bajta do 10 MiB.");
-
-        var name = Path.GetFileName(file.FileName.Replace('\\', '/')).Trim();
-        if (name.Length is < 1 or > 200 || name is "." or ".." || name.Any(char.IsControl))
-            throw new ArgumentException("Naziv datoteke nije valjan.");
-
-        await using var buffer = new MemoryStream((int)file.Length);
-        await file.CopyToAsync(buffer, cancellationToken);
-        if (buffer.Length != file.Length)
-            throw new ArgumentException("Datoteka nije učitana u cijelosti.");
+        var upload = await UploadedFile.Read(file, cancellationToken);
         await Mutate(project, issue, """
             INSERT dbo.IssueAttachments(IssueId,AuthorId,FileName,Content) VALUES(@issue,@user,@name,@content)
-            """, P("@user", user), P("@name", name),
-            new SqlParameter("@content", System.Data.SqlDbType.VarBinary, -1) { Value = buffer.ToArray() });
+            """, P("@user", user), P("@name", upload.Name),
+            new SqlParameter("@content", System.Data.SqlDbType.VarBinary, -1) { Value = upload.Content });
     }
 
     public async Task<bool> Remove(int user, int issue, int attachment)

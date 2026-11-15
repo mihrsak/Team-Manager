@@ -93,3 +93,7 @@ Nakon migracije `026-project-wiki.sql` na detaljima projekta otvorite **Wiki**. 
 ## Prilozi zadataka
 
 Nakon migracije `027-issue-attachments.sql` na detaljima zadatka možete dodavati i uklanjati priloge uz ovlast uređivanja u aktivnom projektu. Veličina pojedine datoteke je od 1 bajta do 10 MiB. Preuzimanje provjerava pristup zadatku i isporučuje datoteku kao privitak. Sadržaj je u SQL bazi. Kopija zadatka ne uključuje priloge, a premještanje ih zadržava pod ovlastima odredišnog projekta.
+
+## Dokumenti projekta
+
+Nakon migracije `028-project-documents.sql` na detaljima projekta otvorite **Dokumenti**. Korisnici s pravom upravljanja aktivnim projektom mogu dodati dokument s naslovom, opisom i datotekom do 10 MiB ili ga ukloniti. Pregled zbirke i preuzimanje prate vidljivost projekta. Datoteke se pohranjuju u SQL bazi i preuzimaju kao privitci. Zatvoreni i arhivirani projekti zadržavaju pregled i preuzimanje dokumenata.
