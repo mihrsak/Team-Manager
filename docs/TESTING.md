@@ -57,3 +57,7 @@ Kopiranje s detalja zadatka traži pregled izvornog i pravo kreiranja na odredi�
 ## Veze zadataka
 
 Nakon migracije `015-issue-links.sql` na detaljima zadatka unesite broj drugog zadatka i odaberite vrstu veze. Za dodavanje ili uklanjanje veze potrebna je ovlast uređivanja obaju zadataka. Korisnik vidi vezu ako može otvoriti oba zadatka. Povezanost i duplikati prikazuju se s obje strane. Podzadatak ima najviše jedan nadređeni zadatak. Hijerarhijske veze i ovisnosti ne dopuštaju cikluse. Veza **Blokira** prikazuje ovisnost, a prijelaze statusa i dalje određuje tijek rada.
+
+## Osobni spremljeni upiti
+
+Nakon migracije `016-saved-issue-queries.sql` primijenite filtre na popisu zadataka, unesite naziv u odjeljak **Moji spremljeni upiti** i spremite ih. Upit pamti projekt, status i tekst pretrage. Vlasnik ga može ponovno otvoriti ili ukloniti. Rezultati pri svakom otvaranju ovise o tadašnjim projektnim ovlastima.

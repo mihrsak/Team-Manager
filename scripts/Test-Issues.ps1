@@ -259,6 +259,27 @@ try {
     $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$publicIssue;relation='blocks'}
     $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$id;relation='blocks'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='blocks'") -eq 2) 'Transitive dependency cycle is rejected'
+    $page=Post "/Issues?handler=SaveQuery&ProjectId=$parent&Query=QA%2C" $admin @{name='QA saved filter'}
+    Assert ($page.Content.Contains('QA saved filter')) 'Saved issue filter is listed for its owner'
+    $savedId=Sql "SELECT Id FROM dbo.SavedIssueQueries WHERE Name=N'QA saved filter'"
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Saved&id=$savedId" -WebSession $admin
+    Assert ($page.BaseResponse.ResponseUri.Query -match "ProjectId=$parent" -and [uri]::UnescapeDataString($page.BaseResponse.ResponseUri.Query) -match 'Query=QA,') 'Saved issue filter reapplies project and search'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issues" -WebSession $regular
+    Assert (-not $page.Content.Contains('QA saved filter')) 'Saved issue filters are private'
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Saved&id=$savedId" -WebSession $regular | Out-Null
+        throw 'Other user could open saved query'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Other user cannot open saved query by ID'
+    }
+    try {
+        Post "/Issues?handler=DeleteQuery&id=$savedId" $regular @{} | Out-Null
+        throw 'Other user could delete saved query'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Other user cannot delete saved query by ID'
+    }
+    $page=Post "/Issues?handler=DeleteQuery&id=$savedId" $admin @{}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.SavedIssueQueries WHERE Id=$savedId") -eq 0) 'Owner can delete saved query'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

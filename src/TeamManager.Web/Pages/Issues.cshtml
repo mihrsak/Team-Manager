@@ -5,6 +5,22 @@
 <div class="card"><h2>Projekti</h2>@foreach(var p in Model.Projects){<p><a asp-page="/Issues" asp-route-ProjectId="@p.Id">@p.Name</a> @if(Model.CanCreate.Contains(p.Id)){<a class="button" asp-page="/Issue" asp-route-projectId="@p.Id">Novi zadatak</a>}</p>}@if(Model.Projects.Count==0){<p>Nema dostupnih projekata. Administrator može kreirati projekt i dodijeliti članstvo.</p>}</div>
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
 <div asp-validation-summary="All"></div>
+<section class="card">
+    <h2>Moji spremljeni upiti</h2>
+    @foreach (var saved in Model.SavedQueries)
+    {
+        <div class="actions">
+            <a asp-page-handler="Saved" asp-route-id="@saved.Id">@saved.Name</a>
+            <form method="post" asp-page-handler="DeleteQuery" asp-route-id="@saved.Id" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query">
+                <button aria-label="Ukloni upit @saved.Name">Ukloni</button>
+            </form>
+        </div>
+    }
+    <form method="post" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query">
+        <label>Naziv upita<input name="name" maxlength="80" required></label>
+        <button>Spremi primijenjene filtre</button>
+    </form>
+</section>
 @if (Model.Items.Any(i => Model.CanEdit.Contains(i.ProjectId)))
 {
     <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" class="card">

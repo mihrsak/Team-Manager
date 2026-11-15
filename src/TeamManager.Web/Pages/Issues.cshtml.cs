@@ -3,8 +3,9 @@ using System.Text;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Data.SqlClient;
 namespace TeamManager.Web.Pages;
-public class IssuesModel(IssueStore store,WorkflowStore workflow):PageModel
+public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQueryStore savedQueries):PageModel
 {
     [BindProperty(SupportsGet=true)]public int? ProjectId{get;set;}
     [BindProperty(SupportsGet=true)]public string? Status{get;set;}
@@ -15,7 +16,50 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow):PageModel
     public List<IssueRow> Items{get;set;}=[];
     public HashSet<int> CanEdit {get;set;}=[];
     public List<string> Priorities {get;set;}=[];
-    public async Task OnGetAsync(){Priorities=await workflow.Values("priority");Statuses=await workflow.Values("status");var user=int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);Projects=await store.Projects(user);foreach(var p in Projects)if(await store.Can(user,p.Id,"issues.create"))CanCreate.Add(p.Id);foreach(var p in Projects)if(await store.Can(user,p.Id,"issues.edit"))CanEdit.Add(p.Id);Items=await store.List(user,ProjectId,Status,Query);}
+    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    public List<SavedIssueQuery> SavedQueries { get; private set; } = [];
+    public async Task OnGetAsync(){SavedQueries=await savedQueries.List(UserId);Priorities=await workflow.Values("priority");Statuses=await workflow.Values("status");var user=int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);Projects=await store.Projects(user);foreach(var p in Projects)if(await store.Can(user,p.Id,"issues.create"))CanCreate.Add(p.Id);foreach(var p in Projects)if(await store.Can(user,p.Id,"issues.edit"))CanEdit.Add(p.Id);Items=await store.List(user,ProjectId,Status,Query);}
+
+    public async Task<IActionResult> OnGetSavedAsync(int id)
+    {
+        var saved = (await savedQueries.List(UserId)).Find(query => query.Id == id);
+        if (saved is null) return NotFound();
+        return RedirectToPage(new { saved.ProjectId, saved.Status, Query = saved.SearchText });
+    }
+
+    public async Task<IActionResult> OnPostSaveQueryAsync(string? name)
+    {
+        name = name?.Trim();
+        if (!ModelState.IsValid || name is null or { Length: 0 or > 80 } ||
+            Query is { Length: > 200 } || Status is { Length: > 30 })
+            return await InvalidQuery("Provjeri naziv i filtre upita.");
+        if (ProjectId is int project && !await store.Can(UserId, project, "issues.view"))
+            return NotFound();
+        if (Status is not null && !(await workflow.Values("status")).Contains(Status))
+            return await InvalidQuery("Odaberi valjan status.");
+
+        try { await savedQueries.Create(UserId, name, ProjectId, Status, Query); }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627 or 547)
+        {
+            return await InvalidQuery("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan.");
+        }
+        TempData["Notice"] = "Upit je spremljen.";
+        return RedirectToPage(new { ProjectId, Status, Query });
+    }
+
+    public async Task<IActionResult> OnPostDeleteQueryAsync(int id)
+    {
+        if (!await savedQueries.Delete(UserId, id)) return NotFound();
+        TempData["Notice"] = "Spremljeni upit je uklonjen.";
+        return RedirectToPage(new { ProjectId, Status, Query });
+    }
+
+    private async Task<IActionResult> InvalidQuery(string message)
+    {
+        ModelState.AddModelError("", message);
+        await OnGetAsync();
+        return Page();
+    }
 
     public async Task<IActionResult> OnPostBulkAsync(string[] selection, string? bulkStatus, string? bulkPriority)
     {

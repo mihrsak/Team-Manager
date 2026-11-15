@@ -29,5 +29,6 @@ Invoke-SqlFile '012-user-groups.sql' 'TeamManager'
 Invoke-SqlFile '013-project-role-inheritance.sql' 'TeamManager'
 Invoke-SqlFile '014-time-entry-activity.sql' 'TeamManager'
 Invoke-SqlFile '015-issue-links.sql' 'TeamManager'
+Invoke-SqlFile '016-saved-issue-queries.sql' 'TeamManager'
 if ($Demo) { Invoke-SqlFile '002-demo.sql' 'TeamManager' }
 Write-Host 'TeamManager database is ready.'
