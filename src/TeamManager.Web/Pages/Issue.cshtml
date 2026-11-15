@@ -28,7 +28,7 @@
                 <input type="hidden" name="revision" value="@Model.Input.Revision">
                 <input type="hidden" name="move" value="true">
                 <label>Projekt za premještanje<select name="destination" required>@foreach(var project in Model.MoveProjects){<option value="@project.Id">@project.Name</option>}</select></label>
-                <p>Zadatak zadržava komentare, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta.</p>
+                <p>Zadatak zadržava komentare, priloge, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta.</p>
                 <button>Premjesti zadatak</button>
             </form>
         }
@@ -99,6 +99,32 @@
             <form method="post" asp-page-handler="PrivateNote" asp-route-id="@Model.Id">
                 <label>Bilješka vidljiva samo tebi<textarea name="text" maxlength="4000" rows="3" required></textarea></label>
                 <button>Spremi bilješku</button>
+            </form>
+        }
+    </section>
+}
+@if (Model.Id is not null)
+{
+    <section class="card">
+        <h2>Prilozi</h2>
+        @foreach (var attachment in Model.Attachments)
+        {
+            <div class="actions">
+                <a asp-page-handler="Attachment" asp-route-id="@Model.Id" asp-route-attachmentId="@attachment.Id">@attachment.Name</a>
+                <span>@attachment.Size B</span>
+                @if (Model.CanEdit)
+                {
+                    <form method="post" asp-page-handler="RemoveAttachment" asp-route-id="@Model.Id" asp-route-attachmentId="@attachment.Id">
+                        <button aria-label="Ukloni prilog @attachment.Name">Ukloni</button>
+                    </form>
+                }
+            </div>
+        }
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-page-handler="Upload" asp-route-id="@Model.Id" enctype="multipart/form-data">
+                <label>Datoteka (do 10 MiB)<input name="attachment" type="file" required></label>
+                <button>Dodaj prilog</button>
             </form>
         }
     </section>

@@ -89,3 +89,7 @@ Nakon migracije `025-project-news.sql` na detaljima projekta otvorite **Novosti*
 ## Projektni wiki
 
 Nakon migracije `026-project-wiki.sql` na detaljima projekta otvorite **Wiki**. Čitanje stranica i povijesti prati vidljivost projekta. Za uređivanje aktivnog projekta potrebna je ovlast `wiki.edit`, koju migracija dodjeljuje standardnim ulogama Voditelj i Developer. Svako spremanje stvara novu verziju naslova i teksta. Na stranici možete otvoriti stariju verziju ili odabrati dvije verzije za usporedbu jednu uz drugu. Wiki prikazuje običan tekst.
+
+## Prilozi zadataka
+
+Nakon migracije `027-issue-attachments.sql` na detaljima zadatka možete dodavati i uklanjati priloge uz ovlast uređivanja u aktivnom projektu. Veličina pojedine datoteke je od 1 bajta do 10 MiB. Preuzimanje provjerava pristup zadatku i isporučuje datoteku kao privitak. Sadržaj je u SQL bazi. Kopija zadatka ne uključuje priloge, a premještanje ih zadržava pod ovlastima odredišnog projekta.

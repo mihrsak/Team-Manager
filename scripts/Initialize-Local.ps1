@@ -40,5 +40,6 @@ Invoke-SqlFile '023-administration-audit.sql' 'TeamManager'
 Invoke-SqlFile '024-audit-details.sql' 'TeamManager'
 Invoke-SqlFile '025-project-news.sql' 'TeamManager'
 Invoke-SqlFile '026-project-wiki.sql' 'TeamManager'
+Invoke-SqlFile '027-issue-attachments.sql' 'TeamManager'
 if ($Demo) { Invoke-SqlFile '002-demo.sql' 'TeamManager' }
 Write-Host 'TeamManager database is ready.'

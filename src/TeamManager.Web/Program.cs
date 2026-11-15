@@ -16,6 +16,7 @@ builder.Services.AddScoped<TeamStore>();
 builder.Services.AddScoped<IssueStore>();
 builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<IssuePersonalStore>();
+builder.Services.AddScoped<IssueAttachmentStore>();
 builder.Services.AddScoped<SavedIssueQueryStore>();
 builder.Services.AddScoped<ProjectStore>();
 builder.Services.AddScoped<RoadmapStore>();

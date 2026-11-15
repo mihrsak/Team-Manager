@@ -471,6 +471,45 @@ try {
     Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$project; DELETE dbo.ProjectMembers WHERE ProjectId=$project AND UserId=$uid" | Out-Null
     $page=Post "/Wiki?handler=Save&projectId=$project" $regular @{title='Forbidden';body='Missing wiki permission'}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant wiki editing'
+    $detail=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
+    $token=[regex]::Match($detail.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
+    $boundary='TeamManagerQABoundary'
+    $upload=@(
+        "--$boundary",
+        'Content-Disposition: form-data; name="__RequestVerificationToken"',
+        '',
+        [System.Net.WebUtility]::HtmlDecode($token),
+        "--$boundary",
+        'Content-Disposition: form-data; name="attachment"; filename="qa-attachment.txt"',
+        'Content-Type: text/plain',
+        '',
+        'Team Manager QA attachment',
+        "--$boundary--",
+        ''
+    ) -join "`r`n"
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Upload" -Method Post -WebSession $admin -Body $upload -ContentType "multipart/form-data; boundary=$boundary" -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    Assert ($page.StatusCode -eq 303 -and $page.Headers.Location -match "/Issue\?id=$id$") 'Upload redirects to the issue detail'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
+    Assert ($page.Content.Contains('qa-attachment.txt')) 'Issue editor can upload an attachment'
+    $attachmentId=Sql "SELECT Id FROM dbo.IssueAttachments WHERE IssueId=$id"
+    $download=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Attachment&attachmentId=$attachmentId" -WebSession $admin
+    Assert ([Text.Encoding]::ASCII.GetString($download.RawContentStream.ToArray()) -eq 'Team Manager QA attachment') 'Attachment download preserves bytes'
+    Assert ($download.Headers['Content-Disposition'] -match 'attachment' -and $download.Headers['Content-Type'] -match 'application/octet-stream' -and $download.Headers['X-Content-Type-Options'] -eq 'nosniff') 'Download uses attachment disposition and disables MIME sniffing'
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Attachment&attachmentId=$attachmentId" -WebSession $regular | Out-Null
+        throw 'Nonmember downloaded private attachment'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private attachment is hidden from nonmembers'
+    }
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue&handler=Attachment&attachmentId=$attachmentId" -WebSession $admin | Out-Null
+        throw 'Attachment was served under another issue'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Attachment ID must belong to the requested issue'
+    }
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=RemoveAttachment&attachmentId=$attachmentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    Assert ($page.StatusCode -eq 303) 'Removal redirects to the issue detail'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueAttachments WHERE Id=$attachmentId") -eq 0) 'Issue editor can remove attachment'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

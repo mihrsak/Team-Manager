@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
-public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal):PageModel
+public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
     public int? Id{get;set;}
@@ -15,6 +15,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<AttachmentInfo> Attachments {get;private set;}=[];
     public List<PrivateIssueNote> PrivateNotes {get;private set;}=[];
     public bool CanAddPrivateNote {get;private set;}
     public bool IsWatching {get;private set;}
@@ -35,6 +36,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
+            Attachments = await attachments.List(id.Value, ProjectId);
             PrivateNotes = await personal.Notes(UserId, id.Value, ProjectId);
             CanAddPrivateNote = await personal.CanAddNote(ProjectId);
             IsWatching = await store.IsWatching(UserId, id.Value);
@@ -149,6 +151,45 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             return Page();
         }
         return RedirectToPage(new { id });
+    }
+
+    public async Task<IActionResult> OnGetAttachmentAsync(int id, int attachmentId)
+    {
+        if (id <= 0 || attachmentId <= 0) return NotFound();
+        var attachment = await attachments.Download(UserId, id, attachmentId);
+        if (attachment is null) return NotFound();
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        return File(attachment.Content, "application/octet-stream", attachment.Name);
+    }
+
+    public async Task<IActionResult> OnPostUploadAsync(int id, IFormFile? attachment)
+    {
+        if (id <= 0) return BadRequest();
+        try { await attachments.Add(UserId, id, attachment, HttpContext.RequestAborted); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (ArgumentException ex)
+        {
+            ModelState.Clear();
+            var result = await OnGetAsync(id, 0);
+            if (result is not PageResult) return result;
+            ModelState.AddModelError("", ex.Message);
+            return Page();
+        }
+        Response.Headers.Location = Url.Page("/Issue", new { id });
+        return StatusCode(StatusCodes.Status303SeeOther);
+    }
+
+    public async Task<IActionResult> OnPostRemoveAttachmentAsync(int id, int attachmentId)
+    {
+        if (id <= 0 || attachmentId <= 0) return NotFound();
+        try
+        {
+            if (!await attachments.Remove(UserId, id, attachmentId)) return NotFound();
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        Response.Headers.Location = Url.Page("/Issue", new { id });
+        return StatusCode(StatusCodes.Status303SeeOther);
     }
 
     public IActionResult OnPost()=>BadRequest();
