@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="Moji zadaci" xml:space="preserve"><value>My tasks</value></data>
+  <data name="Pretraga" xml:space="preserve"><value>Search</value></data>
+  <data name="Projekti" xml:space="preserve"><value>Projects</value></data>
+  <data name="Zadaci" xml:space="preserve"><value>Issues</value></data>
+  <data name="Kalendar" xml:space="preserve"><value>Calendar</value></data>
+  <data name="Aktivnosti" xml:space="preserve"><value>Activity</value></data>
+  <data name="Obavijesti" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Izvještaj o vremenu" xml:space="preserve"><value>Time report</value></data>
+  <data name="Korisnici" xml:space="preserve"><value>Users</value></data>
+  <data name="Moj profil" xml:space="preserve"><value>My profile</value></data>
+  <data name="Odjava" xml:space="preserve"><value>Sign out</value></data>
+  <data name="Role i ovlasti" xml:space="preserve"><value>Roles and permissions</value></data>
+  <data name="Tijek rada" xml:space="preserve"><value>Workflow</value></data>
+  <data name="Rok je prošao" xml:space="preserve"><value>Overdue</value></data>
+  <data name="Predstojeći rokovi" xml:space="preserve"><value>Upcoming deadlines</value></data>
+  <data name="Bez roka" xml:space="preserve"><value>No deadline</value></data>
+  <data name="Pratim" xml:space="preserve"><value>Watching</value></data>
+  <data name="Nema zadataka u ovoj skupini." xml:space="preserve"><value>No issues in this group.</value></data>
+  <data name="Zadatak" xml:space="preserve"><value>Issue</value></data>
+  <data name="Projekt" xml:space="preserve"><value>Project</value></data>
+  <data name="Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Prioritet" xml:space="preserve"><value>Priority</value></data>
+  <data name="Rok" xml:space="preserve"><value>Due date</value></data>
+  <data name="Tema prikaza" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Tema" xml:space="preserve"><value>Theme</value></data>
+  <data name="Svijetla" xml:space="preserve"><value>Light</value></data>
+  <data name="Tamna" xml:space="preserve"><value>Dark</value></data>
+  <data name="Prema postavci uređaja" xml:space="preserve"><value>Use device setting</value></data>
+  <data name="Spremi temu" xml:space="preserve"><value>Save theme</value></data>
+  <data name="Jezik sučelja" xml:space="preserve"><value>Display language</value></data>
+  <data name="Spremi jezik" xml:space="preserve"><value>Save language</value></data>
+  <data name="Karta planova" xml:space="preserve"><value>Roadmap</value></data>
+  <data name="Novosti" xml:space="preserve"><value>News</value></data>
+  <data name="Wiki" xml:space="preserve"><value>Wiki</value></data>
+  <data name="Dokumenti" xml:space="preserve"><value>Documents</value></data>
+  <data name="Forum" xml:space="preserve"><value>Forum</value></data>
+  <data name="Pojam" xml:space="preserve"><value>Search term</value></data>
+  <data name="Modul" xml:space="preserve"><value>Module</value></data>
+  <data name="Svi moduli" xml:space="preserve"><value>All modules</value></data>
+  <data name="Verzije i prekretnice" xml:space="preserve"><value>Versions and milestones</value></data>
+  <data name="Pretraži" xml:space="preserve"><value>Search</value></data>
+  <data name="Nema rezultata za odabrani pojam." xml:space="preserve"><value>No matching results.</value></data>
+  <data name="Prikazano je najviše 20 rezultata po modulu." xml:space="preserve"><value>Showing up to 20 results per module.</value></data>
+</root>

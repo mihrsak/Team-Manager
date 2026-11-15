@@ -85,3 +85,26 @@ Lokalna provjera na odvojenim SQL Express bazama obuhvatila je backup s kontroln
 Vanjski nadzor neka provjerava `/health/live` i `/health/ready` putem HTTPS-a. Odgovor 503 na readiness znači da aplikacija odgovara, ali SQL provjera nije prošla. Ako ni liveness ne odgovara, provjerite proces, IIS i mrežnu vezu.
 
 Dok aplikacija radi, pozadinska SQL provjera bilježi početno stanje i svaku promjenu stanja pod kategorijom `TeamManager.Web.DatabaseHealthPublisher`. Oporavak ima razinu `Information`, a neuspjeh `Warning`. Upozorenja i oporavak prikupljajte preko konfiguriranog ASP.NET Core pružatelja logova. Ako na Windowsu koristite Event Log, za ovu kategoriju postavite `Logging__EventLog__LogLevel__TeamManager.Web.DatabaseHealthPublisher` na `Information` kako biste zabilježili i oporavak. Vanjski nadzor ostaje mjerodavan kad je proces ugašen ili se ne može pokrenuti.
+
+## Jezik sučelja i proširenja projektne navigacije
+
+Nakon migracije `031-account-language.sql` korisnik pod **Moj profil** može odabrati hrvatski ili engleski. Odabir se sprema po računu. Prijevod pokriva glavnu i projektnu navigaciju, osobni pregled, pretragu i postavke jezika i teme. Ostali moduli nastavljaju prikazivati hrvatsko sučelje. Prevedeni tekstovi koriste ASP.NET Core lokalizaciju i resurse `UiText.en.resx`.
+
+Projektne poveznice mogu se dodati u `appsettings.Local.json` pod `ProjectExtensions:Links`. Primjer konfiguracije:
+
+```json
+{
+  "ProjectExtensions": {
+    "Links": [
+      {
+        "Label": "Priručnik",
+        "EnglishLabel": "Handbook",
+        "Url": "https://example.com/handbook",
+        "ProjectId": "12"
+      }
+    ]
+  }
+}
+```
+
+Izostavite `ProjectId` za prikaz poveznice u svim dostupnim projektima. Konfigurirane poveznice prihvaćaju apsolutne HTTPS adrese. Proširenja iz izvornog koda registriraju se u DI spremniku kao implementacije `IProjectNavigationExtension`. Za dublje integracije predviđene su zasebne stavke backloga.

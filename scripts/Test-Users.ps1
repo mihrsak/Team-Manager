@@ -139,6 +139,22 @@ try {
     } catch [System.Net.WebException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 400) 'Invalid theme is rejected'
     }
+    $page=Post-Page '/Profile?handler=Language' $themed @{language='en'}
+    Assert ($page.Content.Contains('<html lang="en"') -and $page.Content.Contains('Save language')) 'User can choose English UI'
+    $page=Get-Page '/Dashboard' $themed
+    Assert ($page.Content.Contains('<h1>My tasks</h1>') -and $page.Content.Contains('Upcoming deadlines')) 'Dashboard renders localized interface text'
+    $page=Get-Page '/Dashboard' $admin
+    Assert ($page.Content.Contains('<html lang="hr"') -and $page.Content.Contains('<h1>Moji zadaci</h1>')) 'User language does not change other accounts'
+    $newLanguageSession=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $page=Post-Page '/Login' $newLanguageSession @{EmployeeNumber=$employee;Password="Reset$testPassword"}
+    Assert ($page.Content.Contains('<html lang="en"')) 'Language preference survives a new session'
+    if ($env:ProjectExtensions__Links__0__EnglishLabel) {
+        $page=Get-Page "/Project?id=$projectId" $newLanguageSession
+        Assert ($page.Content.Contains($env:ProjectExtensions__Links__0__EnglishLabel)) 'Configured project extension renders localized navigation'
+        Assert (-not $page.Content.Contains('QA rejected extension')) 'Unsafe URL scheme is omitted from navigation'
+    }
+    $page=Post-Page '/Profile?handler=Language' $newLanguageSession @{language='hr'}
+    Assert ($page.Content.Contains('<html lang="hr"')) 'User can restore Croatian UI'
 } finally {
     $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

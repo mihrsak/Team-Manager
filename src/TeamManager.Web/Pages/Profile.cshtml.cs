@@ -146,6 +146,13 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         catch(SqlException ex) when(ex.Number==51001){return Invalid("Mora ostati barem jedan puni administrator.");}
         return Success(id,"Globalne role su spremljene.");
     }
+    public async Task<IActionResult> OnPostLanguageAsync(string? language)
+    {
+        if (language is not ("hr" or "en")) return BadRequest();
+        await store.SetLanguage(UserId, language);
+        return RedirectToPage(new { id = UserId });
+    }
+
     public async Task<IActionResult> OnPostThemeAsync(string? theme)
     {
         if (theme is not ("light" or "dark" or "system")) return BadRequest();

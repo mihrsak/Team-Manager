@@ -7,6 +7,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddSingleton<IProjectNavigationExtension, ConfiguredProjectLinks>();
 builder.Services.AddRazorPages(options => {
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
@@ -43,8 +45,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         if(!int.TryParse(id,out var userId)){context.RejectPrincipal();return;}
         var version = context.Principal?.FindFirst("session_version")?.Value;
         var store = context.HttpContext.RequestServices.GetRequiredService<UserStore>();
-        var theme = int.TryParse(version, out var sessionVersion) ? await store.SessionTheme(userId, sessionVersion) : null;
-        if (theme is null)
+        var settings = int.TryParse(version, out var sessionVersion) ? await store.SessionSettings(userId, sessionVersion) : null;
+        if (settings is null)
         {
             context.RejectPrincipal();
             return;
@@ -52,7 +54,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         var rights = await context.HttpContext.RequestServices.GetRequiredService<Permissions>().Effective(userId);
         var identity = (System.Security.Claims.ClaimsIdentity)context.Principal!.Identity!;
         foreach (var claim in identity.FindAll(UserStore.ThemeClaim).ToList()) identity.RemoveClaim(claim);
-        identity.AddClaim(new(UserStore.ThemeClaim, theme));
+        identity.AddClaim(new(UserStore.ThemeClaim, settings.Theme));
+        foreach (var claim in identity.FindAll(UserStore.LanguageClaim).ToList()) identity.RemoveClaim(claim);
+        identity.AddClaim(new(UserStore.LanguageClaim, settings.Language));
         foreach(var claim in identity.FindAll(System.Security.Claims.ClaimTypes.Role).ToList())identity.RemoveClaim(claim);
         foreach(var right in rights.Contains("*") ? Permissions.Catalog.Keys.ToList() : rights)
             identity.AddClaim(new(System.Security.Claims.ClaimTypes.Role,right));
@@ -95,6 +99,17 @@ if (!app.Environment.IsDevelopment())
 }
 app.UseHttpsRedirection();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    var previous = System.Globalization.CultureInfo.CurrentUICulture;
+    var language = context.User.FindFirst(UserStore.LanguageClaim)?.Value == "en" ? "en" : "hr";
+    try
+    {
+        System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(language);
+        await next(context);
+    }
+    finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
+});
 app.UseAuthorization();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready").AllowAnonymous();

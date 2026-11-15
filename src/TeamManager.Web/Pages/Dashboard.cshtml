@@ -1,14 +1,16 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.DashboardModel
-<h1>Moji zadaci</h1>
+@{ ViewData["LocalizedBody"] = true; }
+<h1>@Text["Moji zadaci"]</h1>
 
 @{
     var groups = new[]
     {
-        (Name: "Rok je prošao", Issues: Model.Overdue),
-        (Name: "Predstojeći rokovi", Issues: Model.WithDeadline),
-        (Name: "Bez roka", Issues: Model.WithoutDeadline),
-        (Name: "Pratim", Issues: Model.Watched)
+        (Name: Text["Rok je prošao"], Issues: Model.Overdue),
+        (Name: Text["Predstojeći rokovi"], Issues: Model.WithDeadline),
+        (Name: Text["Bez roka"], Issues: Model.WithoutDeadline),
+        (Name: Text["Pratim"], Issues: Model.Watched)
     };
 }
 @foreach (var group in groups)
@@ -17,12 +19,12 @@
         <h2>@group.Name (@group.Issues.Count)</h2>
         @if (group.Issues.Count == 0)
         {
-            <p>Nema zadataka u ovoj skupini.</p>
+            <p>@Text["Nema zadataka u ovoj skupini."]</p>
         }
         else
         {
             <table>
-                <thead><tr><th>Zadatak</th><th>Projekt</th><th>Status</th><th>Prioritet</th><th>Rok</th></tr></thead>
+                <thead><tr><th>@Text["Zadatak"]</th><th>@Text["Projekt"]</th><th>@Text["Status"]</th><th>@Text["Prioritet"]</th><th>@Text["Rok"]</th></tr></thead>
                 <tbody>
                     @foreach (var issue in group.Issues)
                     {

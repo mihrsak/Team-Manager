@@ -1,22 +1,36 @@
 @page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.ProfileModel
 <p class="muted">KORISNICI / PROFIL</p><h1>@Model.Person!.DisplayName</h1><p>Broj radnika: <strong>@Model.Person.EmployeeNumber</strong></p>
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
 <div asp-validation-summary="All"></div>
 @if (Model.IsSelf)
 {
-    var theme = User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light";
-    <section class="card">
-        <h2>Tema prikaza</h2>
-        <form method="post" asp-page-handler="Theme">
-            <label>Tema
-                <select name="theme">
-                    <option value="light" selected="@(theme == "light")">Svijetla</option>
-                    <option value="dark" selected="@(theme == "dark")">Tamna</option>
-                    <option value="system" selected="@(theme == "system")">Prema postavci uređaja</option>
+    var language = User.FindFirst(UserStore.LanguageClaim)?.Value ?? "hr";
+    <section class="card" lang="@language">
+        <h2>@Text["Jezik sučelja"]</h2>
+        <form method="post" asp-page-handler="Language">
+            <label>@Text["Jezik sučelja"]
+                <select name="language">
+                    <option value="hr" selected="@(language == "hr")">Hrvatski</option>
+                    <option value="en" selected="@(language == "en")">English</option>
                 </select>
             </label>
-            <button>Spremi temu</button>
+            <button>@Text["Spremi jezik"]</button>
+        </form>
+    </section>
+    var theme = User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light";
+    <section class="card" lang="@language">
+        <h2>@Text["Tema prikaza"]</h2>
+        <form method="post" asp-page-handler="Theme">
+            <label>@Text["Tema"]
+                <select name="theme">
+                    <option value="light" selected="@(theme == "light")">@Text["Svijetla"]</option>
+                    <option value="dark" selected="@(theme == "dark")">@Text["Tamna"]</option>
+                    <option value="system" selected="@(theme == "system")">@Text["Prema postavci uređaja"]</option>
+                </select>
+            </label>
+            <button>@Text["Spremi temu"]</button>
         </form>
     </section>
 }

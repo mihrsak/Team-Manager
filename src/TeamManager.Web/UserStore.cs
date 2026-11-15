@@ -5,6 +5,7 @@ namespace TeamManager.Web;
 
 public record AppUser(int Id, string EmployeeNumber, string DisplayName, string JobTitle, int? OrganizationUnitId, string PasswordHash, bool IsAdministrator, bool IsActive = true, int SessionVersion = 0);
 public record UserMatch(int Id, string Name, string EmployeeNumber, string JobTitle);
+public record SessionPreferences(string Theme, string Language);
 public record DirectoryEntry(AppUser User, string Unit);
 public record Membership(int ScopeId, string Scope, string Role, bool IsAdditional);
 
@@ -141,6 +142,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         return await command.ExecuteNonQueryAsync() == 1;
     }
 
+    public const string LanguageClaim = "ui_language";
     public const string ThemeClaim = "display_theme";
 
     public async Task SetTheme(int userId, string theme)
@@ -149,14 +151,21 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
             P("@theme", theme), P("@id", userId));
     }
 
-    public async Task<string?> SessionTheme(int userId, int version)
+    public async Task SetLanguage(int userId, string language)
+    {
+        await Execute("UPDATE dbo.AppUsers SET UiLanguage=@language WHERE Id=@id AND IsActive=1",
+            P("@language", language), P("@id", userId));
+    }
+
+    public async Task<SessionPreferences?> SessionSettings(int userId, int version)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
-            "SELECT DisplayTheme FROM dbo.AppUsers WHERE Id=@id AND IsActive=1 AND SessionVersion=@version", connection);
+            "SELECT DisplayTheme,UiLanguage FROM dbo.AppUsers WHERE Id=@id AND IsActive=1 AND SessionVersion=@version", connection);
         command.Parameters.Add(P("@id", userId));
         command.Parameters.Add(P("@version", version));
-        return await command.ExecuteScalarAsync() as string;
+        await using var reader = await command.ExecuteReaderAsync();
+        return await reader.ReadAsync() ? new(reader.GetString(0), reader.GetString(1)) : null;
     }
 }
