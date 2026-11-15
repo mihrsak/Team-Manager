@@ -38,7 +38,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Gotovo: mjesečni kalendar rokova i Gantt s datumima i ovisnostima između prikazanih zadataka |
 | TIME-01 | Unos sati po zadatku i pregled zapisa | Gotovo |
 | TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Gotovo |
-| FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Djelomično: projektno definirana tekstualna polja zadataka; preostaju polja za korisnike, projekte i vrijeme |
+| FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Gotovo: tekstualna polja za zadatke, korisnike, projekte i unose vremena; HR/EN sučelje |
 | DOC-01 | Dokumenti, datoteke i kontrolirani prilozi | Gotovo: projektna zbirka dokumenata i datoteka te kontrolirani prilozi na zadacima |
 | WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Gotovo: tekstualne stranice, povijest i usporedba dviju verzija uz projektne ovlasti |
 | NEWS-01 | Novosti i komentari | Gotovo: projektne objave i komentari s projektnim ovlastima |

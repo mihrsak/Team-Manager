@@ -610,6 +610,45 @@ try {
     $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
     $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$revision;destination=$parent;move='true'}
     Assert ($page.Content.Contains('QA &lt;reference&gt;')) 'Returning an issue to the original project restores its field value'
+    foreach ($scope in @('user','project','time')) {
+        $page=Post "/CustomFields?handler=Create&scope=$scope" $admin @{name="QA $scope field"}
+        Assert ($page.Content.Contains("QA $scope field") -and $page.Content.Contains('Custom fields')) "$scope field definition is configurable in English"
+    }
+    $userField=Sql "SELECT Id FROM dbo.CustomFields WHERE Scope='user' AND Name=N'QA user field'"
+    $projectField=Sql "SELECT Id FROM dbo.CustomFields WHERE Scope='project' AND Name=N'QA project field'"
+    $timeField=Sql "SELECT Id FROM dbo.CustomFields WHERE Scope='time' AND Name=N'QA time field'"
+    $page=Post "/CustomFields?handler=Value&scope=user&entityId=$uid" $regular @{fieldId=$userField;revision=0;fieldValue='QA personal field'}
+    Assert ($page.Content.Contains('QA personal field') -and $page.Content -match '<html lang="hr"') 'User can set a profile field in Croatian'
+    $page=Post "/CustomFields?handler=Value&scope=user&entityId=$uid" $regular @{fieldId=$userField;revision=0;fieldValue='QA stale field'}
+    Assert ((Sql "SELECT Value FROM dbo.UserFieldValues WHERE EntityId=$uid AND FieldId=$userField") -eq 'QA personal field') 'Stale profile field revision is rejected'
+    $administratorId=Sql "SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=N'admin'"
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=user&entityId=$administratorId" -WebSession $regular | Out-Null
+        throw 'Other profile fields were visible'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Profile field values are private to the owner and user managers'
+    }
+    $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $admin @{fieldId=$projectField;revision=0;fieldValue='QA project value'}
+    Assert ($page.Content.Contains('QA project value') -and $page.Content.Contains('<h1>Project fields</h1>')) 'Project manager can set a project field in English'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=project&entityId=$project" -WebSession $regular
+    Assert ($page.Content.Contains('QA project value') -and -not $page.Content.Contains('name="fieldValue"')) 'Ordinary project members can read project fields'
+    $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $regular @{fieldId=$projectField;revision=1;fieldValue='QA unauthorized'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project field edits require project management permission'
+    $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $admin @{fieldId=$userField;revision=0;fieldValue='QA wrong scope'}
+    Assert ($page.Content.Contains('Select a field of this type.')) 'Field from one scope cannot be saved in another'
+    $timeId=Sql "SELECT TOP (1) Id FROM dbo.TimeEntries WHERE IssueId=$id ORDER BY Id"
+    $page=Post "/CustomFields?handler=Value&scope=time&entityId=$timeId" $admin @{fieldId=$timeField;revision=0;fieldValue='QA time value'}
+    Assert ($page.Content.Contains('<h1>Time entry fields</h1>') -and $page.Content.Contains('QA time value')) 'Time entry author can set a custom field'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
+    $page=Post "/CustomFields?handler=Value&scope=time&entityId=$timeId" $regular @{fieldId=$timeField;revision=1;fieldValue='QA wrong author'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project member cannot edit a time entry field owned by another user'
+    Sql "UPDATE dbo.Projects SET TimeEnabled=0 WHERE Id=$parent" | Out-Null
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=time&entityId=$timeId" -WebSession $regular | Out-Null
+        throw 'Time fields were visible while time module disabled'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Time fields respect the disabled time module'
+    }
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

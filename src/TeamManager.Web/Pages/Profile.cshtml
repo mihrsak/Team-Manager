@@ -4,6 +4,10 @@
 <p class="muted">@Text["KORISNICI / PROFIL"]</p><h1>@Model.Person!.DisplayName</h1><p>@Text["Broj radnika"]: <strong>@Model.Person.EmployeeNumber</strong></p>
 @if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}
 <div asp-validation-summary="All"></div>
+@if (Model.IsSelf || User.IsInRole("users.manage"))
+{
+    <p><a asp-page="/CustomFields" asp-route-scope="user" asp-route-entityId="@Model.Person!.Id">@Text["Polja korisnika"]</a></p>
+}
 @if (Model.IsSelf)
 {
     var language = User.FindFirst(UserStore.LanguageClaim)?.Value ?? "hr";

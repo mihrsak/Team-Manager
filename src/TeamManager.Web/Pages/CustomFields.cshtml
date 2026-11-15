@@ -1,0 +1,72 @@
+@page
+@model TeamManager.Web.Pages.CustomFieldsModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@{
+    var labels = new Dictionary<string, string>
+    {
+        ["user"] = "Polja korisnika", ["project"] = "Polja projekta", ["time"] = "Polja unosa vremena"
+    };
+}
+
+<h1>@Text[Model.EntityId is null ? "Prilagodljiva polja" : labels[Model.Scope]]</h1>
+<div asp-validation-summary="All"></div>
+
+@if (Model.Target is { } target)
+{
+    <p>
+        @if (target.IssueId is int issue)
+        {
+            <a asp-page="/Issue" asp-route-id="@issue">@target.Title</a>
+        }
+        else if (target.ProjectId is int project)
+        {
+            <a asp-page="/Project" asp-route-id="@project">@target.Title</a>
+        }
+        else
+        {
+            <a asp-page="/Profile" asp-route-id="@Model.EntityId">@target.Title</a>
+        }
+    </p>
+}
+else
+{
+    <div class="actions">
+        @foreach (var label in labels)
+        {
+            <a asp-page="/CustomFields" asp-route-scope="@label.Key">@Text[label.Value]</a>
+        }
+    </div>
+    <section class="card">
+        <h2>@Text[labels[Model.Scope]]</h2>
+        <form method="post" asp-page-handler="Create" asp-route-scope="@Model.Scope">
+            <label>@Text["Naziv"]<input name="name" maxlength="100" required></label>
+            <button>@Text["Dodaj polje"]</button>
+        </form>
+    </section>
+}
+
+@if (Model.Fields.Count == 0)
+{
+    <p>@Text["Nema prilagodljivih polja za ovu vrstu zapisa."]</p>
+}
+else
+{
+    <section class="card">
+        @foreach (var field in Model.Fields)
+        {
+            if (Model.Target?.CanEdit == true)
+            {
+                <form method="post" asp-page-handler="Value" asp-route-scope="@Model.Scope" asp-route-entityId="@Model.EntityId">
+                    <input type="hidden" name="fieldId" value="@field.Id">
+                    <input type="hidden" name="revision" value="@field.Revision">
+                    <label>@field.Name<input name="fieldValue" value="@field.Value" maxlength="500"></label>
+                    <button>@Text["Spremi vrijednost"]</button>
+                </form>
+            }
+            else
+            {
+                <p><strong>@field.Name</strong>@if (Model.EntityId is not null) { <text> · @(field.Value ?? "—")</text> }</p>
+            }
+        }
+    </section>
+}

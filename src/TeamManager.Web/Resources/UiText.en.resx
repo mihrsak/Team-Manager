@@ -1237,4 +1237,12 @@
   <data name="Vrijednost polja može imati najviše 500 znakova." xml:space="preserve"><value>The field value can contain up to 500 characters.</value></data>
   <data name="Odaberi polje ovog projekta." xml:space="preserve"><value>Select a field from this project.</value></data>
   <data name="Dodavanje polja zadatka" xml:space="preserve"><value>Issue field added</value></data>
+  <data name="Prilagodljiva polja" xml:space="preserve"><value>Custom fields</value></data>
+  <data name="Polja korisnika" xml:space="preserve"><value>User fields</value></data>
+  <data name="Polja projekta" xml:space="preserve"><value>Project fields</value></data>
+  <data name="Polja unosa vremena" xml:space="preserve"><value>Time entry fields</value></data>
+  <data name="Nema prilagodljivih polja za ovu vrstu zapisa." xml:space="preserve"><value>No custom fields are defined for this type of record.</value></data>
+  <data name="Odaberi polje te vrste." xml:space="preserve"><value>Select a field of this type.</value></data>
+  <data name="Vrijednost je u međuvremenu izmijenjena. Osvježi stranicu." xml:space="preserve"><value>The value has changed. Refresh the page.</value></data>
+  <data name="Dodavanje prilagodljivog polja" xml:space="preserve"><value>Custom field added</value></data>
 </root>

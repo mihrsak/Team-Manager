@@ -22,6 +22,7 @@ builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<IssuePersonalStore>();
 builder.Services.AddScoped<IssueAttachmentStore>();
 builder.Services.AddScoped<IssueFieldStore>();
+builder.Services.AddScoped<CustomFieldStore>();
 builder.Services.AddScoped<ProjectDocumentStore>();
 builder.Services.AddScoped<ProjectForumStore>();
 builder.Services.AddScoped<SavedIssueQueryStore>();
