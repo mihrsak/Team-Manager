@@ -398,6 +398,32 @@ try {
     Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$parent AND UserId=$uid" | Out-Null
     $page=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
     Assert (-not $page.Content.Contains("href=`"/Issue?id=$id`"")) 'Watching does not preserve access after project permission is revoked'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='true'}
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $admin @{watch='true'}
+    $page=Post "/Issue?id=$publicIssue&handler=PrivateNote" $regular @{text='QA private note <secret>'}
+    Assert ($page.Content.Contains('QA private note &lt;secret&gt;')) 'Author sees the private note as escaped text'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $admin
+    Assert (-not $page.Content.Contains('QA private note')) 'Other viewers including administrators cannot see the private note'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueNotifications WHERE IssueId=$publicIssue") -eq 0) 'Private notes do not generate watcher notifications'
+    $page=Post "/Issue?id=$publicIssue&handler=Comment" $admin @{text='QA watcher notification'}
+    $eventId=Sql "SELECT MAX(Id) FROM dbo.IssueEvents WHERE IssueId=$publicIssue"
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueNotifications WHERE EventId=$eventId AND UserId=$uid AND IsRead=0") -eq 1) 'Public activity notifies the other watcher'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueNotifications WHERE EventId=$eventId") -eq 1) 'Actor does not receive a notification for their own activity'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Notifications" -WebSession $regular
+    Assert ($page.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Watcher can open notification list'
+    try {
+        Post "/Notifications?handler=Read&eventId=$eventId" $admin @{} | Out-Null
+        throw 'Other user changed notification state'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Another user cannot mark a notification as read'
+    }
+    $page=Post "/Notifications?handler=Read&eventId=$eventId" $regular @{}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueNotifications WHERE EventId=$eventId AND UserId=$uid AND IsRead=1") -eq 1) 'Watcher can mark a notification as read'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='false'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueNotifications WHERE EventId=$eventId AND UserId=$uid") -eq 0) 'Unwatching removes notifications for the task'
+    $page=Post "/Issue?id=$id&handler=Comment" $admin @{text='QA hidden watcher event'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Notifications" -WebSession $regular
+    Assert (-not $page.Content.Contains("href=`"/Issue?id=$id`"")) 'Notifications hide issues after access is revoked'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

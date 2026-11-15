@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
-public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap):PageModel
+public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
     public int? Id{get;set;}
@@ -15,6 +15,8 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<PrivateIssueNote> PrivateNotes {get;private set;}=[];
+    public bool CanAddPrivateNote {get;private set;}
     public bool IsWatching {get;private set;}
     public List<RoadmapItem> RoadmapItems {get;set;}=[];
     public List<IssueLink> Links {get;set;}=[];
@@ -23,6 +25,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public async Task<IActionResult> OnGetAsync(int? id,int projectId)
     {
+        Response.Headers.CacheControl = "private, no-store";
         Id=id;
         Types=await workflow.Values("type");Statuses=await workflow.Values("status");Priorities=await workflow.Values("priority");
         if(id is not null){var issue=await store.Get(UserId,id.Value);if(issue is null)return NotFound();ProjectId=issue.ProjectId;Input=issue.Input;var activity=await store.Activity(UserId,id.Value);Events=activity.Events;Time=activity.Time;}
@@ -32,6 +35,8 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
+            PrivateNotes = await personal.Notes(UserId, id.Value, ProjectId);
+            CanAddPrivateNote = await personal.CanAddNote(ProjectId);
             IsWatching = await store.IsWatching(UserId, id.Value);
             Links = await links.List(UserId, id.Value, ProjectId);
             var canMove = CanEdit && await store.CanMove(UserId, ProjectId);
@@ -127,6 +132,22 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         if (id <= 0 || watch is null) return BadRequest();
         try { await store.SetWatching(UserId, id, watch.Value); }
         catch (UnauthorizedAccessException) { return Forbid(); }
+        return RedirectToPage(new { id });
+    }
+
+    public async Task<IActionResult> OnPostPrivateNoteAsync(int id, string? text)
+    {
+        if (id <= 0) return BadRequest();
+        try { await personal.AddNote(UserId, id, text); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (ArgumentException ex)
+        {
+            ModelState.Clear();
+            var result = await OnGetAsync(id, 0);
+            if (result is not PageResult) return result;
+            ModelState.AddModelError("", ex.Message);
+            return Page();
+        }
         return RedirectToPage(new { id });
     }
 

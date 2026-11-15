@@ -32,7 +32,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ISSUE-04 | Prilagodljivi tipovi, statusi i prijelazi prema roli i tipu | Gotovo: dodavanje šifrarnika, dodavanje/uklanjanje prijelaza; početni status Novo |
 | ISSUE-05 | Podzadaci, veze, ovisnosti, duplikati | Gotovo: veze na detaljima zadatka, jedan nadređeni zadatak, provjera ciklusa; ovisnosti služe za pregled |
 | ISSUE-06 | Skupno uređivanje, kopiranje/premještanje i CSV izvoz | Gotovo: CSV, skupna izmjena statusa/prioriteta, kopiranje i premještanje pojedinačnog zadatka |
-| ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Djelomično: osobno praćenje zadataka; preostaju privatne bilješke i obavijesti |
+| ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Gotovo: osobno praćenje, bilješke vidljive autoru i obavijesti unutar aplikacije |
 | QUERY-01 | Spremljeni upiti, stupci, grupiranje, sortiranje i sažeci | Gotovo: osobni upiti spremaju filtre, stupce, sortiranje i grupiranje; broj zadataka po grupi i ukupno |
 | PLAN-01 | Verzije, prekretnice i roadmap | Gotovo: verzije i prekretnice, povezivanje zadataka i napredak prema statusima |
 | PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Gotovo: mjesečni kalendar rokova i Gantt s datumima i ovisnostima između prikazanih zadataka |

@@ -73,3 +73,7 @@ Nakon migracije `018-issue-start-dates.sql` zadatak može imati neobavezni datum
 Nakon migracije `019-project-milestones.sql` na detaljima projekta otvorite **Karta planova**. Korisnik s ovlasti upravljanja aktivnim projektom može dodavati i uređivati verzije i prekretnice, uključujući opcionalni ciljni datum i oznaku dovršenosti. Čitanje prati vidljivost projekta. Zatvoreni i arhivirani projekti zadržavaju pregled postojećih stavki.
 
 Nakon migracije `020-issue-roadmap-items.sql` zadatak se može povezati s jednom verzijom ili prekretnicom svog projekta. Karta planova prikazuje broj zadataka po statusu i postotak zatvorenih. U izračun ulaze statusi koji su u tijeku rada označeni kao zatvoreni. Oznaka dovršenosti same verzije ili prekretnice uređuje se zasebno. Pregled napretka prati ovlast pregleda zadataka. Kopiranje unutar projekta zadržava poveznicu, a kopiranje i premještanje u drugi projekt uklanjaju poveznicu s izvornom stavkom.
+
+## Privatne bilješke i obavijesti
+
+Nakon migracije `022-issue-notes-notifications.sql` privatne bilješke dostupne su autoru na detaljima zadatka. Privatne bilješke izostavljene su iz povijesti, feedova i obavijesti. **Obavijesti** prikazuju do 50 novih i pročitanih aktivnosti na praćenim zadacima. Aktivnost autora vlastite radnje izostavlja se iz njegovih obavijesti. Prestanak praćenja uklanja obavijesti za zadatak. Vidljivost obavijesti ovisi o aktualnim projektnim ovlastima i postavkama modula.

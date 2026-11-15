@@ -86,6 +86,23 @@
         }
     </section>
 }
+@if (Model.Id is not null)
+{
+    <section class="card">
+        <h2>Moje privatne bilješke</h2>
+        @foreach (var note in Model.PrivateNotes)
+        {
+            <p style="white-space:pre-wrap">@note.Body <small>@note.CreatedAt.ToString("dd.MM.yyyy HH:mm") UTC</small></p>
+        }
+        @if (Model.CanAddPrivateNote)
+        {
+            <form method="post" asp-page-handler="PrivateNote" asp-route-id="@Model.Id">
+                <label>Bilješka vidljiva samo tebi<textarea name="text" maxlength="4000" rows="3" required></textarea></label>
+                <button>Spremi bilješku</button>
+            </form>
+        }
+    </section>
+}
 @if(Model.Id is not null){<div class="grid">
 @if(Model.CanComment){<section class="card"><h2>Komentar</h2><form method="post" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>Tekst<textarea name="text" required maxlength="4000" rows="4" style="width:100%"></textarea></label><button>Dodaj komentar</button></form></section>}
 @if(Model.CanLogTime){<section class="card"><h2>Evidencija vremena</h2><form method="post" asp-page-handler="Time" asp-route-id="@Model.Id"><label>Datum<input name="date" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required></label><label>Sati<input name="hours" type="number" min="0.01" max="24" step="0.01" required></label><label>Aktivnost<input name="activity" maxlength="60" placeholder="Općenito"></label><label>Napomena<input name="note" maxlength="1000"></label><button>Spremi vrijeme</button></form></section>}

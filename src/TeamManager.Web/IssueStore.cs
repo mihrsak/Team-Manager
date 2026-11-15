@@ -229,7 +229,14 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         if (await command.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
     }
 
-    private static async Task Event(SqlConnection c,SqlTransaction tx,int id,int user,string kind,string text){await using var cmd=new SqlCommand("INSERT dbo.IssueEvents(IssueId,UserId,Kind,Body) VALUES(@id,@user,@kind,@text)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@kind",kind),P("@text",text)]);await cmd.ExecuteNonQueryAsync();}
+    private static async Task Event(SqlConnection c,SqlTransaction tx,int id,int user,string kind,string text){await using var cmd=new SqlCommand("""
+        INSERT dbo.IssueEvents(IssueId,UserId,Kind,Body) VALUES(@id,@user,@kind,@text);
+        DECLARE @eventId int=CONVERT(int,SCOPE_IDENTITY());
+        INSERT dbo.IssueNotifications(EventId,IssueId,UserId)
+        SELECT @eventId,@id,w.UserId
+        FROM dbo.IssueWatchers w WITH (HOLDLOCK)
+        WHERE w.IssueId=@id AND w.UserId<>@user;
+        """,c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@kind",kind),P("@text",text)]);await cmd.ExecuteNonQueryAsync();}
     public async Task Comment(int user,int id,string text)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"issues.comment"))throw new UnauthorizedAccessException();if(string.IsNullOrWhiteSpace(text)||text.Length>4000)throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
