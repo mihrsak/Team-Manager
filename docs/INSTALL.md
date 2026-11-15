@@ -108,3 +108,9 @@ Projektne poveznice mogu se dodati u `appsettings.Local.json` pod `ProjectExtens
 ```
 
 Izostavite `ProjectId` za prikaz poveznice u svim dostupnim projektima. Konfigurirane poveznice prihvaćaju apsolutne HTTPS adrese. Proširenja iz izvornog koda registriraju se u DI spremniku kao implementacije `IProjectNavigationExtension`. Za dublje integracije predviđene su zasebne stavke backloga.
+
+## Registracija uz odobrenje
+
+Nakon migracije `034-registration-approval.sql` postavite `Registration__Enabled=true` ili `Registration:Enabled` na `true` u konfiguraciji aplikacije kako biste ponudili zahtjev za registraciju na stranici za prijavu. Zadano je isključena. Zahtjev sadrži broj radnika, ime i sažetak lozinke. Prijava je moguća tek nakon odobrenja.
+
+Puni administrator otvara **Korisnici → Zahtjevi za registraciju**. Prije odobrenja provjerite broj radnika i potvrdite s radnikom da je osobno poslao zahtjev. Odobreni račun dobiva redovan pristup, a uloge se dodjeljuju zasebno. Odbijanje uklanja zahtjev. Odluke se bilježe u revizijskom zapisu. Registracija prihvaća do 10 POST zahtjeva po udaljenoj IP adresi u pet minuta. Iza proxyja ograničenje koristi IP adresu koju aplikacija vidi.

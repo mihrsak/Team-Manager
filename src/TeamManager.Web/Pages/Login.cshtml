@@ -1,5 +1,11 @@
 @page
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.LoginModel
+@inject IConfiguration Configuration
 <div class="card" style="max-width:440px;margin:60px auto"><p class="muted">@Text["DOBRO DOŠLI"]</p><h1>@Text["Prijava"]</h1><p>@Text["Prijavi se svojim brojem radnika."]</p><div asp-validation-summary="All"></div>
-<form method="post"><label>@Text["Broj radnika"]<input asp-for="EmployeeNumber" autocomplete="username" required maxlength="30"></label><label>@Text["Lozinka"]<input asp-for="Password" type="password" autocomplete="current-password" required maxlength="200"></label><button>@Text["Prijavi se"]</button></form></div>
+<form method="post"><label>@Text["Broj radnika"]<input asp-for="EmployeeNumber" autocomplete="username" required maxlength="30"></label><label>@Text["Lozinka"]<input asp-for="Password" type="password" autocomplete="current-password" required maxlength="200"></label><button>@Text["Prijavi se"]</button></form>
+@if (Configuration.GetValue<bool>("Registration:Enabled"))
+{
+    <p><a asp-page="/Register">@Text["Zahtjev za registraciju"]</a></p>
+}
+</div>

@@ -2,6 +2,10 @@
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.UsersModel
 <p class="muted">@Text["ORGANIZACIJA / KORISNICI"]</p><h1>@Text["Korisnici"]</h1><p>@Text["Brojevi radnika, funkcije i organizacijske jedinice."]</p>
+@if (User.IsInRole("*"))
+{
+    <p><a asp-page="/RegistrationRequests">@Text["Zahtjevi za registraciju"]</a></p>
+}
 <div class="card table"><table><thead><tr><th>@Text["Broj radnika"]</th><th>@Text["Ime i prezime"]</th><th>@Text["Funkcija"]</th><th>@Text["Organizacijska jedinica"]</th><th></th></tr></thead><tbody>
 @foreach(var entry in Model.Entries){<tr><td>@entry.User.EmployeeNumber</td><td>@entry.User.DisplayName @if (!entry.User.IsActive) { <span class="badge">@Text["Deaktiviran"]</span> }</td><td>@entry.User.JobTitle</td><td>@entry.Unit</td><td><a asp-page="/Profile" asp-route-id="@entry.User.Id">@Text["Profil"]</a></td></tr>}
 </tbody></table></div>

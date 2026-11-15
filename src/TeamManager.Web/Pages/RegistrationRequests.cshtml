@@ -1,0 +1,32 @@
+@page
+@model TeamManager.Web.Pages.RegistrationRequestsModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+<h1>@Text["Zahtjevi za registraciju"]</h1>
+<p>@Text["Prije odobrenja provjeri identitet podnositelja i broj radnika."]</p>
+<div asp-validation-summary="All"></div>
+@if (Model.Pending.Count == 0)
+{
+    <p>@Text["Nema zahtjeva na čekanju."]</p>
+}
+else
+{
+    <div class="card table">
+        <table>
+            <thead><tr><th>@Text["Broj radnika"]</th><th>@Text["Ime i prezime"]</th><th>@Text["Vrijeme (UTC)"]</th><th>@Text["Radnja"]</th></tr></thead>
+            <tbody>
+                @foreach (var request in Model.Pending)
+                {
+                    <tr>
+                        <td>@request.EmployeeNumber</td><td>@request.DisplayName</td><td>@request.At.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>
+                            <form method="post" asp-page-handler="Decision" asp-route-id="@request.Id" class="actions">
+                                <button name="approve" value="true">@Text["Odobri"]</button>
+                                <button name="approve" value="false">@Text["Odbij"]</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -49,6 +49,8 @@ public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : P
         "roadmap.update" => "Izmjena stavke plana",
         "project.issue-field.create" => "Dodavanje polja zadatka",
         "custom-field.create" => "Dodavanje prilagodljivog polja",
+        "registration.approve" => "Odobrenje registracije",
+        "registration.reject" => "Odbijanje registracije",
         _ => action
     };
 }

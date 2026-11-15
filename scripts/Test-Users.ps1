@@ -14,6 +14,8 @@ $regular=New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $suffix=[guid]::NewGuid().ToString('N').Substring(0,8)
 $employee="qa$suffix"
 $role="QA$suffix"
+$approvedEmployee="ra$suffix"
+$rejectedEmployee="rr$suffix"
 $testPassword=[guid]::NewGuid().ToString('N')
 $db=New-Object System.Data.SqlClient.SqlConnection "Server=localhost\SQLEXPRESS;Database=$Database;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
 $db.Open()
@@ -186,6 +188,43 @@ try {
     Assert ($page.Content.Contains('Sign-in failed or the account is temporarily locked.')) 'Form validation displays a translated error'
     $page=Post-Page '/Profile?handler=Language' $newLanguageSession @{language='hr'}
     Assert ($page.Content.Contains('<html lang="hr"')) 'User can restore Croatian UI'
+    if ($env:Registration__Enabled -eq 'true') {
+        $applicant=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+        $applicant.Headers['Accept-Language']='en-US'
+        $page=Get-Page '/Register' $applicant
+        Assert ($page.Content.Contains('<h1>Registration request</h1>')) 'Registration form supports English'
+        $croatianApplicant=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+        $croatianApplicant.Headers['Accept-Language']='hr-HR'
+        $page=Get-Page '/Register' $croatianApplicant
+        Assert ($page.Content.Contains('<h1>Zahtjev za registraciju</h1>')) 'Registration form supports Croatian'
+        $page=Post-Page '/Register' $applicant @{employee=$approvedEmployee;name='QA registration';password=$testPassword;confirm=$testPassword}
+        Assert ($page.Content.Contains('an administrator will review the request')) 'Applicant receives a generic registration response'
+        $page=Post-Page '/Register' $applicant @{employee=$approvedEmployee;name='QA duplicate submission';password="New$testPassword";confirm="New$testPassword"}
+        $cmd=$db.CreateCommand()
+        $cmd.CommandText="SELECT Id FROM dbo.RegistrationRequests WHERE EmployeeNumber=@e AND DisplayName=N'QA registration' AND PasswordHash<>@password"
+        [void]$cmd.Parameters.AddWithValue('@e',$approvedEmployee)
+        [void]$cmd.Parameters.AddWithValue('@password',$testPassword)
+        $registrationId=[int]$cmd.ExecuteScalar()
+        Assert ($registrationId -gt 0) 'Duplicate submission preserves the first pending request and password hash'
+        $page=Post-Page '/Login' $applicant @{EmployeeNumber=$approvedEmployee;Password=$testPassword}
+        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Pending applicant cannot sign in'
+        $page=Get-Page '/RegistrationRequests' $fresh
+        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Regular user cannot review requests'
+        $page=Post-Page "/RegistrationRequests?handler=Decision&id=$registrationId" $admin @{approve='true'}
+        $page=Post-Page '/Login' $applicant @{EmployeeNumber=$approvedEmployee;Password=$testPassword}
+        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users' -and -not $page.Content.Contains('Novi korisnik')) 'Approved applicant can sign in without administrative rights'
+        $page=Post-Page '/Register' $croatianApplicant @{employee=$rejectedEmployee;name='QA rejected';password=$testPassword;confirm=$testPassword}
+        $cmd=$db.CreateCommand();$cmd.CommandText='SELECT Id FROM dbo.RegistrationRequests WHERE EmployeeNumber=@e';[void]$cmd.Parameters.AddWithValue('@e',$rejectedEmployee)
+        $rejectedId=[int]$cmd.ExecuteScalar()
+        $page=Post-Page "/RegistrationRequests?handler=Decision&id=$rejectedId" $admin @{approve='false'}
+        $page=Post-Page '/Login' $croatianApplicant @{EmployeeNumber=$rejectedEmployee;Password=$testPassword}
+        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Rejected applicant cannot sign in'
+        $cmd=$db.CreateCommand()
+        $cmd.CommandText="SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE (Subject=@approved AND Action='registration.approve') OR (Subject=@rejected AND Action='registration.reject')"
+        [void]$cmd.Parameters.AddWithValue('@approved',$approvedEmployee)
+        [void]$cmd.Parameters.AddWithValue('@rejected',$rejectedEmployee)
+        Assert ($cmd.ExecuteScalar() -eq 2) 'Approval and rejection are recorded in the audit log'
+    }
 } finally {
-    $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
+    $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.RegistrationRequests WHERE EmployeeNumber IN (@approved,@rejected); DELETE dbo.AppUsers WHERE EmployeeNumber IN (@approved,@rejected); DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.Parameters.AddWithValue('@approved',$approvedEmployee);[void]$cmd.Parameters.AddWithValue('@rejected',$rejectedEmployee);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

@@ -1,0 +1,23 @@
+@page
+@model TeamManager.Web.Pages.RegisterModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+<section class="card" style="max-width:32rem;margin:3rem auto">
+    <h1>@Text["Zahtjev za registraciju"]</h1>
+    @if (Model.Submitted)
+    {
+        <p>@Text["Ako je registracija moguća, administrator će pregledati zahtjev."]</p>
+    }
+    else
+    {
+        <p>@Text["Prijava je moguća nakon administratorskog odobrenja."]</p>
+        <div asp-validation-summary="All"></div>
+        <form method="post">
+            <label>@Text["Broj radnika"]<input name="employee" required maxlength="30" pattern="[A-Za-z0-9._-]+" autocomplete="username"></label>
+            <label>@Text["Ime i prezime"]<input name="name" required maxlength="100" autocomplete="name"></label>
+            <label>@Text["Lozinka"]<input name="password" type="password" required minlength="10" maxlength="200" autocomplete="new-password"></label>
+            <label>@Text["Ponovi novu lozinku"]<input name="confirm" type="password" required minlength="10" maxlength="200" autocomplete="new-password"></label>
+            <button>@Text["Pošalji zahtjev"]</button>
+        </form>
+    }
+    <p><a asp-page="/Login">@Text["Povratak na prijavu"]</a></p>
+</section>

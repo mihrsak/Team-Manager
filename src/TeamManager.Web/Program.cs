@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using TeamManager.Web;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,10 +11,22 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddE
 builder.Services.AddScoped<LocalizedValidationFilter>();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSingleton<IProjectNavigationExtension, ConfiguredProjectLinks>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("Registration", context => HttpMethods.IsPost(context.Request.Method)
+        ? RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new()
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(5)
+        })
+        : RateLimitPartition.GetNoLimiter("read"));
+});
 builder.Services.AddRazorPages(options => {
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.ServiceFilterAttribute(typeof(LocalizedValidationFilter)));
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
+    options.Conventions.AllowAnonymousToPage("/Register");
     options.Conventions.AllowAnonymousToPage("/Error");
 });
 builder.Services.AddScoped<TeamStore>();
@@ -32,6 +45,7 @@ builder.Services.AddScoped<ProjectNewsStore>();
 builder.Services.AddScoped<ProjectWikiStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
+builder.Services.AddScoped<RegistrationStore>();
 builder.Services.AddScoped<Permissions>();
 builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();
@@ -124,6 +138,7 @@ app.Use(async (context, next) =>
     finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
 });
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapRazorPages();
