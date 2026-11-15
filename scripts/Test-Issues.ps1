@@ -588,6 +588,28 @@ try {
     } catch [System.Net.WebException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Forum topic cannot be accessed under a different project'
     }
+    $page=Post "/IssueFields?projectId=$parent&handler=Create" $admin @{name='QA reference field'}
+    Assert ($page.Content.Contains('QA reference field')) 'Manager can define a text field for the project'
+    $field=Sql "SELECT Id FROM dbo.ProjectIssueFields WHERE ProjectId=$parent AND Name=N'QA reference field'"
+    $page=Post "/IssueFields?projectId=$project&handler=Create" $regular @{name='Unauthorized field'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Issue editor cannot define project fields without project management'
+    $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    $page=Post "/Issue?id=$id&handler=SetField" $admin @{fieldId=$field;revision=$revision;fieldValue='QA <reference>'}
+    Assert ($page.Content.Contains('QA &lt;reference&gt;')) 'Issue editor can set and read a safely encoded field value'
+    $page=Post "/Issue?id=$id&handler=SetField" $admin @{fieldId=$field;revision=$revision;fieldValue='Stale value'}
+    Assert ((Sql "SELECT Value FROM dbo.IssueFieldValues WHERE IssueId=$id AND FieldId=$field") -eq 'QA <reference>') 'Stale issue revision cannot overwrite field value'
+    $page=Post '/Profile?handler=Language' $admin @{language='en'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/IssueFields?projectId=$parent" -WebSession $admin
+    Assert ($page.Content.Contains('<h1>Issue fields</h1>') -and $page.Content.Contains('Add field')) 'Field administration has English labels'
+    $otherRevision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$publicIssue"
+    $page=Post "/Issue?id=$publicIssue&handler=SetField" $admin @{fieldId=$field;revision=$otherRevision;fieldValue='Wrong project'}
+    Assert ($page.Content.Contains('Select a field from this project.') -and (Sql "SELECT COUNT(*) FROM dbo.IssueFieldValues WHERE IssueId=$publicIssue") -eq 0) 'Foreign field is rejected with localized validation'
+    $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$revision;destination=$project;move='true'}
+    Assert (-not $page.Content.Contains('QA reference field') -and (Sql "SELECT COUNT(*) FROM dbo.IssueFieldValues WHERE IssueId=$id AND FieldId=$field") -eq 1) 'Moving an issue hides and preserves the original project field value'
+    $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$revision;destination=$parent;move='true'}
+    Assert ($page.Content.Contains('QA &lt;reference&gt;')) 'Returning an issue to the original project restores its field value'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

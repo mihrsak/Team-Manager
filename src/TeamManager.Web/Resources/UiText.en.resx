@@ -1229,4 +1229,12 @@
   <data name="Odaberi datoteku veličine od 1 bajta do 10 MiB." xml:space="preserve"><value>Select a file between 1 byte and 10 MiB.</value></data>
   <data name="Naziv datoteke nije valjan." xml:space="preserve"><value>The file name is invalid.</value></data>
   <data name="Datoteka nije učitana u cijelosti." xml:space="preserve"><value>The upload did not complete.</value></data>
+  <data name="Polja zadataka" xml:space="preserve"><value>Issue fields</value></data>
+  <data name="Novo tekstualno polje" xml:space="preserve"><value>New text field</value></data>
+  <data name="Dodaj polje" xml:space="preserve"><value>Add field</value></data>
+  <data name="Spremi vrijednost" xml:space="preserve"><value>Save value</value></data>
+  <data name="Projekt još nema prilagodljivih polja zadataka." xml:space="preserve"><value>This project has no custom issue fields yet.</value></data>
+  <data name="Vrijednost polja može imati najviše 500 znakova." xml:space="preserve"><value>The field value can contain up to 500 characters.</value></data>
+  <data name="Odaberi polje ovog projekta." xml:space="preserve"><value>Select a field from this project.</value></data>
+  <data name="Dodavanje polja zadatka" xml:space="preserve"><value>Issue field added</value></data>
 </root>

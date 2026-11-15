@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
-public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments):PageModel
+public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments,IssueFieldStore fields):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
     public int? Id{get;set;}
@@ -15,6 +15,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<IssueField> CustomFields {get;private set;}=[];
     public List<AttachmentInfo> Attachments {get;private set;}=[];
     public List<PrivateIssueNote> PrivateNotes {get;private set;}=[];
     public bool CanAddPrivateNote {get;private set;}
@@ -36,6 +37,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
+            CustomFields = await fields.List(ProjectId,id.Value);
             Attachments = await attachments.List(id.Value, ProjectId);
             PrivateNotes = await personal.Notes(UserId, id.Value, ProjectId);
             CanAddPrivateNote = await personal.CanAddNote(ProjectId);
@@ -190,6 +192,22 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         catch (UnauthorizedAccessException) { return Forbid(); }
         Response.Headers.Location = Url.Page("/Issue", new { id });
         return StatusCode(StatusCodes.Status303SeeOther);
+    }
+
+    public async Task<IActionResult> OnPostSetFieldAsync(int id, int fieldId, int? revision, string? fieldValue)
+    {
+        if (id <= 0 || fieldId <= 0 || revision is null or < 0) return BadRequest();
+        try { await fields.SetValue(UserId, id, fieldId, revision.Value, fieldValue); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            ModelState.Clear();
+            var result = await OnGetAsync(id, 0);
+            if (result is not PageResult) return result;
+            ModelState.AddModelError("", ex.Message);
+            return Page();
+        }
+        return RedirectToPage(new { id });
     }
 
     public IActionResult OnPost()=>BadRequest();

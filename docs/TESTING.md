@@ -105,3 +105,7 @@ Nakon migracije `029-project-forums.sql` na detaljima projekta otvorite **Forum*
 ## Tema prikaza
 
 Nakon migracije `030-account-display-theme.sql` na stranici **Moj profil** odaberite svijetlu temu, tamnu temu ili postavku uređaja. Odabir se sprema na korisnički račun i primjenjuje pri sljedećem zahtjevu, uključujući prijave iz drugih preglednika. Zadana je svijetla tema.
+
+## Prilagodljiva polja zadataka
+
+Nakon migracije `032-project-issue-fields.sql` upravitelj aktivnog projekta može u **Poljima zadataka** dodati tekstualno polje. Na detaljima zadatka korisnici s pravom uređivanja mogu spremiti tekst do 500 znakova ili isprazniti vrijednost. Čitanje prati ovlast pregleda zadatka. Pri premještanju u drugi projekt vrijednosti izvornog projekta ostaju pohranjene i ponovno se prikazuju ako se zadatak vrati. Kopiranje stvara zadatak bez prilagodljivih vrijednosti. Sučelje je dostupno na hrvatskom i engleskom, a korisnički nazivi i vrijednosti prikazuju se kako su uneseni.

@@ -47,6 +47,7 @@ public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : P
         "workflow.transition.remove" => "Uklanjanje prijelaza statusa",
         "roadmap.create" => "Dodavanje stavke plana",
         "roadmap.update" => "Izmjena stavke plana",
+        "project.issue-field.create" => "Dodavanje polja zadatka",
         _ => action
     };
 }

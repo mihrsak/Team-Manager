@@ -1,0 +1,28 @@
+@page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@model TeamManager.Web.Pages.IssueFieldsModel
+<p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
+<h1>@Text["Polja zadataka"]</h1>
+<div asp-validation-summary="All"></div>
+
+@if (Model.Project.Input.State == "Active")
+{
+    <section class="card">
+        <h2>@Text["Novo tekstualno polje"]</h2>
+        <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id">
+            <label>@Text["Naziv"]<input name="name" maxlength="100" required></label>
+            <button>@Text["Dodaj polje"]</button>
+        </form>
+    </section>
+}
+
+@if (Model.Fields.Count == 0)
+{
+    <p>@Text["Projekt još nema prilagodljivih polja zadataka."]</p>
+}
+else
+{
+    <ul class="card">
+        @foreach (var field in Model.Fields) { <li>@field.Name</li> }
+    </ul>
+}
