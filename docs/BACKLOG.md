@@ -31,7 +31,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ISSUE-03 | Filtri po projektu/statusu/tekstu | Gotovo |
 | ISSUE-04 | Prilagodljivi tipovi, statusi i prijelazi prema roli i tipu | Gotovo: dodavanje šifrarnika, dodavanje/uklanjanje prijelaza; početni status Novo |
 | ISSUE-05 | Podzadaci, veze, ovisnosti, duplikati | Backlog |
-| ISSUE-06 | Skupno uređivanje, kopiranje/premještanje i CSV izvoz | Backlog |
+| ISSUE-06 | Skupno uređivanje, kopiranje/premještanje i CSV izvoz | Djelomično: CSV izvoz provjeren; preostaju skupno uređivanje i kopiranje/premještanje |
 | ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Backlog |
 | QUERY-01 | Spremljeni upiti, stupci, grupiranje, sortiranje i sažeci | Backlog |
 | PLAN-01 | Verzije, prekretnice i roadmap | Backlog |

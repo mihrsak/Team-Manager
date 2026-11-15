@@ -101,6 +101,9 @@ try {
     $name=Sql "SELECT Name FROM dbo.Projects WHERE Id=$project"
     $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport" -WebSession $regular
     Assert (-not $report.Content.Contains('QA analysis')) 'Time report hides private project entries from nonmembers'
+    $export=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Csv&ProjectId=$project" -WebSession $regular
+    $csv=[Text.Encoding]::UTF8.GetString($export.RawContentStream.ToArray())
+    Assert (($csv.TrimStart([char]0xFEFF) -split '\r?\n')[1] -eq '') 'CSV excludes private tasks for nonmembers'
     $projectInput=@{'Input.Name'=$name;'Input.Description'='Public demo';'Input.State'='Active';'Input.IsPublic'='true';'Input.Revision'='1'}
     $page=Post "/Project?id=$project" $admin $projectInput
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $regular
@@ -201,6 +204,15 @@ try {
     $page=Post "/Project?id=$inherited" $admin $inheritedInput
     $page=Invoke-WebRequest -UseBasicParsing "$base/Projects" -WebSession $regular
     Assert (-not $page.Content.Contains('QA inherited')) 'Disabling inheritance immediately revokes inherited access'
+    Sql "UPDATE dbo.Issues SET Title=N'=QA,'+NCHAR(34)+N'CSV'+NCHAR(34) WHERE Id=$id" | Out-Null
+    $export=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Csv&ProjectId=$project&Query=QA%2CCSV" -WebSession $admin
+    $csv=[Text.Encoding]::UTF8.GetString($export.RawContentStream.ToArray())
+    Assert (($csv.TrimStart([char]0xFEFF) -split '\r?\n')[1] -eq '') 'CSV applies text filter'
+    $export=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Csv&ProjectId=$project&Query=QA%2C" -WebSession $admin
+    $csv=[Text.Encoding]::UTF8.GetString($export.RawContentStream.ToArray())
+    $expected='"'+[char]39+'=QA,""CSV"""'
+    Assert ($csv.Contains($expected)) 'CSV quotes delimiters and prevents spreadsheet formulas'
+    Assert ($export.Headers['Content-Disposition'].Contains('zadaci.csv')) 'CSV is an attachment'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment
