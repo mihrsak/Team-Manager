@@ -367,6 +367,14 @@ try {
     $anon=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Invoke-WebRequest -UseBasicParsing "$base/Activity?handler=Atom" -WebSession $anon
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Anonymous clients cannot access activity feeds'
+    Sql "UPDATE dbo.Issues SET AssigneeId=$uid WHERE Id IN ($id,$copy,$publicIssue); UPDATE dbo.Issues SET Status=N'Novo',DueDate='2000-01-01' WHERE Id=$publicIssue" | Out-Null
+    $dashboard=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
+    Assert ($dashboard.Content.Contains('Rok je pro') -and $dashboard.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Dashboard includes an overdue assigned issue'
+    Assert (-not $dashboard.Content.Contains("href=`"/Issue?id=$copy`"")) 'Dashboard excludes assigned issues in closed workflow statuses'
+    Assert (-not $dashboard.Content.Contains("href=`"/Issue?id=$id`"")) 'Dashboard excludes assigned issues in inaccessible projects'
+    Sql "UPDATE dbo.Issues SET AssigneeId=NULL WHERE Id=$publicIssue" | Out-Null
+    $dashboard=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
+    Assert (-not $dashboard.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Dashboard excludes unassigned issues'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

@@ -1,0 +1,38 @@
+@page
+@model TeamManager.Web.Pages.DashboardModel
+<h1>Moji zadaci</h1>
+
+@{
+    var groups = new[]
+    {
+        (Name: "Rok je prošao", Issues: Model.Overdue),
+        (Name: "Predstojeći rokovi", Issues: Model.WithDeadline),
+        (Name: "Bez roka", Issues: Model.WithoutDeadline)
+    };
+}
+@foreach (var group in groups)
+{
+    <section class="card table">
+        <h2>@group.Name (@group.Issues.Count)</h2>
+        @if (group.Issues.Count == 0)
+        {
+            <p>Nema otvorenih zadataka u ovoj skupini.</p>
+        }
+        else
+        {
+            <table>
+                <thead><tr><th>Zadatak</th><th>Projekt</th><th>Status</th><th>Prioritet</th><th>Rok</th></tr></thead>
+                <tbody>
+                    @foreach (var issue in group.Issues)
+                    {
+                        <tr>
+                            <td><a asp-page="/Issue" asp-route-id="@issue.Id">@issue.Title</a></td>
+                            <td>@issue.Project</td><td>@issue.Status</td><td>@issue.Priority</td>
+                            <td>@(issue.DueDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+}
