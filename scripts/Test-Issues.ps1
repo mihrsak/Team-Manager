@@ -15,7 +15,12 @@ function Post($path,$session,$data){
     $page=Invoke-WebRequest -UseBasicParsing "$base$path" -WebSession $session
     $token=[regex]::Match($page.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
     $data['__RequestVerificationToken']=[System.Net.WebUtility]::HtmlDecode($token)
-    Invoke-WebRequest -UseBasicParsing "$base$path" -Method Post -WebSession $session -Body $data
+    $body = foreach ($key in $data.Keys) {
+        foreach ($value in @($data[$key])) {
+            [uri]::EscapeDataString($key) + '=' + [uri]::EscapeDataString([string]$value)
+        }
+    }
+    Invoke-WebRequest -UseBasicParsing "$base$path" -Method Post -WebSession $session -Body ($body -join '&') -ContentType 'application/x-www-form-urlencoded'
 }
 function Stop-App{if($process -and -not $process.HasExited){Stop-Process -Id $process.Id;$process.WaitForExit()}}
 try {
@@ -213,6 +218,25 @@ try {
     $expected='"'+[char]39+'=QA,""CSV"""'
     Assert ($csv.Contains($expected)) 'CSV quotes delimiters and prevents spreadsheet formulas'
     Assert ($export.Headers['Content-Disposition'].Contains('zadaci.csv')) 'CSV is an attachment'
+    $rev=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    $page=Post "/Issue?id=$id&handler=Transfer" $regular @{revision=$rev;destination=$parent;move='true'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Move requires management of both projects'
+    $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$rev;destination=$parent}
+    $copy=Sql "SELECT MAX(Id) FROM dbo.Issues WHERE ProjectId=$parent"
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$copy AND Status=N'Novo' AND AssigneeId IS NULL") -eq 1) 'Copy creates an unassigned issue in the initial status'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$copy") -eq 1 -and (Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$copy") -eq 0) 'Copy does not duplicate history or time'
+    $copyRev=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$copy"
+    $page=Post '/Issues?handler=Bulk' $admin @{selection=@("${id}:$rev","${copy}:$($copyRev+1)");bulkPriority='Hitno'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id IN ($id,$copy) AND Priority=N'Hitno'") -eq 0) 'Bulk edit leaves both issues untouched on stale revision'
+    $page=Post '/Issues?handler=Bulk' $admin @{selection=@("${id}:$rev","${copy}:$copyRev");bulkPriority='Hitno'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id IN ($id,$copy) AND Priority=N'Hitno'") -eq 2) 'Bulk edit updates both selected issues'
+    $newRev=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    Assert ($newRev -eq ($rev+1)) 'Bulk edit increments revision'
+    $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$rev;destination=$parent;move='true'}
+    Assert ((Sql "SELECT ProjectId FROM dbo.Issues WHERE Id=$id") -eq $project) 'Stale revision blocks move'
+    $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$newRev;destination=$parent;move='true'}
+    Assert ((Sql "SELECT ProjectId FROM dbo.Issues WHERE Id=$id") -eq $parent) 'Move keeps the same issue in the destination'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id AND Kind='moved'") -eq 1 -and (Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id") -eq 1) 'Move preserves recorded time and adds a history event'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

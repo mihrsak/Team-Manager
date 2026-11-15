@@ -15,6 +15,8 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<Team> CopyProjects {get;set;}=[];
+    public List<Team> MoveProjects {get;set;}=[];
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public async Task<IActionResult> OnGetAsync(int? id,int projectId)
     {
@@ -23,7 +25,19 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
         if(id is not null){var issue=await store.Get(UserId,id.Value);if(issue is null)return NotFound();ProjectId=issue.ProjectId;Input=issue.Input;var activity=await store.Activity(UserId,id.Value);Events=activity.Events;Time=activity.Time;}
         else ProjectId=projectId;
         var project=(await store.Projects(UserId)).FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
-        CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();return Page();
+        CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
+        if (id is not null)
+        {
+            var canMove = CanEdit && await store.CanMove(UserId, ProjectId);
+            foreach (var target in await store.Projects(UserId, "issues.create"))
+            {
+                if (!await store.Can(UserId, target.Id, "issues.view")) continue;
+                CopyProjects.Add(target);
+                if (canMove && target.Id != ProjectId && await store.CanMove(UserId, target.Id))
+                    MoveProjects.Add(target);
+            }
+        }
+        return Page();
     }
     public async Task<IActionResult> OnPostSaveAsync(int? id,int projectId)
     {
@@ -45,5 +59,26 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;if(!valid){ModelState.AddModelError("","Unesi valjan datum i broj sati.");return Page();}
         try{await store.LogTime(UserId,id,date!.Value,value,note,activity);return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
     }
+    public async Task<IActionResult> OnPostTransferAsync(int id, int? revision, int destination, bool move)
+    {
+        if (id <= 0 || destination <= 0 || revision is null or < 0 ||
+            ModelState.GetValidationState(nameof(move)) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid)
+            return BadRequest();
+        try
+        {
+            var saved = await store.Transfer(UserId, id, revision.Value, destination, move);
+            TempData["Notice"] = move ? "Zadatak je premješten." : "Zadatak je kopiran.";
+            return RedirectToPage(new { id = saved });
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            var result = await OnGetAsync(id, 0);
+            if (result is not PageResult) return result;
+            ModelState.AddModelError("", ex.Message);
+            return Page();
+        }
+    }
+
     public IActionResult OnPost()=>BadRequest();
 }

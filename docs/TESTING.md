@@ -47,3 +47,9 @@ Nakon migracije `012-user-groups.sql`, puni administrator može otvoriti **Role 
 Migracija `014-time-entry-activity.sql` postojećim zapisima dodjeljuje aktivnost **Općenito**. Pri unosu vremena na zadatku može se navesti aktivnost do 60 znakova. U navigaciji **Izvještaj o vremenu** odaberite projekt, osobu, aktivnost ili datumski raspon. Izvještaj zbraja sate po projektu, osobi i aktivnosti te prikazuje sveukupne sate za odabrane filtre. Oba datuma uključena su u raspon.
 
 Izvještaj prati postojeća pravila pregleda utrošenog vremena, uključujući javne projekte dostupne prijavljenim korisnicima. U izvještaj ulaze samo projekti s uključenim modulima zadataka i vremena.
+
+## Skupno uređivanje, kopiranje i premještanje
+
+Na popisu zadataka označite do 100 zadataka i odaberite novi status, prioritet ili oba. Sve se izmjene spremaju u jednoj transakciji uz provjeru ovlasti, dopuštenih prijelaza i revizija. Ako bilo koja izmjena ne prođe, cijela se grupa poništava.
+
+Kopiranje s detalja zadatka traži pregled izvornog i pravo kreiranja na odredišnom projektu. Kopija prenosi naslov, opis, tip, prioritet i rok te počinje u statusu **Novo**, bez nositelja, komentara i utrošenog vremena. Za premještanje su potrebni pravo uređivanja na izvornom projektu, pravo kreiranja na odredišnom i pravo upravljanja obama projektima. Premještanje zadržava ID, status, komentare, vrijeme i povijest. Nositelj ostaje dodijeljen ako je izravni član odredišnog projekta.

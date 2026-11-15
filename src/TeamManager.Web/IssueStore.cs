@@ -15,12 +15,12 @@ public sealed class IssueInput
     public DateTime? DueDate{get;set;}
     public int Revision{get;set;}
 }
-public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate);
+public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision);
 public record IssueDetail(int Id,int ProjectId,IssueInput Input);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity);
 public record TimeReportRow(string Project,string Person,string EmployeeNumber,string Activity,decimal Hours);
-public sealed class IssueStore(IConfiguration config,Permissions permissions,WorkflowStore workflow)
+public sealed class IssueStore(IConfiguration config,Permissions permissions,WorkflowStore workflow,ProjectStore projects)
 {
     public static readonly string[] Types=["Zadatak","Greška","Zahtjev"];
     public static readonly string[] Priorities=["Nizak","Normalan","Visok","Hitno"];
@@ -49,8 +49,8 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query)
     {
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) ORDER BY i.Id DESC",c);
-        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??"")]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7)));return result;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) ORDER BY i.Id DESC",c);
+        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??"")]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
@@ -68,6 +68,13 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         if(string.IsNullOrWhiteSpace(input.Title)||input.Title.Length>200||(input.Description?.Length??0)>4000||!(await workflow.Values("type")).Contains(input.Type)||!(await workflow.Values("priority")).Contains(input.Priority)||!(await workflow.Values("status")).Contains(input.Status)||input.DueDate?.Year<1753)throw new ArgumentException("Provjeri polja zadatka.");
         if(id is null&&input.Status!="Novo")throw new ArgumentException("Novi zadatak mora početi statusom Novo.");
         await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();
+        var issueId = await SaveInTransaction(c, tx, user, project, id, input);
+        await tx.CommitAsync();
+        return issueId;
+    }
+
+    private async Task<int> SaveInTransaction(SqlConnection c, SqlTransaction tx, int user, int project, int? id, IssueInput input)
+    {
         await RequireActive(c,tx,project);
         if(input.AssigneeId is not null){await using var check=new SqlCommand("SELECT COUNT(*) FROM dbo.ProjectMembers WITH(HOLDLOCK) WHERE ProjectId=@p AND UserId=@u",c,tx);check.Parameters.AddRange([P("@p",project),P("@u",input.AssigneeId)]);if(Convert.ToInt32(await check.ExecuteScalarAsync())==0)throw new ArgumentException("Nositelj mora biti član projekta.");}
         string? before=null;
@@ -81,24 +88,115 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
         await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),P("@user",user),P("@id",id),P("@revision",input.Revision)]);
         var saved=await cmd.ExecuteScalarAsync();if(saved is null)throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
-        var issueId=Convert.ToInt32(saved);await Event(c,tx,issueId,user,id is null?"created":"updated",JsonSerializer.Serialize(new{Before=before,After=input}));await tx.CommitAsync();return issueId;
+        var issueId=Convert.ToInt32(saved);await Event(c,tx,issueId,user,id is null?"created":"updated",JsonSerializer.Serialize(new{Before=before,After=input}));return issueId;
     }
+    public async Task UpdateMany(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority)
+    {
+        if (revisions.Count is < 1 or > 100 || (status is null && priority is null))
+            throw new ArgumentException("Odaberi od 1 do 100 zadataka i barem jednu promjenu.");
+        if ((status is not null && !(await workflow.Values("status")).Contains(status)) ||
+            (priority is not null && !(await workflow.Values("priority")).Contains(priority)))
+            throw new ArgumentException("Odaberi valjan status ili prioritet.");
+
+        var batch = new List<IssueDetail>();
+        foreach (var (id, revision) in revisions.OrderBy(item => item.Key))
+        {
+            var issue = await Get(user, id);
+            if (issue is null || !await Can(user, issue.ProjectId, "issues.edit"))
+                throw new UnauthorizedAccessException();
+            if (issue.Input.Revision != revision)
+                throw new InvalidOperationException("Neki su zadaci u međuvremenu izmijenjeni. Osvježi popis.");
+            issue.Input.Status = status ?? issue.Input.Status;
+            issue.Input.Priority = priority ?? issue.Input.Priority;
+            batch.Add(issue);
+        }
+
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+        foreach (var issue in batch)
+            await SaveInTransaction(connection, transaction, user, issue.ProjectId, issue.Id, issue.Input);
+        await transaction.CommitAsync();
+    }
+
+    public Task<bool> CanMove(int user, int project)
+        => projects.CanManage(user, project);
+
+    public async Task<int> Transfer(int user, int id, int revision, int destination, bool move)
+    {
+        var issue = await Get(user, id) ?? throw new UnauthorizedAccessException();
+        var source = issue.ProjectId;
+        if (!await Can(user, destination, "issues.view") || !await Can(user, destination, "issues.create") ||
+            (move && (!await Can(user, source, "issues.edit") || !await CanMove(user, source) ||
+                      !await CanMove(user, destination))))
+            throw new UnauthorizedAccessException();
+        if (move && source == destination)
+            throw new ArgumentException("Odaberi drugi projekt za premještanje.");
+        if (issue.Input.Revision != revision)
+            throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Osvježi stranicu.");
+
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+        if (move) await RequireActive(connection, transaction, source);
+        await RequireActive(connection, transaction, destination);
+
+        await using var check = new SqlCommand("""
+            SELECT 1 FROM dbo.Issues WITH (UPDLOCK)
+            WHERE Id=@id AND ProjectId=@source AND Revision=@revision
+            """, connection, transaction);
+        check.Parameters.AddRange([P("@id",id), P("@source",source), P("@revision",revision)]);
+        if (await check.ExecuteScalarAsync() is null)
+            throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Osvježi stranicu.");
+
+        if (!move)
+        {
+            issue.Input.Status = "Novo";
+            issue.Input.AssigneeId = null;
+            issue.Input.Revision = 0;
+            var copy = await SaveInTransaction(connection, transaction, user, destination, null, issue.Input);
+            await transaction.CommitAsync();
+            return copy;
+        }
+
+        await using var command = new SqlCommand("""
+            UPDATE dbo.Issues SET ProjectId=@destination, Revision=Revision+1,
+                AssigneeId=CASE WHEN EXISTS (SELECT 1 FROM dbo.ProjectMembers WITH (HOLDLOCK)
+                    WHERE ProjectId=@destination AND UserId=dbo.Issues.AssigneeId) THEN AssigneeId END
+            WHERE Id=@id
+            """, connection, transaction);
+        command.Parameters.AddRange([P("@id",id), P("@destination",destination)]);
+        await command.ExecuteNonQueryAsync();
+        await Event(connection, transaction, id, user, "moved",
+            JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination }));
+        await transaction.CommitAsync();
+        return id;
+    }
+
+    private static async Task RequireIssueProject(SqlConnection connection, SqlTransaction transaction, int id, int project)
+    {
+        await using var command = new SqlCommand(
+            "SELECT 1 FROM dbo.Issues WITH (HOLDLOCK) WHERE Id=@id AND ProjectId=@project", connection, transaction);
+        command.Parameters.AddRange([P("@id", id), P("@project", project)]);
+        if (await command.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
+    }
+
     private static async Task Event(SqlConnection c,SqlTransaction tx,int id,int user,string kind,string text){await using var cmd=new SqlCommand("INSERT dbo.IssueEvents(IssueId,UserId,Kind,Body) VALUES(@id,@user,@kind,@text)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@kind",kind),P("@text",text)]);await cmd.ExecuteNonQueryAsync();}
     public async Task Comment(int user,int id,string text)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"issues.comment"))throw new UnauthorizedAccessException();if(string.IsNullOrWhiteSpace(text)||text.Length>4000)throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await RequireIssueProject(c,tx,id,issue.ProjectId);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
     }
     public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note,string? activity=null)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"time.log"))throw new UnauthorizedAccessException();if(hours<=0||hours>24||decimal.Round(hours,2)!=hours||date.Year<1753||(note?.Length??0)>1000)throw new ArgumentException("Unesi datum i sate od 0,01 do 24 (najviše dvije decimale).");
         activity = string.IsNullOrWhiteSpace(activity) ? "Općenito" : activity.Trim();
         if (activity.Length > 60) throw new ArgumentException("Aktivnost može imati najviše 60 znakova.");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note,Activity) VALUES(@id,@user,@date,@hours,@note,@activity)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??""),P("@activity",activity)]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await RequireIssueProject(c,tx,id,issue.ProjectId);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note,Activity) VALUES(@id,@user,@date,@hours,@note,@activity)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??""),P("@activity",activity)]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
     }
     public async Task<(List<IssueEvent> Events,List<TimeEntry> Time)> Activity(int user,int id)
     {
-        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4)));return(events,time);
+        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project) AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project) AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));cmd.Parameters.Add(P("@project",issue.ProjectId));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4)));return(events,time);
     }
 
     public async Task<List<TimeReportRow>> TimeReport(
