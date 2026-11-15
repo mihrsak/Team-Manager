@@ -1,0 +1,74 @@
+@page
+@model TeamManager.Web.Pages.CalendarModel
+<h1>Kalendar rokova</h1>
+
+<section class="card">
+    <form method="get" class="grid">
+        <label>Mjesec<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
+        <label>Projekt
+            <select asp-for="ProjectId">
+                <option value="">Svi dostupni projekti</option>
+                @foreach (var project in Model.Projects) { <option value="@project.Id">@project.Name</option> }
+            </select>
+        </label>
+        <div><button>Prikaži</button></div>
+    </form>
+    <div class="actions">
+        @if (Model.Previous is not null)
+        {
+            <a asp-page="/Calendar" asp-route-month="@Model.Previous" asp-route-projectId="@Model.ProjectId">Prethodni mjesec</a>
+        }
+        @if (Model.Next is not null)
+        {
+            <a asp-page="/Calendar" asp-route-month="@Model.Next" asp-route-projectId="@Model.ProjectId">Sljedeći mjesec</a>
+        }
+    </div>
+</section>
+
+<div class="card table">
+    <table class="deadline-calendar">
+        <caption>@Model.Caption</caption>
+        <thead><tr>
+            @foreach (var day in new[] { "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja" })
+            {
+                <th scope="col">@day</th>
+            }
+        </tr></thead>
+        <tbody>
+            @for (var week = 0; week < Model.WeekCount; week++)
+            {
+                <tr>
+                    @for (var weekday = 0; weekday < 7; weekday++)
+                    {
+                        var day = week * 7 + weekday - Model.FirstDayOffset + 1;
+                        <td>
+                            @if (day >= 1 && day <= Model.Days)
+                            {
+                                <strong>@day</strong>
+                                @if (Model.Deadlines.Contains(day))
+                                {
+                                    <ul>
+                                        @foreach (var issue in Model.Deadlines[day])
+                                        {
+                                            <li><a asp-page="/Issue" asp-route-id="@issue.Id">@issue.Title</a></li>
+                                        }
+                                    </ul>
+                                }
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (Model.Deadlines.Count == 0)
+    {
+        <p>U ovom mjesecu nema rokova za odabrane projekte.</p>
+    }
+</div>
+
+<style>
+    .deadline-calendar { min-width: 720px; table-layout: fixed; }
+    .deadline-calendar td { height: 5rem; vertical-align: top; overflow-wrap: anywhere; }
+    .deadline-calendar ul { padding-left: 1rem; margin: .25rem 0; }
+</style>

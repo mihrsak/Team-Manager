@@ -286,6 +286,15 @@ try {
     }
     $page=Post "/Issues?handler=DeleteQuery&id=$savedId" $admin @{}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.SavedIssueQueries WHERE Id=$savedId") -eq 0) 'Owner can delete saved query'
+    $calendar=Invoke-WebRequest -UseBasicParsing "$base/Calendar?Month=2026-12&ProjectId=$parent" -WebSession $admin
+    $issueLink="href=`"/Issue?id=$id`""
+    Assert ($calendar.Content.Contains($issueLink)) 'Calendar shows an accessible issue in its deadline month'
+    $nextMonth=Invoke-WebRequest -UseBasicParsing "$base/Calendar?Month=2027-01&ProjectId=$parent" -WebSession $admin
+    Assert (-not $nextMonth.Content.Contains($issueLink)) 'Calendar excludes deadlines in previous months'
+    $regularCalendar=Invoke-WebRequest -UseBasicParsing "$base/Calendar?Month=2026-12" -WebSession $regular
+    Assert (-not $regularCalendar.Content.Contains($issueLink)) 'Calendar hides deadlines from inaccessible projects'
+    $upperBoundary=Invoke-WebRequest -UseBasicParsing "$base/Calendar?Month=9999-12" -WebSession $admin
+    Assert ($upperBoundary.StatusCode -eq 200) 'Calendar supports the final selectable month'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment
