@@ -35,7 +35,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Backlog |
 | QUERY-01 | Spremljeni upiti, stupci, grupiranje, sortiranje i sažeci | Gotovo: osobni upiti spremaju filtre, stupce, sortiranje i grupiranje; broj zadataka po grupi i ukupno |
 | PLAN-01 | Verzije, prekretnice i roadmap | Backlog |
-| PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Djelomično: mjesečni kalendar rokova; preostaje Gantt s datumima i ovisnostima |
+| PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Gotovo: mjesečni kalendar rokova i Gantt s datumima i ovisnostima između prikazanih zadataka |
 | TIME-01 | Unos sati po zadatku i pregled zapisa | Gotovo |
 | TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Gotovo |
 | FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Backlog |

@@ -295,6 +295,19 @@ try {
     Assert (-not $regularCalendar.Content.Contains($issueLink)) 'Calendar hides deadlines from inaccessible projects'
     $upperBoundary=Invoke-WebRequest -UseBasicParsing "$base/Calendar?Month=9999-12" -WebSession $admin
     Assert ($upperBoundary.StatusCode -eq 200) 'Calendar supports the final selectable month'
+    $schedule=@{'Input.Title'='QA scheduled';'Input.Description'='Scheduled task';'Input.Type'='Zadatak';'Input.Priority'='Hitno';'Input.Status'='Novo';'Input.StartDate'='2026-12-04';'Input.DueDate'='2026-12-03';'Input.Revision'=(Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id")}
+    $page=Post "/Issue?id=$id&handler=Save" $admin $schedule
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$id AND StartDate IS NULL") -eq 1) 'Issue rejects a start after its due date'
+    $schedule['Input.StartDate']='2026-11-29'
+    $page=Post "/Issue?id=$id&handler=Save" $admin $schedule
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$id AND StartDate='2026-11-29' AND DueDate='2026-12-03'") -eq 1) 'Issue saves its schedule'
+    $gantt=Invoke-WebRequest -UseBasicParsing "$base/Gantt?Month=2026-12&ProjectId=$parent" -WebSession $admin
+    Assert ($gantt.Content -match "<tr id=`"task-$id`">(?s:.*?)colspan=`"3`" class=`"gantt-period`"") 'Gantt clips the schedule at the month boundary'
+    Assert ($gantt.Content.Contains("href=`"#task-$id`"")) 'Gantt shows blockers between displayed tasks'
+    Assert ($gantt.Content -match "<tr id=`"task-$copy`">(?s:.*?)colspan=`"1`" class=`"gantt-period`"") 'A deadline alone is shown as a one-day marker'
+    Sql "UPDATE dbo.Issues SET DueDate='2026-12-03' WHERE Id=$publicIssue" | Out-Null
+    $gantt=Invoke-WebRequest -UseBasicParsing "$base/Gantt?Month=2026-12" -WebSession $regular
+    Assert ($gantt.Content.Contains("id=`"task-$publicIssue`"") -and -not $gantt.Content.Contains("href=`"#task-$copy`"")) 'Gantt hides dependencies on inaccessible tasks'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

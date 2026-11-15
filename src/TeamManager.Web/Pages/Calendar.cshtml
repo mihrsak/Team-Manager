@@ -1,6 +1,7 @@
 @page
 @model TeamManager.Web.Pages.CalendarModel
 <h1>Kalendar rokova</h1>
+<p><a asp-page="/Gantt" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">Ganttov prikaz</a></p>
 
 <section class="card">
     <form method="get" class="grid">

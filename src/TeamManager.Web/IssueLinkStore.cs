@@ -44,6 +44,27 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
         return result;
     }
 
+    public async Task<ILookup<int, int>> Dependencies(IEnumerable<int> visibleIds)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            WITH Visible AS (SELECT Id FROM OPENJSON(@issues) WITH (Id int '$'))
+            SELECT l.TargetId,l.SourceId FROM dbo.IssueLinks l
+            JOIN Visible s ON s.Id=l.SourceId JOIN Visible t ON t.Id=l.TargetId
+            WHERE l.Kind='blocks' ORDER BY l.SourceId
+            """, connection);
+        command.Parameters.Add(new SqlParameter("@issues", System.Data.SqlDbType.NVarChar, -1)
+        {
+            Value = System.Text.Json.JsonSerializer.Serialize(visibleIds)
+        });
+        await using var reader = await command.ExecuteReaderAsync();
+        var dependencies = new List<(int Target, int Source)>();
+        while (await reader.ReadAsync())
+            dependencies.Add((reader.GetInt32(0), reader.GetInt32(1)));
+        return dependencies.ToLookup(link => link.Target, link => link.Source);
+    }
+
     public async Task Set(int user, int id, int otherId, string kind, bool outgoing, bool remove)
     {
         if (id == otherId || kind is not ("related" or "duplicate" or "blocks" or "parent"))

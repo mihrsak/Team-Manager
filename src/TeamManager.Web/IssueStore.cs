@@ -12,10 +12,11 @@ public sealed class IssueInput
     [Required] public string Priority{get;set;}="Normalan";
     [Required] public string Status{get;set;}="Novo";
     public int? AssigneeId{get;set;}
+    public DateTime? StartDate{get;set;}
     public DateTime? DueDate{get;set;}
     public int Revision{get;set;}
 }
-public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision,string? AssigneeEmployeeNumber);
+public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision,string? AssigneeEmployeeNumber,DateTime? StartDate);
 public record IssueDetail(int Id,int ProjectId,IssueInput Input);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity);
@@ -46,17 +47,17 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name FROM dbo.Projects ORDER BY Name",c);await using var r=await cmd.ExecuteReaderAsync();var all=new List<Team>();while(await r.ReadAsync())all.Add(new(r.GetInt32(0),r.GetString(1)));
         var result=new List<Team>();foreach(var project in all)if(await Can(user,project.Id,right))result.Add(project);return result;
     }
-    public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null)
+    public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null,bool schedule=false)
     {
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR i.DueDate>=@from) AND (@to IS NULL OR i.DueDate<=@to) ORDER BY i.Id DESC",c);
-        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value}]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9)));return result;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC",c);
+        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule)]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision FROM dbo.Issues WHERE Id=@id",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate FROM dbo.Issues WHERE Id=@id",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
         var project=r.GetInt32(0);if(!await Can(user,project,"issues.view"))return null;
-        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8)});
+        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9)});
     }
     public async Task<List<Team>> Assignees(int project)
     {
@@ -66,6 +67,8 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     {
         if(!await Can(user,project,id is null?"issues.create":"issues.edit")||!await Can(user,project,"issues.view"))throw new UnauthorizedAccessException();
         if(string.IsNullOrWhiteSpace(input.Title)||input.Title.Length>200||(input.Description?.Length??0)>4000||!(await workflow.Values("type")).Contains(input.Type)||!(await workflow.Values("priority")).Contains(input.Priority)||!(await workflow.Values("status")).Contains(input.Status)||input.DueDate?.Year<1753)throw new ArgumentException("Provjeri polja zadatka.");
+        if (input.StartDate?.Year < 1753 || input.StartDate?.Date > input.DueDate?.Date)
+            throw new ArgumentException("Početak mora biti valjan datum i ne može biti poslije roka.");
         if(id is null&&input.Status!="Novo")throw new ArgumentException("Novi zadatak mora početi statusom Novo.");
         await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();
         var issueId = await SaveInTransaction(c, tx, user, project, id, input);
@@ -78,15 +81,15 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         await RequireActive(c,tx,project);
         if(input.AssigneeId is not null){await using var check=new SqlCommand("SELECT COUNT(*) FROM dbo.ProjectMembers WITH(HOLDLOCK) WHERE ProjectId=@p AND UserId=@u",c,tx);check.Parameters.AddRange([P("@p",project),P("@u",input.AssigneeId)]);if(Convert.ToInt32(await check.ExecuteScalarAsync())==0)throw new ArgumentException("Nositelj mora biti član projekta.");}
         string? before=null;
-        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p FOR JSON PATH,WITHOUT_ARRAY_WRAPPER",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
+        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p FOR JSON PATH,WITHOUT_ARRAY_WRAPPER",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
         if(id is not null){
             if(string.IsNullOrEmpty(before))throw new InvalidOperationException("Zadatak više ne postoji.");
             using var previous=JsonDocument.Parse(before);var oldStatus=previous.RootElement.GetProperty("Status").GetString()!;var oldType=previous.RootElement.GetProperty("Type").GetString()!;
             var rights=await permissions.Effective(user,"project",project);
             if(oldStatus!=input.Status&&!rights.Contains("*")&&!await WorkflowStore.Allowed(c,tx,user,project,oldType,oldStatus,input.Status))throw new ArgumentException("Tvoja rola ne dopušta taj prijelaz statusa za ovaj tip zadatka.");
         }
-        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
-        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),P("@user",user),P("@id",id),P("@revision",input.Revision)]);
+        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
+        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),new SqlParameter("@start",System.Data.SqlDbType.Date){Value=(object?)input.StartDate??DBNull.Value},P("@user",user),P("@id",id),P("@revision",input.Revision)]);
         var saved=await cmd.ExecuteScalarAsync();if(saved is null)throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
         var issueId=Convert.ToInt32(saved);await Event(c,tx,issueId,user,id is null?"created":"updated",JsonSerializer.Serialize(new{Before=before,After=input}));return issueId;
     }

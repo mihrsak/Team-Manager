@@ -1,0 +1,77 @@
+@page
+@model TeamManager.Web.Pages.GanttModel
+<h1>Ganttov prikaz</h1>
+<p><a asp-page="/Calendar" asp-route-month="@Model.Month" asp-route-projectId="@Model.ProjectId">Kalendar rokova</a></p>
+
+<section class="card">
+    <form method="get" class="grid">
+        <label>Mjesec<input asp-for="Month" type="month" min="1753-01" max="9999-12" required></label>
+        <label>Projekt
+            <select asp-for="ProjectId">
+                <option value="">Svi dostupni projekti</option>
+                @foreach (var project in Model.Projects) { <option value="@project.Id">@project.Name</option> }
+            </select>
+        </label>
+        <div><button>Prikaži</button></div>
+    </form>
+</section>
+
+@if (Model.Tasks.Count == 0)
+{
+    <p>Nema zadataka s planiranim datumom u ovom mjesecu.</p>
+}
+else
+{
+    <div class="card table gantt-scroll">
+        <table class="gantt">
+            <caption>@Model.Caption</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Zadatak</th>
+                    @for (var day = 1; day <= Model.Days; day++)
+                    {
+                        <th class="gantt-day" scope="col">@day</th>
+                    }
+                    <th scope="col">Ovisnosti</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var task in Model.Tasks)
+                {
+                    var remaining = Model.Days - task.FirstDay - task.Span + 1;
+                    <tr id="task-@task.Issue.Id">
+                        <th scope="row">
+                            <a asp-page="/Issue" asp-route-id="@task.Issue.Id">#@task.Issue.Id @task.Issue.Title</a>
+                            <small>@task.Issue.Project · @task.Dates</small>
+                        </th>
+                        @if (task.FirstDay > 1)
+                        {
+                            <td colspan="@(task.FirstDay - 1)"></td>
+                        }
+                        <td colspan="@task.Span" class="gantt-period"><span title="@task.Dates"></span></td>
+                        @if (remaining > 0)
+                        {
+                            <td colspan="@remaining"></td>
+                        }
+                        <td>
+                            @foreach (var blocker in Model.Dependencies[task.Issue.Id])
+                            {
+                                <div>Blokiran zadatkom <a href="#task-@blocker">#@blocker</a></div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<style>
+    .gantt-scroll { overflow-x: auto; }
+    .gantt { min-width: 76rem; }
+    .gantt th[scope=row] { min-width: 13rem; overflow-wrap: anywhere; }
+    .gantt th small { display: block; font-weight: normal; }
+    .gantt .gantt-day { min-width: 1.6rem; padding-inline: .2rem; text-align: center; }
+    .gantt .gantt-period { padding-inline: .2rem; }
+    .gantt-period span { display: block; height: .85rem; border-radius: .25rem; background: #2457a6; }
+</style>
