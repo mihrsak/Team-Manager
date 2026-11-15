@@ -63,7 +63,7 @@ public sealed class ActivityModel(IssueStore issues, Microsoft.Extensions.Locali
         if (ProjectId is int project && !Projects.Any(item => item.Id == project)) return NotFound();
         var allowed = ProjectId is int selected ? [selected] : Projects.Select(item => item.Id).ToArray();
         if (allowed.Length > 0)
-            Entries = await issues.RecentActivity(allowed);
+            Entries = await issues.RecentActivity(user, allowed);
         return null;
     }
 

@@ -56,7 +56,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
         return matches;
     }
 
-    public async Task<ILookup<int, RoadmapStatusCount>> Progress(int project)
+    public async Task<ILookup<int, RoadmapStatusCount>> Progress(int user, int project)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -66,10 +66,12 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
             JOIN dbo.IssueStatuses s ON s.Name=i.Status
             JOIN dbo.Projects p ON p.Id=i.ProjectId
             WHERE i.ProjectId=@project AND p.IssuesEnabled=1 AND i.RoadmapItemId IS NOT NULL
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
             GROUP BY i.RoadmapItemId,i.Status,s.IsClosed
-            ORDER BY s.IsClosed,i.Status
+            ORDER BY s.IsClosed,i.Status OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.Add(P("@project", project));
+        command.Parameters.Add(P("@viewer",user));
         var counts = new List<RoadmapStatusCount>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())

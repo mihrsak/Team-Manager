@@ -12,13 +12,14 @@ public sealed class IssueInput
     [Required] public string Priority{get;set;}="Normalan";
     [Required] public string Status{get;set;}="Novo";
     public int? AssigneeId{get;set;}
+    public bool? IsPrivate{get;set;}
     public int? RoadmapItemId{get;set;}
     public DateTime? StartDate{get;set;}
     public DateTime? DueDate{get;set;}
     public int Revision{get;set;}
 }
 public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision,string? AssigneeEmployeeNumber,DateTime? StartDate);
-public record IssueDetail(int Id,int ProjectId,IssueInput Input);
+public record IssueDetail(int Id,int ProjectId,IssueInput Input,int CreatorId);
 public record ActivityRow(int Id,int IssueId,string Title,string Project,string Author,string Kind,DateTime At);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity,int Id);
@@ -52,14 +53,14 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null,bool schedule=false,int? assigneeId=null,bool openOnly=false,bool watchedOnly=false)
     {
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@watcher IS NULL OR EXISTS(SELECT 1 FROM dbo.IssueWatchers w WHERE w.IssueId=i.Id AND w.UserId=@watcher)) AND (@assignee IS NULL OR i.AssigneeId=@assignee) AND (@open=0 OR EXISTS(SELECT 1 FROM dbo.IssueStatuses st WHERE st.Name=i.Status AND st.IsClosed=0)) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC",c);
-        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule),new SqlParameter("@assignee",System.Data.SqlDbType.Int){Value=(object?)assigneeId??DBNull.Value},P("@open",openOnly),new SqlParameter("@watcher",System.Data.SqlDbType.Int){Value=watchedOnly?user:DBNull.Value}]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId)) AND (@p IS NULL OR i.ProjectId=@p) AND (@watcher IS NULL OR EXISTS(SELECT 1 FROM dbo.IssueWatchers w WHERE w.IssueId=i.Id AND w.UserId=@watcher)) AND (@assignee IS NULL OR i.AssigneeId=@assignee) AND (@open=0 OR EXISTS(SELECT 1 FROM dbo.IssueStatuses st WHERE st.Name=i.Status AND st.IsClosed=0)) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC OPTION(MAXRECURSION 0)",c);
+        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule),P("@viewer",user),new SqlParameter("@assignee",System.Data.SqlDbType.Int){Value=(object?)assigneeId??DBNull.Value},P("@open",openOnly),new SqlParameter("@watcher",System.Data.SqlDbType.Int){Value=watchedOnly?user:DBNull.Value}]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate,RoadmapItemId FROM dbo.Issues WHERE Id=@id",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate,RoadmapItemId,IsPrivate,CreatedBy FROM dbo.Issues WHERE Id=@id AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,ProjectId,IsPrivate,CreatedBy,AssigneeId)) OPTION(MAXRECURSION 0)",c);cmd.Parameters.AddRange([P("@id",id),P("@viewer",user)]);await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
         var project=r.GetInt32(0);if(!await Can(user,project,"issues.view"))return null;
-        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9),RoadmapItemId=r.IsDBNull(10)?null:r.GetInt32(10)});
+        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9),RoadmapItemId=r.IsDBNull(10)?null:r.GetInt32(10),IsPrivate=r.GetBoolean(11)},r.GetInt32(12));
     }
     public async Task<bool> IsWatching(int user, int issue)
     {
@@ -81,7 +82,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
             "SELECT 1 FROM dbo.Projects WITH (HOLDLOCK) WHERE Id=@project AND IssuesEnabled=1", connection, transaction);
         project.Parameters.Add(P("@project", issue.ProjectId));
         if (await project.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
-        await RequireIssueProject(connection, transaction, id, issue.ProjectId);
+        await RequireIssueProject(connection, transaction, id, issue.ProjectId, user);
 
         await using var command = new SqlCommand(watch
             ? """
@@ -125,15 +126,20 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
                 throw new ArgumentException("Odaberi verziju ili prekretnicu ovog projekta.");
         }
         string? before=null;
-        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p FOR JSON PATH,WITHOUT_ARRAY_WRAPPER",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
+        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId,IsPrivate,CreatedBy FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,ProjectId,IsPrivate,CreatedBy,AssigneeId)) FOR JSON PATH,WITHOUT_ARRAY_WRAPPER OPTION(MAXRECURSION 0)",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project),P("@viewer",user)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
         if(id is not null){
-            if(string.IsNullOrEmpty(before))throw new InvalidOperationException("Zadatak više ne postoji.");
+            if(string.IsNullOrEmpty(before))throw new UnauthorizedAccessException();
             using var previous=JsonDocument.Parse(before);var oldStatus=previous.RootElement.GetProperty("Status").GetString()!;var oldType=previous.RootElement.GetProperty("Type").GetString()!;
             var rights=await permissions.Effective(user,"project",project);
+            var wasPrivate = previous.RootElement.GetProperty("IsPrivate").GetBoolean();
+            input.IsPrivate ??= wasPrivate;
+            if (input.IsPrivate != wasPrivate && previous.RootElement.GetProperty("CreatedBy").GetInt32() != user
+                && !rights.Contains("*") && !rights.Contains("projects.manage"))
+                throw new UnauthorizedAccessException();
             if(oldStatus!=input.Status&&!rights.Contains("*")&&!await WorkflowStore.Allowed(c,tx,user,project,oldType,oldStatus,input.Status))throw new ArgumentException("Tvoja rola ne dopušta taj prijelaz statusa za ovaj tip zadatka.");
         }
-        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@roadmap,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,RoadmapItemId=@roadmap,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
-        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),new SqlParameter("@start",System.Data.SqlDbType.Date){Value=(object?)input.StartDate??DBNull.Value},new SqlParameter("@roadmap",System.Data.SqlDbType.Int){Value=(object?)input.RoadmapItemId??DBNull.Value},P("@user",user),P("@id",id),P("@revision",input.Revision)]);
+        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId,IsPrivate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@roadmap,@private,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,RoadmapItemId=@roadmap,IsPrivate=@private,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
+        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),new SqlParameter("@start",System.Data.SqlDbType.Date){Value=(object?)input.StartDate??DBNull.Value},new SqlParameter("@roadmap",System.Data.SqlDbType.Int){Value=(object?)input.RoadmapItemId??DBNull.Value},P("@private",input.IsPrivate??false),P("@user",user),P("@id",id),P("@revision",input.Revision)]);
         var saved=await cmd.ExecuteScalarAsync();if(saved is null)throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
         var issueId=Convert.ToInt32(saved);await Event(c,tx,issueId,user,id is null?"created":"updated",JsonSerializer.Serialize(new{Before=before,After=input}));return issueId;
     }
@@ -191,8 +197,10 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         await using var check = new SqlCommand("""
             SELECT 1 FROM dbo.Issues WITH (UPDLOCK)
             WHERE Id=@id AND ProjectId=@source AND Revision=@revision
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,ProjectId,IsPrivate,CreatedBy,AssigneeId))
+            OPTION(MAXRECURSION 0)
             """, connection, transaction);
-        check.Parameters.AddRange([P("@id",id), P("@source",source), P("@revision",revision)]);
+        check.Parameters.AddRange([P("@id",id), P("@source",source), P("@revision",revision), P("@viewer",user)]);
         if (await check.ExecuteScalarAsync() is null)
             throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Osvježi stranicu.");
 
@@ -221,11 +229,11 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         return id;
     }
 
-    internal static async Task RequireIssueProject(SqlConnection connection, SqlTransaction transaction, int id, int project)
+    internal static async Task RequireIssueProject(SqlConnection connection, SqlTransaction transaction, int id, int project, int user)
     {
         await using var command = new SqlCommand(
-            "SELECT 1 FROM dbo.Issues WITH (HOLDLOCK) WHERE Id=@id AND ProjectId=@project", connection, transaction);
-        command.Parameters.AddRange([P("@id", id), P("@project", project)]);
+            "SELECT 1 FROM dbo.Issues WITH (HOLDLOCK) WHERE Id=@id AND ProjectId=@project AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,ProjectId,IsPrivate,CreatedBy,AssigneeId)) OPTION(MAXRECURSION 0)", connection, transaction);
+        command.Parameters.AddRange([P("@id", id), P("@project", project), P("@viewer",user)]);
         if (await command.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
     }
 
@@ -240,22 +248,22 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     public async Task Comment(int user,int id,string text)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"issues.comment"))throw new UnauthorizedAccessException();if(string.IsNullOrWhiteSpace(text)||text.Length>4000)throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await RequireIssueProject(c,tx,id,issue.ProjectId);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await RequireIssueProject(c,tx,id,issue.ProjectId,user);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
     }
     public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note,string? activity=null)
     {
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"time.log"))throw new UnauthorizedAccessException();if(hours<=0||hours>24||decimal.Round(hours,2)!=hours||date.Year<1753||(note?.Length??0)>1000)throw new ArgumentException("Unesi datum i sate od 0,01 do 24 (najviše dvije decimale).");
         activity = string.IsNullOrWhiteSpace(activity) ? "Općenito" : activity.Trim();
         if (activity.Length > 60) throw new ArgumentException("Aktivnost može imati najviše 60 znakova.");
-        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await RequireIssueProject(c,tx,id,issue.ProjectId);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note,Activity) VALUES(@id,@user,@date,@hours,@note,@activity)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??""),P("@activity",activity)]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
+        await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId,true);await RequireIssueProject(c,tx,id,issue.ProjectId,user);await using var cmd=new SqlCommand("INSERT dbo.TimeEntries(IssueId,UserId,WorkDate,Hours,Note,Activity) VALUES(@id,@user,@date,@hours,@note,@activity)",c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@date",date.Date),P("@hours",hours),P("@note",note??""),P("@activity",activity)]);await cmd.ExecuteNonQueryAsync();await Event(c,tx,id,user,"time",$"{date:yyyy-MM-dd}: {hours} h — {note}");await tx.CommitAsync();
     }
     public async Task<(List<IssueEvent> Events,List<TimeEntry> Time)> Activity(int user,int id)
     {
-        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project) AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC; SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity,t.Id FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project) AND @showTime=1 ORDER BY t.WorkDate DESC",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));cmd.Parameters.Add(P("@project",issue.ProjectId));await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4),r.GetInt32(5)));return(events,time);
+        var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))) AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC OPTION(MAXRECURSION 0); SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity,t.Id FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))) AND @showTime=1 ORDER BY t.WorkDate DESC OPTION(MAXRECURSION 0)",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));cmd.Parameters.AddRange([P("@project",issue.ProjectId),P("@viewer",user)]);await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4),r.GetInt32(5)));return(events,time);
     }
 
     public async Task<List<TimeReportRow>> TimeReport(
-        IEnumerable<int> projectIds, DateTime? from, DateTime? to, string? person, string? activity)
+        int user, IEnumerable<int> projectIds, DateTime? from, DateTime? to, string? person, string? activity)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -267,12 +275,14 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
             JOIN dbo.AppUsers u ON u.Id=t.UserId
             JOIN OPENJSON(@projects) WITH (Id int '$') permitted ON permitted.Id=p.Id
             WHERE p.IssuesEnabled=1 AND p.TimeEnabled=1
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
               AND (@from IS NULL OR t.WorkDate>=@from) AND (@to IS NULL OR t.WorkDate<=@to)
               AND (@person='' OR CHARINDEX(@person,u.DisplayName)>0 OR CHARINDEX(@person,u.EmployeeNumber)>0)
               AND (@activity='' OR CHARINDEX(@activity,t.Activity)>0)
             GROUP BY p.Name,u.Id,u.DisplayName,u.EmployeeNumber,t.Activity
-            ORDER BY p.Name,u.DisplayName,u.EmployeeNumber,t.Activity
+            ORDER BY p.Name,u.DisplayName,u.EmployeeNumber,t.Activity OPTION(MAXRECURSION 0)
             """, connection);
+        command.Parameters.Add(P("@viewer",user));
         command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
             { Value = JsonSerializer.Serialize(projectIds) });
         command.Parameters.Add(new SqlParameter("@from", System.Data.SqlDbType.Date)
@@ -289,7 +299,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         return rows;
     }
 
-    public async Task<List<ActivityRow>> RecentActivity(IEnumerable<int> projectIds)
+    public async Task<List<ActivityRow>> RecentActivity(int user, IEnumerable<int> projectIds)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -301,8 +311,10 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
             JOIN dbo.AppUsers u ON u.Id=e.UserId
             JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
             WHERE p.IssuesEnabled=1 AND (e.Kind<>'time' OR p.TimeEnabled=1)
-            ORDER BY e.CreatedAt DESC,e.Id DESC
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+            ORDER BY e.CreatedAt DESC,e.Id DESC OPTION(MAXRECURSION 0)
             """, connection);
+        command.Parameters.Add(P("@viewer",user));
         command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
         {
             Value = JsonSerializer.Serialize(projectIds)

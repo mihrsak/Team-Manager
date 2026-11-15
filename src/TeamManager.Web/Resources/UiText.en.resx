@@ -1265,4 +1265,6 @@
   <data name="Ograniči na upravitelje" xml:space="preserve"><value>Restrict to project managers</value></data>
   <data name="Ograničavanje vidljivosti polja zadatka" xml:space="preserve"><value>Issue field visibility restricted</value></data>
   <data name="Dijeljenje polja zadatka" xml:space="preserve"><value>Issue field shared</value></data>
+  <data name="Privatni zadatak" xml:space="preserve"><value>Private issue</value></data>
+  <data name="Privatni zadatak mogu vidjeti autor, nositelj i upravitelji s pristupom projektu." xml:space="preserve"><value>The creator, assignee, and managers with access to the project can view a private issue.</value></data>
 </root>

@@ -19,7 +19,8 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
             SELECT n.Body,n.CreatedAt FROM dbo.IssuePrivateNotes n
             JOIN dbo.Issues i ON i.Id=n.IssueId
             WHERE n.UserId=@user AND n.IssueId=@issue AND i.ProjectId=@project
-            ORDER BY n.Id DESC
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+            ORDER BY n.Id DESC OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.AddRange([P("@user", user), P("@issue", issue), P("@project", project)]);
         var notes = new List<PrivateIssueNote>();
@@ -49,7 +50,7 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
         await connection.OpenAsync();
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
         await IssueStore.RequireActive(connection, transaction, issue.ProjectId);
-        await IssueStore.RequireIssueProject(connection, transaction, id, issue.ProjectId);
+        await IssueStore.RequireIssueProject(connection, transaction, id, issue.ProjectId, user);
         await using var command = new SqlCommand("""
             INSERT dbo.IssuePrivateNotes(IssueId,UserId,Body) VALUES(@issue,@user,@body)
             """, connection, transaction);
@@ -72,7 +73,8 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
             JOIN dbo.Projects p ON p.Id=i.ProjectId
             JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
             WHERE n.UserId=@user AND p.IssuesEnabled=1 AND (e.Kind<>'time' OR p.TimeEnabled=1)
-            ORDER BY n.IsRead,e.CreatedAt DESC,n.EventId DESC
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+            ORDER BY n.IsRead,e.CreatedAt DESC,n.EventId DESC OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.Add(P("@user", user));
         command.Parameters.Add(ProjectFilter(allowed));
@@ -99,6 +101,8 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
             JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
             WHERE n.UserId=@user AND n.EventId=@event AND p.IssuesEnabled=1
               AND (e.Kind<>'time' OR p.TimeEnabled=1)
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+            OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.AddRange([P("@user", user), P("@event", eventId), ProjectFilter(allowed)]);
         return await command.ExecuteNonQueryAsync() == 1;

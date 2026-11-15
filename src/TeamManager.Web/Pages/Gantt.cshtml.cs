@@ -47,7 +47,7 @@ public sealed class GanttModel(IssueStore issues, IssueLinkStore links, Microsof
             Tasks.Add(new(issue, first, last - first + 1, dates));
         }
         if (Tasks.Count > 0)
-            Dependencies = await links.Dependencies(Tasks.Select(task => task.Issue.Id));
+            Dependencies = await links.Dependencies(user, Tasks.Select(task => task.Issue.Id));
 
         return Page();
     }

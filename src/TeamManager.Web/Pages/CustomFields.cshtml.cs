@@ -28,7 +28,7 @@ public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
         }
         else if (!User.IsInRole("*")) return Forbid();
 
-        Fields = await fields.List(Scope, entityId, Target);
+        Fields = await fields.List(UserId, Scope, entityId, Target);
         return Page();
     }
 

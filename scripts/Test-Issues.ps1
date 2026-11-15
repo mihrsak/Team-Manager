@@ -670,6 +670,48 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
     Assert ($page.Content.Contains('QA restricted value')) 'Restoring standard visibility exposes the existing value'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE Subject=N'#$visibilityField' AND Action IN ('project.issue-field.restrict','project.issue-field.share')") -eq 2) 'Field visibility changes are audited'
+    $page=Post "/Roadmap?handler=Save&projectId=$project" $admin @{kind='version';name='QA privacy roadmap'}
+    $privacyItem=Sql "SELECT Id FROM dbo.ProjectMilestones WHERE ProjectId=$project AND Name=N'QA privacy roadmap'"
+    $privacyInput=@{'Input.Title'='QA confidential issue';'Input.Description'='QA confidential detail';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.DueDate'='2026-12-20';'Input.RoadmapItemId'=$privacyItem}
+    $page=Post "/Issue?handler=Save&projectId=$project" $admin $privacyInput
+    $secretIssue=Sql "SELECT Id FROM dbo.Issues WHERE ProjectId=$project AND Title=N'QA confidential issue'"
+    $page=Post "/Issue?id=$secretIssue&handler=Watch" $regular @{watch='true'}
+    $page=Post "/Issue?id=$secretIssue&handler=Time" $admin @{date='2026-12-19';hours='2';note='QA private time note';activity='QA secret activity'}
+    $secretTime=Sql "SELECT MAX(Id) FROM dbo.TimeEntries WHERE IssueId=$secretIssue"
+    $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$secretIssue;relation='related'}
+    $privacyInput['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$secretIssue"
+    $privacyInput['Input.IsPrivate']='true'
+    $page=Post "/Issue?id=$secretIssue&handler=Save" $admin $privacyInput
+    Assert ($page.Content.Contains('Private issue') -and (Sql "SELECT CAST(IsPrivate AS int) FROM dbo.Issues WHERE Id=$secretIssue") -eq 1) 'Manager can set private visibility using the English form'
+    foreach ($path in @("/Issue?id=$secretIssue","/CustomFields?scope=time&entityId=$secretTime")) {
+        try {
+            Invoke-WebRequest -UseBasicParsing "$base$path" -WebSession $regular | Out-Null
+            throw "Unauthorized read: $path"
+        } catch [System.Net.WebException] {
+            Assert ([int]$_.Exception.Response.StatusCode -eq 404) "$path hides private issue data"
+        }
+    }
+    foreach ($path in @("/Issues?ProjectId=$project",'/Search?Query=QA%20confidential','/Calendar?Month=2026-12','/Gantt?Month=2026-12','/Activity','/Notifications','/Dashboard',"/Issue?id=$publicIssue")) {
+        $page=Invoke-WebRequest -UseBasicParsing "$base$path" -WebSession $regular
+        Assert (-not $page.Content.Contains('QA confidential issue')) "$path excludes the private issue"
+    }
+    $csv=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Csv&ProjectId=$project" -WebSession $regular
+    Assert (-not ([Text.Encoding]::UTF8.GetString($csv.RawContentStream.ToArray()).Contains('QA confidential issue'))) 'CSV excludes private issues'
+    $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport?ProjectId=$project&Activity=QA%20secret%20activity" -WebSession $regular
+    Assert (-not $report.Content.Contains('<td>QA secret activity</td>')) 'Time reports exclude private issue hours'
+    $roadmap=Invoke-WebRequest -UseBasicParsing "$base/Roadmap?projectId=$project" -WebSession $regular
+    Assert ($roadmap.Content.Contains('QA privacy roadmap') -and -not $roadmap.Content.Contains('0 od 1 zatvorenih zadataka')) 'Roadmap excludes private issues from status counts'
+    $privacyInput['Input.AssigneeId']=$uid
+    $privacyInput['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$secretIssue"
+    $page=Post "/Issue?id=$secretIssue&handler=Save" $admin $privacyInput
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$secretIssue" -WebSession $regular
+    Assert ($page.Content.Contains('Privatni zadatak')) 'Assigned user with project access can read the private issue in Croatian'
+    $privacyInput['Input.IsPrivate']='false'
+    $privacyInput['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$secretIssue"
+    $page=Post "/Issue?id=$secretIssue&handler=Save" $regular $privacyInput
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Assignee cannot make another author private issue public'
+    $page=Post "/Issue?handler=Save&projectId=$project" $regular @{'Input.Title'='QA private by author';'Input.Description'='Author test';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.IsPrivate'='true'}
+    Assert ($page.Content.Contains('QA private by author') -and $page.Content.Contains('Privatni zadatak')) 'Issue creator can read their private unassigned issue'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

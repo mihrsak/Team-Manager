@@ -9,12 +9,12 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
-    public Task<List<IssueField>> Definitions(int project) => List(project, null, true);
+    public Task<List<IssueField>> Definitions(int project) => List(null, project, null, true);
 
     public async Task<List<IssueField>> ForIssue(int user, int project, int issue)
-        => await List(project, issue, await projects.CanManage(user, project));
+        => await List(user, project, issue, await projects.CanManage(user, project));
 
-    private async Task<List<IssueField>> List(int project, int? issue, bool canSeeRestricted)
+    private async Task<List<IssueField>> List(int? viewer, int project, int? issue, bool canSeeRestricted)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -22,10 +22,11 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
             SELECT f.Id,f.Name,v.Value,f.ManagersOnly FROM dbo.ProjectIssueFields f
             LEFT JOIN dbo.IssueFieldValues v ON v.FieldId=f.Id AND v.IssueId=@issue
             WHERE f.ProjectId=@project AND (f.ManagersOnly=0 OR @canSeeRestricted=1)
-              AND (@issue IS NULL OR EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@issue AND i.ProjectId=@project))
-            ORDER BY f.Name
+              AND (@issue IS NULL OR EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@issue AND i.ProjectId=@project
+                AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))))
+            ORDER BY f.Name OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@project", project), P("@issue", issue), P("@canSeeRestricted", canSeeRestricted)]);
+        command.Parameters.AddRange([P("@project", project), P("@issue", issue), P("@canSeeRestricted", canSeeRestricted),P("@viewer",viewer)]);
         await using var reader = await command.ExecuteReaderAsync();
         var fields = new List<IssueField>();
         while (await reader.ReadAsync())
@@ -71,6 +72,7 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
         await connection.OpenAsync();
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
         await IssueStore.RequireActive(connection, transaction, issue.ProjectId);
+        await IssueStore.RequireIssueProject(connection, transaction, id, issue.ProjectId, user);
         await using var check = new SqlCommand("""
             SELECT ManagersOnly FROM dbo.ProjectIssueFields WITH(HOLDLOCK) WHERE Id=@field AND ProjectId=@project
             """, connection, transaction);

@@ -19,10 +19,12 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
             FROM dbo.IssueLinks l
             JOIN dbo.Issues other ON other.Id=CASE WHEN l.SourceId=@id THEN l.TargetId ELSE l.SourceId END
             WHERE (l.SourceId=@id OR l.TargetId=@id)
-              AND EXISTS(SELECT 1 FROM dbo.Issues currentIssue WHERE currentIssue.Id=@id AND currentIssue.ProjectId=@project)
-            ORDER BY l.Kind,other.Id
+              AND EXISTS(SELECT 1 FROM dbo.Issues currentIssue WHERE currentIssue.Id=@id AND currentIssue.ProjectId=@project
+                AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,currentIssue.ProjectId,currentIssue.IsPrivate,currentIssue.CreatedBy,currentIssue.AssigneeId)))
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,other.ProjectId,other.IsPrivate,other.CreatedBy,other.AssigneeId))
+            ORDER BY l.Kind,other.Id OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@id", id), P("@project", project)]);
+        command.Parameters.AddRange([P("@id", id), P("@project", project), P("@viewer",user)]);
 
         var candidates = new List<(int Id, string Title, int Project, string Kind, bool Outgoing)>();
         await using (var reader = await command.ExecuteReaderAsync())
@@ -44,7 +46,7 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
         return result;
     }
 
-    public async Task<ILookup<int, int>> Dependencies(IEnumerable<int> visibleIds)
+    public async Task<ILookup<int, int>> Dependencies(int user, IEnumerable<int> visibleIds)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -52,8 +54,13 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
             WITH Visible AS (SELECT Id FROM OPENJSON(@issues) WITH (Id int '$'))
             SELECT l.TargetId,l.SourceId FROM dbo.IssueLinks l
             JOIN Visible s ON s.Id=l.SourceId JOIN Visible t ON t.Id=l.TargetId
-            WHERE l.Kind='blocks' ORDER BY l.SourceId
+            JOIN dbo.Issues source ON source.Id=l.SourceId JOIN dbo.Issues target ON target.Id=l.TargetId
+            WHERE l.Kind='blocks'
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,source.ProjectId,source.IsPrivate,source.CreatedBy,source.AssigneeId))
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,target.ProjectId,target.IsPrivate,target.CreatedBy,target.AssigneeId))
+            ORDER BY l.SourceId OPTION(MAXRECURSION 0)
             """, connection);
+        command.Parameters.Add(P("@viewer",user));
         command.Parameters.Add(new SqlParameter("@issues", System.Data.SqlDbType.NVarChar, -1)
         {
             Value = System.Text.Json.JsonSerializer.Serialize(visibleIds)
@@ -95,8 +102,8 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
 
         foreach (var project in new[] { first.ProjectId, second.ProjectId }.Distinct().Order())
             await IssueStore.RequireActive(connection, transaction, project);
-        await IssueStore.RequireIssueProject(connection, transaction, first.Id, first.ProjectId);
-        await IssueStore.RequireIssueProject(connection, transaction, second.Id, second.ProjectId);
+        await IssueStore.RequireIssueProject(connection, transaction, first.Id, first.ProjectId, user);
+        await IssueStore.RequireIssueProject(connection, transaction, second.Id, second.ProjectId, user);
 
         await using var command = new SqlCommand(remove
             ? "DELETE dbo.IssueLinks WHERE SourceId=@source AND TargetId=@target AND Kind=@kind"

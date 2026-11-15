@@ -12,6 +12,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public List<string> Types{get;set;}=[];public List<string> Statuses{get;set;}=[];public List<string> Priorities{get;set;}=[];
     public List<IssueEvent> Events{get;set;}=[];
     public List<TimeEntry> Time{get;set;}=[];
+    public bool CanSetPrivacy {get;private set;}
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
@@ -30,7 +31,21 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         Response.Headers.CacheControl = "private, no-store";
         Id=id;
         Types=await workflow.Values("type");Statuses=await workflow.Values("status");Priorities=await workflow.Values("priority");
-        if(id is not null){var issue=await store.Get(UserId,id.Value);if(issue is null)return NotFound();ProjectId=issue.ProjectId;Input=issue.Input;var activity=await store.Activity(UserId,id.Value);Events=activity.Events;Time=activity.Time;}
+        if (id is int selected)
+        {
+            var issue = await store.Get(UserId, selected);
+            if (issue is null) return NotFound();
+            ProjectId = issue.ProjectId;
+            Input = issue.Input;
+            CanSetPrivacy = issue.CreatorId == UserId || await store.CanMove(UserId, ProjectId);
+            try
+            {
+                var activity = await store.Activity(UserId, selected);
+                Events = activity.Events;
+                Time = activity.Time;
+            }
+            catch (UnauthorizedAccessException) { return NotFound(); }
+        }
         else ProjectId=projectId;
         var project=(await store.Projects(UserId)).FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
         RoadmapItems = await roadmap.List(ProjectId);
@@ -38,7 +53,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         if (id is not null)
         {
             CustomFields = await fields.ForIssue(UserId,ProjectId,id.Value);
-            Attachments = await attachments.List(id.Value, ProjectId);
+            Attachments = await attachments.List(UserId, id.Value, ProjectId);
             PrivateNotes = await personal.Notes(UserId, id.Value, ProjectId);
             CanAddPrivateNote = await personal.CanAddNote(ProjectId);
             IsWatching = await store.IsWatching(UserId, id.Value);

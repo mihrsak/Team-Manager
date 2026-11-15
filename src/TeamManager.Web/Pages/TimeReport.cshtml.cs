@@ -30,7 +30,7 @@ public sealed class TimeReportModel(IssueStore store) : PageModel
         {
             var projectIds = ProjectId is int selected ? [selected] : Projects.Select(p => p.Id).ToArray();
             if (projectIds.Length > 0)
-                Rows = await store.TimeReport(projectIds, From?.Date, To?.Date, Person?.Trim(), Activity?.Trim());
+                Rows = await store.TimeReport(user, projectIds, From?.Date, To?.Date, Person?.Trim(), Activity?.Trim());
         }
 
         return Page();

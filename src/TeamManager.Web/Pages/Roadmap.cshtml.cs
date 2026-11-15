@@ -21,7 +21,7 @@ public sealed class RoadmapModel(ProjectStore projects, RoadmapStore roadmap, Is
         CanEdit = project.Input.State == "Active" && await projects.CanManage(UserId, projectId);
         Items = await roadmap.List(projectId);
         if (await issues.Can(UserId, projectId, "issues.view"))
-            Progress = await roadmap.Progress(projectId);
+            Progress = await roadmap.Progress(UserId, projectId);
         return Page();
     }
 

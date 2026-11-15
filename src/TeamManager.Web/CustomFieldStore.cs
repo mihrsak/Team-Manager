@@ -41,9 +41,10 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
 
         await using var command = new SqlCommand("""
             SELECT t.UserId,i.Id,i.ProjectId,i.Title FROM dbo.TimeEntries t JOIN dbo.Issues i ON i.Id=t.IssueId
-            WHERE t.Id=@id
+            WHERE t.Id=@id AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+            OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.Add(P("@id", id));
+        command.Parameters.AddRange([P("@id", id),P("@viewer",actor)]);
         await using var reader = await command.ExecuteReaderAsync();
         if (!await reader.ReadAsync()) return null;
         var owner = reader.GetInt32(0);
@@ -54,7 +55,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
         return new(title, projectId, issue, actor == owner && await issues.Can(actor, projectId, "time.log"));
     }
 
-    public async Task<List<CustomFieldValue>> List(string scope, int? id, FieldTarget? target)
+    public async Task<List<CustomFieldValue>> List(int actor, string scope, int? id, FieldTarget? target)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -62,15 +63,16 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
             ? """
               AND EXISTS (SELECT 1 FROM dbo.TimeEntries t JOIN dbo.Issues i ON i.Id=t.IssueId
               JOIN dbo.Projects p ON p.Id=i.ProjectId
-              WHERE t.Id=@entity AND i.Id=@issue AND p.Id=@project AND p.IssuesEnabled=1 AND p.TimeEnabled=1)
+              WHERE t.Id=@entity AND i.Id=@issue AND p.Id=@project AND p.IssuesEnabled=1 AND p.TimeEnabled=1
+                AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId)))
               """
             : "";
         await using var command = new SqlCommand($"""
             SELECT f.Id,f.Name,v.Value,COALESCE(v.Revision,0)
             FROM dbo.CustomFields f LEFT JOIN dbo.{ValueTable(scope)} v ON v.FieldId=f.Id AND v.EntityId=@entity
-            WHERE f.Scope=@scope {timeGuard} ORDER BY f.Name
+            WHERE f.Scope=@scope {timeGuard} ORDER BY f.Name OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@scope",scope), P("@entity",id), P("@issue",target?.IssueId), P("@project",target?.ProjectId)]);
+        command.Parameters.AddRange([P("@scope",scope), P("@entity",id), P("@issue",target?.IssueId), P("@project",target?.ProjectId),P("@viewer",actor)]);
         var fields = new List<CustomFieldValue>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -99,7 +101,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
         if (scope == "time")
         {
             await IssueStore.RequireActive(connection,transaction,target.ProjectId!.Value,true);
-            await IssueStore.RequireIssueProject(connection,transaction,target.IssueId!.Value,target.ProjectId.Value);
+            await IssueStore.RequireIssueProject(connection,transaction,target.IssueId!.Value,target.ProjectId.Value,actor);
         }
         else if (scope == "project")
         {
