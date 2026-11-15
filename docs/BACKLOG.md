@@ -34,7 +34,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ISSUE-06 | Skupno uređivanje, kopiranje/premještanje i CSV izvoz | Gotovo: CSV, skupna izmjena statusa/prioriteta, kopiranje i premještanje pojedinačnog zadatka |
 | ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Backlog |
 | QUERY-01 | Spremljeni upiti, stupci, grupiranje, sortiranje i sažeci | Gotovo: osobni upiti spremaju filtre, stupce, sortiranje i grupiranje; broj zadataka po grupi i ukupno |
-| PLAN-01 | Verzije, prekretnice i roadmap | Djelomično: verzije i prekretnice na karti planova; preostaju povezivanje zadataka i pregled napretka |
+| PLAN-01 | Verzije, prekretnice i roadmap | Gotovo: verzije i prekretnice, povezivanje zadataka i napredak prema statusima |
 | PLAN-02 | Kalendar i Gantt s datumima i ovisnostima | Gotovo: mjesečni kalendar rokova i Gantt s datumima i ovisnostima između prikazanih zadataka |
 | TIME-01 | Unos sati po zadatku i pregled zapisa | Gotovo |
 | TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Gotovo |

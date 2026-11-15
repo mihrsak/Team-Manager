@@ -6,6 +6,8 @@ namespace TeamManager.Web;
 public sealed record RoadmapItem(int Id, string Kind, string Name, string Description,
     DateTime? TargetDate, bool IsComplete, int Revision);
 
+public sealed record RoadmapStatusCount(int ItemId, string Status, bool IsClosed, int Count);
+
 public sealed class RoadmapStore(IConfiguration configuration, ProjectStore projects)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
@@ -26,6 +28,27 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
             items.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
                 reader.IsDBNull(4) ? null : reader.GetDateTime(4), reader.GetBoolean(5), reader.GetInt32(6)));
         return items;
+    }
+
+    public async Task<ILookup<int, RoadmapStatusCount>> Progress(int project)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            SELECT i.RoadmapItemId,i.Status,s.IsClosed,COUNT(*)
+            FROM dbo.Issues i
+            JOIN dbo.IssueStatuses s ON s.Name=i.Status
+            JOIN dbo.Projects p ON p.Id=i.ProjectId
+            WHERE i.ProjectId=@project AND p.IssuesEnabled=1 AND i.RoadmapItemId IS NOT NULL
+            GROUP BY i.RoadmapItemId,i.Status,s.IsClosed
+            ORDER BY s.IsClosed,i.Status
+            """, connection);
+        command.Parameters.Add(P("@project", project));
+        var counts = new List<RoadmapStatusCount>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            counts.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetBoolean(2), reader.GetInt32(3)));
+        return counts.ToLookup(count => count.ItemId);
     }
 
     public async Task Save(int user, int project, RoadmapItem item)

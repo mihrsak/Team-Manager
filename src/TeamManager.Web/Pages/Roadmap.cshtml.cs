@@ -5,10 +5,11 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class RoadmapModel(ProjectStore projects, RoadmapStore roadmap) : PageModel
+public sealed class RoadmapModel(ProjectStore projects, RoadmapStore roadmap, IssueStore issues) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<RoadmapItem> Items { get; private set; } = [];
+    public ILookup<int, RoadmapStatusCount>? Progress { get; private set; }
     public bool CanEdit { get; private set; }
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -19,6 +20,8 @@ public sealed class RoadmapModel(ProjectStore projects, RoadmapStore roadmap) : 
         Project = project;
         CanEdit = project.Input.State == "Active" && await projects.CanManage(UserId, projectId);
         Items = await roadmap.List(projectId);
+        if (await issues.Can(UserId, projectId, "issues.view"))
+            Progress = await roadmap.Progress(projectId);
         return Page();
     }
 

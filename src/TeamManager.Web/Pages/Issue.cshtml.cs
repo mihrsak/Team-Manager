@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
-public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links):PageModel
+public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
     public int? Id{get;set;}
@@ -15,6 +15,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<RoadmapItem> RoadmapItems {get;set;}=[];
     public List<IssueLink> Links {get;set;}=[];
     public List<Team> CopyProjects {get;set;}=[];
     public List<Team> MoveProjects {get;set;}=[];
@@ -26,6 +27,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         if(id is not null){var issue=await store.Get(UserId,id.Value);if(issue is null)return NotFound();ProjectId=issue.ProjectId;Input=issue.Input;var activity=await store.Activity(UserId,id.Value);Events=activity.Events;Time=activity.Time;}
         else ProjectId=projectId;
         var project=(await store.Projects(UserId)).FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
+        RoadmapItems = await roadmap.List(ProjectId);
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {

@@ -33,5 +33,6 @@ Invoke-SqlFile '016-saved-issue-queries.sql' 'TeamManager'
 Invoke-SqlFile '017-saved-issue-query-layout.sql' 'TeamManager'
 Invoke-SqlFile '018-issue-start-dates.sql' 'TeamManager'
 Invoke-SqlFile '019-project-milestones.sql' 'TeamManager'
+Invoke-SqlFile '020-issue-roadmap-items.sql' 'TeamManager'
 if ($Demo) { Invoke-SqlFile '002-demo.sql' 'TeamManager' }
 Write-Host 'TeamManager database is ready.'

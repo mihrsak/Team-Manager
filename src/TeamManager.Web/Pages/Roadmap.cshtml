@@ -27,6 +27,27 @@
                     <span>· @date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
                 }
             </p>
+            @if (Model.Progress is not null)
+            {
+                var counts = Model.Progress[item.Id].ToList();
+                var total = counts.Sum(count => count.Count);
+                var closed = counts.Where(count => count.IsClosed).Sum(count => count.Count);
+                if (total == 0)
+                {
+                    <p>Nema povezanih zadataka.</p>
+                }
+                else
+                {
+                    <p>@closed od @total zatvorenih zadataka (@((100m * closed / total).ToString("0")) %)</p>
+                    <progress value="@closed" max="@total" aria-label="Napredak povezanih zadataka"></progress>
+                    <ul>
+                        @foreach (var count in counts)
+                        {
+                            <li>@count.Status · @count.Count</li>
+                        }
+                    </ul>
+                }
+            }
             @if (item.Description.Length > 0)
             {
                 <p style="white-space:pre-wrap">@item.Description</p>

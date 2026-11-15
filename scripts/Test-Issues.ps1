@@ -330,6 +330,29 @@ try {
     }
     $page=Post "/Roadmap?handler=Save&projectId=$project" $regular @{kind='milestone';name='Unauthorized'}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public roadmap still requires management permission to edit'
+    $schedule['Input.RoadmapItemId']=$itemId
+    $schedule['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
+    $page=Post "/Issue?id=$id&handler=Save" $admin $schedule
+    Assert ((Sql "SELECT RoadmapItemId FROM dbo.Issues WHERE Id=$id") -eq $itemId) 'Issue can be assigned to a version in its project'
+    $closedStatus=Sql 'SELECT TOP (1) Name FROM dbo.IssueStatuses WHERE IsClosed=1 ORDER BY Name'
+    $schedule['Input.Status']=$closedStatus
+    $schedule['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$copy"
+    $page=Post "/Issue?id=$copy&handler=Save" $admin $schedule
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Roadmap?projectId=$parent" -WebSession $admin
+    Assert ($page.Content.Contains('1 od 2 zatvorenih zadataka (50 %)')) 'Version progress counts closed workflow statuses'
+    Assert ($page.Content -match '<li>Novo\s*.+\s*1</li>') 'Roadmap shows counts by status'
+    $milestoneId=Sql "SELECT Id FROM dbo.ProjectMilestones WHERE ProjectId=$parent AND Name=N'QA milestone'"
+    $schedule['Input.RoadmapItemId']=$milestoneId
+    $schedule['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$copy"
+    $page=Post "/Issue?id=$copy&handler=Save" $admin $schedule
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Roadmap?projectId=$parent" -WebSession $admin
+    Assert ($page.Content.Contains('0 od 1 zatvorenih zadataka (0 %)') -and $page.Content.Contains('1 od 1 zatvorenih zadataka (100 %)')) 'Reassigning an issue updates version and milestone progress'
+    $schedule['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$publicIssue"
+    $page=Post "/Issue?id=$publicIssue&handler=Save" $admin $schedule
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$publicIssue AND RoadmapItemId IS NULL") -eq 1) 'Issue cannot be linked to another project roadmap item'
+    $copyRevision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$copy"
+    $page=Post "/Issue?id=$copy&handler=Transfer" $admin @{revision=$copyRevision;destination=$project;move='true'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$copy AND ProjectId=$project AND RoadmapItemId IS NULL") -eq 1) 'Moving an issue clears its source roadmap assignment'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

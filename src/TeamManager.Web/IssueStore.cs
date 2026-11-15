@@ -12,6 +12,7 @@ public sealed class IssueInput
     [Required] public string Priority{get;set;}="Normalan";
     [Required] public string Status{get;set;}="Novo";
     public int? AssigneeId{get;set;}
+    public int? RoadmapItemId{get;set;}
     public DateTime? StartDate{get;set;}
     public DateTime? DueDate{get;set;}
     public int Revision{get;set;}
@@ -55,9 +56,9 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate FROM dbo.Issues WHERE Id=@id",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate,RoadmapItemId FROM dbo.Issues WHERE Id=@id",c);cmd.Parameters.Add(P("@id",id));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
         var project=r.GetInt32(0);if(!await Can(user,project,"issues.view"))return null;
-        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9)});
+        return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9),RoadmapItemId=r.IsDBNull(10)?null:r.GetInt32(10)});
     }
     public async Task<List<Team>> Assignees(int project)
     {
@@ -80,16 +81,24 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     {
         await RequireActive(c,tx,project);
         if(input.AssigneeId is not null){await using var check=new SqlCommand("SELECT COUNT(*) FROM dbo.ProjectMembers WITH(HOLDLOCK) WHERE ProjectId=@p AND UserId=@u",c,tx);check.Parameters.AddRange([P("@p",project),P("@u",input.AssigneeId)]);if(Convert.ToInt32(await check.ExecuteScalarAsync())==0)throw new ArgumentException("Nositelj mora biti član projekta.");}
+        if (input.RoadmapItemId is int itemId)
+        {
+            await using var target = new SqlCommand(
+                "SELECT 1 FROM dbo.ProjectMilestones WITH (HOLDLOCK) WHERE ProjectId=@project AND Id=@id", c, tx);
+            target.Parameters.AddRange([P("@project", project), P("@id", itemId)]);
+            if (await target.ExecuteScalarAsync() is null)
+                throw new ArgumentException("Odaberi verziju ili prekretnicu ovog projekta.");
+        }
         string? before=null;
-        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p FOR JSON PATH,WITHOUT_ARRAY_WRAPPER",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
+        if(id is not null){await using var previous=new SqlCommand("SELECT Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId FROM dbo.Issues WITH(UPDLOCK) WHERE Id=@id AND ProjectId=@p FOR JSON PATH,WITHOUT_ARRAY_WRAPPER",c,tx);previous.Parameters.AddRange([P("@id",id),P("@p",project)]);before=Convert.ToString(await previous.ExecuteScalarAsync());}
         if(id is not null){
             if(string.IsNullOrEmpty(before))throw new InvalidOperationException("Zadatak više ne postoji.");
             using var previous=JsonDocument.Parse(before);var oldStatus=previous.RootElement.GetProperty("Status").GetString()!;var oldType=previous.RootElement.GetProperty("Type").GetString()!;
             var rights=await permissions.Effective(user,"project",project);
             if(oldStatus!=input.Status&&!rights.Contains("*")&&!await WorkflowStore.Allowed(c,tx,user,project,oldType,oldStatus,input.Status))throw new ArgumentException("Tvoja rola ne dopušta taj prijelaz statusa za ovaj tip zadatka.");
         }
-        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
-        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),new SqlParameter("@start",System.Data.SqlDbType.Date){Value=(object?)input.StartDate??DBNull.Value},P("@user",user),P("@id",id),P("@revision",input.Revision)]);
+        var sql=id is null?"INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@roadmap,@user)":"UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,RoadmapItemId=@roadmap,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
+        await using var cmd=new SqlCommand(sql,c,tx);cmd.Parameters.AddRange([P("@p",project),P("@t",input.Title.Trim()),P("@d",input.Description??""),P("@type",input.Type),P("@priority",input.Priority),P("@status",input.Status),P("@a",input.AssigneeId),P("@due",input.DueDate),new SqlParameter("@start",System.Data.SqlDbType.Date){Value=(object?)input.StartDate??DBNull.Value},new SqlParameter("@roadmap",System.Data.SqlDbType.Int){Value=(object?)input.RoadmapItemId??DBNull.Value},P("@user",user),P("@id",id),P("@revision",input.Revision)]);
         var saved=await cmd.ExecuteScalarAsync();if(saved is null)throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
         var issueId=Convert.ToInt32(saved);await Event(c,tx,issueId,user,id is null?"created":"updated",JsonSerializer.Serialize(new{Before=before,After=input}));return issueId;
     }
@@ -156,6 +165,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         {
             issue.Input.Status = "Novo";
             issue.Input.AssigneeId = null;
+            if (source != destination) issue.Input.RoadmapItemId = null;
             issue.Input.Revision = 0;
             var copy = await SaveInTransaction(connection, transaction, user, destination, null, issue.Input);
             await transaction.CommitAsync();
@@ -163,7 +173,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         }
 
         await using var command = new SqlCommand("""
-            UPDATE dbo.Issues SET ProjectId=@destination, Revision=Revision+1,
+            UPDATE dbo.Issues SET ProjectId=@destination, RoadmapItemId=NULL, Revision=Revision+1,
                 AssigneeId=CASE WHEN EXISTS (SELECT 1 FROM dbo.ProjectMembers WITH (HOLDLOCK)
                     WHERE ProjectId=@destination AND UserId=dbo.Issues.AssigneeId) THEN AssigneeId END
             WHERE Id=@id
@@ -171,7 +181,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         command.Parameters.AddRange([P("@id",id), P("@destination",destination)]);
         await command.ExecuteNonQueryAsync();
         await Event(connection, transaction, id, user, "moved",
-            JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination }));
+            JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination, PreviousRoadmapItemId = issue.Input.RoadmapItemId }));
         await transaction.CommitAsync();
         return id;
     }
