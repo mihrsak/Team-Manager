@@ -30,7 +30,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | ISSUE-02 | Komentari i transakcijska povijest promjena | Gotovo: povijest s detaljima prije/poslije |
 | ISSUE-03 | Filtri po projektu/statusu/tekstu | Gotovo |
 | ISSUE-04 | Prilagodljivi tipovi, statusi i prijelazi prema roli i tipu | Gotovo: dodavanje šifrarnika, dodavanje/uklanjanje prijelaza; početni status Novo |
-| ISSUE-05 | Podzadaci, veze, ovisnosti, duplikati | Backlog |
+| ISSUE-05 | Podzadaci, veze, ovisnosti, duplikati | Gotovo: veze na detaljima zadatka, jedan nadređeni zadatak, provjera ciklusa; ovisnosti služe za pregled |
 | ISSUE-06 | Skupno uređivanje, kopiranje/premještanje i CSV izvoz | Gotovo: CSV, skupna izmjena statusa/prioriteta, kopiranje i premještanje pojedinačnog zadatka |
 | ISSUE-07 | Promatrači, privatne bilješke i obavijesti | Backlog |
 | QUERY-01 | Spremljeni upiti, stupci, grupiranje, sortiranje i sažeci | Backlog |

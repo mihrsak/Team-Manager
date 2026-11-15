@@ -53,3 +53,7 @@ Izvještaj prati postojeća pravila pregleda utrošenog vremena, uključujući j
 Na popisu zadataka označite do 100 zadataka i odaberite novi status, prioritet ili oba. Sve se izmjene spremaju u jednoj transakciji uz provjeru ovlasti, dopuštenih prijelaza i revizija. Ako bilo koja izmjena ne prođe, cijela se grupa poništava.
 
 Kopiranje s detalja zadatka traži pregled izvornog i pravo kreiranja na odredišnom projektu. Kopija prenosi naslov, opis, tip, prioritet i rok te počinje u statusu **Novo**, bez nositelja, komentara i utrošenog vremena. Za premještanje su potrebni pravo uređivanja na izvornom projektu, pravo kreiranja na odredišnom i pravo upravljanja obama projektima. Premještanje zadržava ID, status, komentare, vrijeme i povijest. Nositelj ostaje dodijeljen ako je izravni član odredišnog projekta.
+
+## Veze zadataka
+
+Nakon migracije `015-issue-links.sql` na detaljima zadatka unesite broj drugog zadatka i odaberite vrstu veze. Za dodavanje ili uklanjanje veze potrebna je ovlast uređivanja obaju zadataka. Korisnik vidi vezu ako može otvoriti oba zadatka. Povezanost i duplikati prikazuju se s obje strane. Podzadatak ima najviše jedan nadređeni zadatak. Hijerarhijske veze i ovisnosti ne dopuštaju cikluse. Veza **Blokira** prikazuje ovisnost, a prijelaze statusa i dalje određuje tijek rada.

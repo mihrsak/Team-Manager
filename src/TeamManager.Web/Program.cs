@@ -14,6 +14,7 @@ builder.Services.AddRazorPages(options => {
 });
 builder.Services.AddScoped<TeamStore>();
 builder.Services.AddScoped<IssueStore>();
+builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<ProjectStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();

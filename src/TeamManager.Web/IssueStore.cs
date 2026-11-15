@@ -35,7 +35,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         if(right=="issues.view"&&r.GetBoolean(0))return true;
         var rights=await permissions.Effective(user,"project",project);return rights.Contains("*")||rights.Contains(right);
     }
-    private static async Task RequireActive(SqlConnection c,SqlTransaction tx,int project,bool time=false)
+    internal static async Task RequireActive(SqlConnection c,SqlTransaction tx,int project,bool time=false)
     {
         await using var cmd=new SqlCommand("SELECT State FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@p AND IssuesEnabled=1 AND (@time=0 OR TimeEnabled=1)",c,tx);cmd.Parameters.Add(P("@p",project));
         cmd.Parameters.Add(P("@time",time));
@@ -173,7 +173,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         return id;
     }
 
-    private static async Task RequireIssueProject(SqlConnection connection, SqlTransaction transaction, int id, int project)
+    internal static async Task RequireIssueProject(SqlConnection connection, SqlTransaction transaction, int id, int project)
     {
         await using var command = new SqlCommand(
             "SELECT 1 FROM dbo.Issues WITH (HOLDLOCK) WHERE Id=@id AND ProjectId=@project", connection, transaction);

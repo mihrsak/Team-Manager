@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
-public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
+public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
     public int? Id{get;set;}
@@ -15,6 +15,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public List<IssueLink> Links {get;set;}=[];
     public List<Team> CopyProjects {get;set;}=[];
     public List<Team> MoveProjects {get;set;}=[];
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -28,6 +29,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
+            Links = await links.List(UserId, id.Value, ProjectId);
             var canMove = CanEdit && await store.CanMove(UserId, ProjectId);
             foreach (var target in await store.Projects(UserId, "issues.create"))
             {
@@ -78,6 +80,42 @@ public class IssueModel(IssueStore store,WorkflowStore workflow):PageModel
             ModelState.AddModelError("", ex.Message);
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostLinkAsync(int id, int otherId, string? relation, bool remove)
+    {
+        if (id <= 0 || otherId <= 0 ||
+            ModelState.GetValidationState(nameof(remove)) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid)
+            return BadRequest();
+        var (kind, outgoing) = relation switch
+        {
+            "blockedBy" => ("blocks", false),
+            "subtaskOf" => ("parent", false),
+            _ => (relation ?? "", true)
+        };
+        string error;
+        try
+        {
+            await links.Set(UserId, id, otherId, kind, outgoing, remove);
+            return RedirectToPage(new { id });
+        }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (ArgumentException ex) { error = ex.Message; }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 51015 or 51016 or 51017)
+        {
+            error = ex.Number switch
+            {
+                51016 => "Podzadatak već ima nadređeni zadatak.",
+                51017 => "Ova bi veza stvorila ciklus.",
+                _ => "Veze se trenutačno uređuju. Pokušaj ponovno."
+            };
+        }
+
+        ModelState.Clear();
+        var result = await OnGetAsync(id, 0);
+        if (result is not PageResult) return result;
+        ModelState.AddModelError("", error);
+        return Page();
     }
 
     public IActionResult OnPost()=>BadRequest();

@@ -237,6 +237,28 @@ try {
     $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$newRev;destination=$parent;move='true'}
     Assert ((Sql "SELECT ProjectId FROM dbo.Issues WHERE Id=$id") -eq $parent) 'Move keeps the same issue in the destination'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id AND Kind='moved'") -eq 1 -and (Sql "SELECT COUNT(*) FROM dbo.TimeEntries WHERE IssueId=$id") -eq 1) 'Move preserves recorded time and adds a history event'
+    Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$parent AND UserId=$uid" | Out-Null
+    $publicIssue=Sql "SELECT MIN(Id) FROM dbo.Issues WHERE ProjectId=$project"
+    $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$copy;relation='related'}
+    Assert ($page.Content.Contains("href=`"/Issue?id=$copy`"")) 'Related issue is linked from the source'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
+    Assert (-not $page.Content.Contains("href=`"/Issue?id=$copy`"")) 'Related issue in private project is hidden from nonmembers'
+    $page=Post "/Issue?id=$publicIssue&handler=Link" $regular @{otherId=$copy;relation='related';remove='true'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Link changes require edit permission on both issues'
+    $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$publicIssue;relation='related';remove='true'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='related'") -eq 0) 'Symmetric link can be removed from either end'
+    $page=Post "/Issue?id=$id&handler=Link" $admin @{otherId=$copy;relation='duplicate'}
+    $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$id;relation='duplicate'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='duplicate'") -eq 1) 'Reverse duplicate link is idempotent'
+    $page=Post "/Issue?id=$id&handler=Link" $admin @{otherId=$copy;relation='parent'}
+    $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$copy;relation='parent'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='parent' AND SourceId=$id AND TargetId=$copy") -eq 1) 'An issue keeps its existing parent'
+    $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$id;relation='parent'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='parent'") -eq 1) 'Subtask cycle is rejected'
+    $page=Post "/Issue?id=$id&handler=Link" $admin @{otherId=$copy;relation='blocks'}
+    $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$publicIssue;relation='blocks'}
+    $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$id;relation='blocks'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='blocks'") -eq 2) 'Transitive dependency cycle is rejected'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

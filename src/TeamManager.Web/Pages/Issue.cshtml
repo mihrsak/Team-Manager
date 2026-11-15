@@ -28,6 +28,58 @@
         }
     </section>
 }
+@if (Model.Id is not null)
+{
+    <section class="card">
+        <h2>Veze zadatka</h2>
+        @foreach (var link in Model.Links)
+        {
+            var relation = (link.Kind, link.Outgoing) switch
+            {
+                ("blocks", false) => "blockedBy",
+                ("parent", false) => "subtaskOf",
+                _ => link.Kind
+            };
+            var label = relation switch
+            {
+                "related" => "Povezan s",
+                "duplicate" => "Duplikat",
+                "blocks" => "Blokira",
+                "blockedBy" => "Blokiran zadatkom",
+                "parent" => "Podzadatak",
+                _ => "Nadređeni zadatak"
+            };
+            <div class="actions">
+                <span>@label · <a asp-page="/Issue" asp-route-id="@link.OtherId">#@link.OtherId @link.Title</a></span>
+                @if (Model.CanEdit && link.CanEdit)
+                {
+                    <form method="post" asp-page-handler="Link" asp-route-id="@Model.Id">
+                        <input type="hidden" name="otherId" value="@link.OtherId">
+                        <input type="hidden" name="relation" value="@relation">
+                        <button name="remove" value="true">Ukloni vezu</button>
+                    </form>
+                }
+            </div>
+        }
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-page-handler="Link" asp-route-id="@Model.Id">
+                <label>Broj drugog zadatka<input name="otherId" type="number" min="1" required></label>
+                <label>Vrsta veze
+                    <select name="relation" required>
+                        <option value="related">Povezan s</option>
+                        <option value="duplicate">Duplikat</option>
+                        <option value="blocks">Blokira</option>
+                        <option value="blockedBy">Blokiran zadatkom</option>
+                        <option value="parent">Podzadatak</option>
+                        <option value="subtaskOf">Nadređeni zadatak</option>
+                    </select>
+                </label>
+                <button>Dodaj vezu</button>
+            </form>
+        }
+    </section>
+}
 @if(Model.Id is not null){<div class="grid">
 @if(Model.CanComment){<section class="card"><h2>Komentar</h2><form method="post" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>Tekst<textarea name="text" required maxlength="4000" rows="4" style="width:100%"></textarea></label><button>Dodaj komentar</button></form></section>}
 @if(Model.CanLogTime){<section class="card"><h2>Evidencija vremena</h2><form method="post" asp-page-handler="Time" asp-route-id="@Model.Id"><label>Datum<input name="date" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required></label><label>Sati<input name="hours" type="number" min="0.01" max="24" step="0.01" required></label><label>Aktivnost<input name="activity" maxlength="60" placeholder="Općenito"></label><label>Napomena<input name="note" maxlength="1000"></label><button>Spremi vrijeme</button></form></section>}
