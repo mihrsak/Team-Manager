@@ -19,8 +19,8 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | AUTH-05 | Registracija s odobrenjem / potvrdom e-pošte | Backlog |
 | AUTH-06 | AD/LDAP i autentikacija kroz bankarski SSO | Backlog |
 | ROLE-01 | Prilagodljive role, zbroj globalnih ovlasti, serverske provjere | Gotovo |
-| ROLE-02 | Članstva po timu/projektu, izolacija ovlasti između projekata | Gotovo: jedna rola po članstvu |
-| ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Backlog |
+| ROLE-02 | Članstva po timu/projektu, izolacija ovlasti između projekata | Gotovo |
+| ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Djelomično: više rola po članstvu; preostaju grupe i nasljeđivanje |
 | ROLE-04 | Pravila vidljivosti privatnih zadataka i pojedinih polja | Backlog |
 | ORG-01 | Unos organizacijskih jedinica, timova i projekata | Gotovo |
 | PROJ-01 | Pregled projekata i pripadajućih zadataka prema ovlastima | Gotovo |

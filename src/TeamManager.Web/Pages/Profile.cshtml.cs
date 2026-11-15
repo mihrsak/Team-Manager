@@ -52,15 +52,51 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
             return Invalid("Račun je u međuvremenu promijenjen. Ponovno se prijavi.");
         return Success(id, "Lozinka je promijenjena. Ponovno se prijavi.");
     }
-    public async Task<IActionResult> OnPostMembershipAsync(int id,string? kind,int scopeId,string? role)
+    public async Task<IActionResult> OnPostMembershipAsync(int id,string? kind,int scopeId,string? role,bool removeRole=false,bool replacePrimary=false)
     {
         if(kind is not ("team" or "project")||!await permissions.CanManageMembers(User,kind,scopeId))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
         if(!ModelState.IsValid||!Roles.Any(x=>x.Name==role)||scopeId<=0)return Invalid("Odaberi tim ili projekt i valjanu ulogu.");
         // Scope managers cannot delegate permissions they do not possess in that scope.
         var effective=await permissions.Effective(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),kind,scopeId);
         if(!effective.Contains("*")&&Roles.Single(x=>x.Name==role).Permissions.Any(x=>!effective.Contains(x)))return Forbid();
-        var sql=kind=="team"?"SET XACT_ABORT ON; BEGIN TRANSACTION; IF EXISTS(SELECT 1 FROM dbo.Members WITH(UPDLOCK,HOLDLOCK) WHERE TeamId=@s AND UserId=@u) UPDATE dbo.Members SET Role=@r WHERE TeamId=@s AND UserId=@u; ELSE INSERT dbo.Members(TeamId,UserId,Name,Role) VALUES(@s,@u,@name,@r); COMMIT;":"SET XACT_ABORT ON; BEGIN TRANSACTION; IF EXISTS(SELECT 1 FROM dbo.ProjectMembers WITH(UPDLOCK,HOLDLOCK) WHERE ProjectId=@s AND UserId=@u) UPDATE dbo.ProjectMembers SET Role=@r WHERE ProjectId=@s AND UserId=@u; ELSE INSERT dbo.ProjectMembers(ProjectId,UserId,Role) VALUES(@s,@u,@r); COMMIT;";
-        try{await store.Execute(sql,P("@s",scopeId),P("@u",id),P("@r",role),P("@name",Person.EmployeeNumber));}
+        var sql = kind == "team"
+            ? """
+              SET XACT_ABORT ON;
+              BEGIN TRANSACTION;
+              DECLARE @member int, @primaryRole nvarchar(30);
+              SELECT @member=Id,@primaryRole=Role FROM dbo.Members WITH(UPDLOCK,HOLDLOCK) WHERE TeamId=@s AND UserId=@u;
+              IF @remove=1
+                  DELETE dbo.TeamMemberRoles WHERE MemberId=@member AND RoleName=@r;
+              ELSE IF @member IS NULL
+                  INSERT dbo.Members(TeamId,UserId,Name,Role) VALUES(@s,@u,@name,@r);
+              ELSE IF @replace=1
+              BEGIN
+                  DELETE dbo.TeamMemberRoles WHERE MemberId=@member AND RoleName=@r;
+                  UPDATE dbo.Members SET Role=@r WHERE Id=@member;
+              END
+              ELSE IF @primaryRole<>@r AND NOT EXISTS(SELECT 1 FROM dbo.TeamMemberRoles WHERE MemberId=@member AND RoleName=@r)
+                  INSERT dbo.TeamMemberRoles(MemberId,RoleName) VALUES(@member,@r);
+              COMMIT;
+              """
+            : """
+              SET XACT_ABORT ON;
+              BEGIN TRANSACTION;
+              DECLARE @primaryRole nvarchar(30);
+              SELECT @primaryRole=Role FROM dbo.ProjectMembers WITH(UPDLOCK,HOLDLOCK) WHERE ProjectId=@s AND UserId=@u;
+              IF @remove=1
+                  DELETE dbo.ProjectMemberRoles WHERE ProjectId=@s AND UserId=@u AND RoleName=@r;
+              ELSE IF @primaryRole IS NULL
+                  INSERT dbo.ProjectMembers(ProjectId,UserId,Role) VALUES(@s,@u,@r);
+              ELSE IF @replace=1
+              BEGIN
+                  DELETE dbo.ProjectMemberRoles WHERE ProjectId=@s AND UserId=@u AND RoleName=@r;
+                  UPDATE dbo.ProjectMembers SET Role=@r WHERE ProjectId=@s AND UserId=@u;
+              END
+              ELSE IF @primaryRole<>@r AND NOT EXISTS(SELECT 1 FROM dbo.ProjectMemberRoles WHERE ProjectId=@s AND UserId=@u AND RoleName=@r)
+                  INSERT dbo.ProjectMemberRoles(ProjectId,UserId,RoleName) VALUES(@s,@u,@r);
+              COMMIT;
+              """;
+        try{await store.Execute(sql,P("@s",scopeId),P("@u",id),P("@r",role),P("@name",Person.EmployeeNumber),P("@remove",removeRole),P("@replace",replacePrimary));}
         catch(SqlException ex) when(ex.Number is 547 or 2601 or 2627){return Invalid("Članstvo nije spremljeno. Provjeri postoji li tim/projekt i ima li već člana s istim brojem radnika.");}
         return Success(id,"Članstvo i uloga su spremljeni.");
     }

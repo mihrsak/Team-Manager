@@ -26,6 +26,6 @@ public sealed class WorkflowStore(IConfiguration configuration)
     }
     public static async Task<bool> Allowed(SqlConnection c,SqlTransaction tx,int user,int project,string type,string from,string to)
     {
-        await using var cmd=new SqlCommand("SELECT COUNT(*) FROM dbo.WorkflowTransitions w WHERE w.Type=@type AND w.FromStatus=@from AND w.ToStatus=@to AND (EXISTS(SELECT 1 FROM dbo.UserRoles r WHERE r.UserId=@user AND r.RoleName=w.RoleName) OR EXISTS(SELECT 1 FROM dbo.ProjectMembers m WHERE m.UserId=@user AND m.ProjectId=@project AND m.Role=w.RoleName))",c,tx);cmd.Parameters.AddRange([P("@type",type),P("@from",from),P("@to",to),P("@user",user),P("@project",project)]);return Convert.ToInt32(await cmd.ExecuteScalarAsync())>0;
+        await using var cmd=new SqlCommand("SELECT COUNT(*) FROM dbo.WorkflowTransitions w WHERE w.Type=@type AND w.FromStatus=@from AND w.ToStatus=@to AND (EXISTS(SELECT 1 FROM dbo.UserRoles r WHERE r.UserId=@user AND r.RoleName=w.RoleName) OR EXISTS(SELECT 1 FROM dbo.ProjectMembers m WHERE m.UserId=@user AND m.ProjectId=@project AND m.Role=w.RoleName) OR EXISTS(SELECT 1 FROM dbo.ProjectMemberRoles r WHERE r.UserId=@user AND r.ProjectId=@project AND r.RoleName=w.RoleName))",c,tx);cmd.Parameters.AddRange([P("@type",type),P("@from",from),P("@to",to),P("@user",user),P("@project",project)]);return Convert.ToInt32(await cmd.ExecuteScalarAsync())>0;
     }
 }

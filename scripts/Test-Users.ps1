@@ -55,6 +55,15 @@ try {
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Scoped permission does not leak to another project'
     $page=Get-Page '/Roles' $regular
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Scoped role does not grant global role administration'
+    $page=Get-Page '/Issues' $regular
+    Assert (-not $page.Content.Contains('Novi zadatak')) 'Base project role cannot create issues'
+    $page=Post-Page "/Profile?id=$id&handler=Membership" $admin @{kind='project';scopeId=$projectId;role='Developer'}
+    Assert ($page.Content.Contains('Moderator') -and $page.Content.Contains('Developer')) 'Additional role preserves base membership'
+    $page=Get-Page '/Issues' $regular
+    Assert ($page.Content.Contains('Novi zadatak')) 'Additional role grants issue creation'
+    $page=Post-Page "/Profile?id=$id&handler=Membership" $admin @{kind='project';scopeId=$projectId;role='Developer';removeRole='true'}
+    $page=Get-Page '/Issues' $regular
+    Assert (-not $page.Content.Contains('Novi zadatak')) 'Removing additional role revokes issue creation'
     $page=Post-Page "/Profile?id=$id&handler=Password" $regular @{currentPassword=$testPassword;newPassword="New$testPassword";confirmPassword="New$testPassword"}
     $fresh=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}

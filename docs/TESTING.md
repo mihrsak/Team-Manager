@@ -33,3 +33,7 @@ Migracija `010-account-lifecycle.sql` postojeće račune zadržava aktivnima. Pr
 U popisu korisnika otvori **Profil** testnog korisnika. Puni administrator može deaktivirati i ponovno aktivirati račun, resetirati lozinku ili opozvati sesije. Reset uklanja privremeno zaključavanje računa. Sve četiri radnje poništavaju prethodne sesije pri sljedećem zahtjevu. Za vlastitu lozinku koristi redovnu promjenu lozinke na vlastitom profilu.
 
 `Test-Users.ps1` pokriva ovlasti, prijavu deaktiviranog i ponovno aktiviranog korisnika, poništenje kolačića, te prihvaćanje nove i odbijanje stare lozinke nakon reseta.
+
+## Više uloga po članstvu
+
+Migracija `011-membership-roles.sql` zadržava postojeću ulogu kao osnovnu. Na profilu korisnika moguće je dodati ili ukloniti dodatnu ulogu te zamijeniti osnovnu. Prava svih dodijeljenih uloga zbrajaju se unutar pripadajućeg tima ili projekta. Uklanjanjem članstva uklanjaju se i njegove dodatne uloge.

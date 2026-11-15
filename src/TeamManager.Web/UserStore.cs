@@ -5,7 +5,7 @@ namespace TeamManager.Web;
 
 public record AppUser(int Id, string EmployeeNumber, string DisplayName, string JobTitle, int? OrganizationUnitId, string PasswordHash, bool IsAdministrator, bool IsActive = true, int SessionVersion = 0);
 public record DirectoryEntry(AppUser User, string Unit);
-public record Membership(int ScopeId, string Scope, string Role);
+public record Membership(int ScopeId, string Scope, string Role, bool IsAdditional);
 
 public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> hasher)
 {
@@ -52,9 +52,27 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     }
     public async Task<List<Membership>> Memberships(int id,bool team)
     {
-        var sql=team?"SELECT t.Id,t.Name,m.Role FROM dbo.Members m JOIN dbo.Teams t ON t.Id=m.TeamId WHERE m.UserId=@id":"SELECT p.Id,p.Name,m.Role FROM dbo.ProjectMembers m JOIN dbo.Projects p ON p.Id=m.ProjectId WHERE m.UserId=@id";
+        var sql = team
+            ? """
+              SELECT t.Id,t.Name,r.RoleName,r.IsAdditional
+              FROM dbo.Members m JOIN dbo.Teams t ON t.Id=m.TeamId
+              CROSS APPLY (
+                  SELECT m.Role,0 UNION ALL
+                  SELECT a.RoleName,1 FROM dbo.TeamMemberRoles a WHERE a.MemberId=m.Id
+              ) r(RoleName,IsAdditional)
+              WHERE m.UserId=@id ORDER BY t.Name,r.IsAdditional,r.RoleName
+              """
+            : """
+              SELECT p.Id,p.Name,r.RoleName,r.IsAdditional
+              FROM dbo.ProjectMembers m JOIN dbo.Projects p ON p.Id=m.ProjectId
+              CROSS APPLY (
+                  SELECT m.Role,0 UNION ALL
+                  SELECT a.RoleName,1 FROM dbo.ProjectMemberRoles a WHERE a.ProjectId=m.ProjectId AND a.UserId=m.UserId
+              ) r(RoleName,IsAdditional)
+              WHERE m.UserId=@id ORDER BY p.Name,r.IsAdditional,r.RoleName
+              """;
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand(sql,c);cmd.Parameters.Add(P("@id",id));
-        await using var r=await cmd.ExecuteReaderAsync();var result=new List<Membership>();while(await r.ReadAsync())result.Add(new(r.GetInt32(0),r.GetString(1),r.GetString(2)));return result;
+        await using var r=await cmd.ExecuteReaderAsync();var result=new List<Membership>();while(await r.ReadAsync())result.Add(new(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetInt32(3)==1));return result;
     }
     public async Task Create(string employee,string name,string job,int? unit,string password,bool admin=false)
     {
