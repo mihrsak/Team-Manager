@@ -79,3 +79,9 @@ HTTPS GET na `/health/live` vraća 200 dok aplikacija odgovara. `/health/ready` 
 3. Provjerite poznate podatke u obnovljenoj bazi i SQL ovlasti aplikacijskog identiteta. Za povratak pokrenite prethodni paket s prethodnom konfiguracijom i vezom na obnovljenu bazu. Prije otvaranja pristupa provjerite prijavu i prikaz projekta. Obnova punog backupa vraća stanje u trenutku kopije. Ako je nakon kopije bilo upisa, DBA treba utvrditi točku oporavka i provjeriti dostupne log backup kopije prije prebacivanja prometa.
 
 Lokalna provjera na odvojenim SQL Express bazama obuhvatila je backup s kontrolnom sumom, obnovu pod drugim imenom, DBCC CHECKDB i potvrdu da su obnovljeni projekti i korisnički podaci iz trenutka kopije. Povratak IIS paketa provjerava se u ciljnom okruženju.
+
+## Nadzor i logovi
+
+Vanjski nadzor neka provjerava `/health/live` i `/health/ready` putem HTTPS-a. Odgovor 503 na readiness znači da aplikacija odgovara, ali SQL provjera nije prošla. Ako ni liveness ne odgovara, provjerite proces, IIS i mrežnu vezu.
+
+Dok aplikacija radi, pozadinska SQL provjera bilježi početno stanje i svaku promjenu stanja pod kategorijom `TeamManager.Web.DatabaseHealthPublisher`. Oporavak ima razinu `Information`, a neuspjeh `Warning`. Upozorenja i oporavak prikupljajte preko konfiguriranog ASP.NET Core pružatelja logova. Ako na Windowsu koristite Event Log, za ovu kategoriju postavite `Logging__EventLog__LogLevel__TeamManager.Web.DatabaseHealthPublisher` na `Information` kako biste zabilježili i oporavak. Vanjski nadzor ostaje mjerodavan kad je proces ugašen ili se ne može pokrenuti.
