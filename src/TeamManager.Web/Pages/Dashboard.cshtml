@@ -7,7 +7,8 @@
     {
         (Name: "Rok je prošao", Issues: Model.Overdue),
         (Name: "Predstojeći rokovi", Issues: Model.WithDeadline),
-        (Name: "Bez roka", Issues: Model.WithoutDeadline)
+        (Name: "Bez roka", Issues: Model.WithoutDeadline),
+        (Name: "Pratim", Issues: Model.Watched)
     };
 }
 @foreach (var group in groups)
@@ -16,7 +17,7 @@
         <h2>@group.Name (@group.Issues.Count)</h2>
         @if (group.Issues.Count == 0)
         {
-            <p>Nema otvorenih zadataka u ovoj skupini.</p>
+            <p>Nema zadataka u ovoj skupini.</p>
         }
         else
         {

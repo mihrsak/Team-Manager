@@ -383,6 +383,21 @@ try {
     Assert (-not $search.Content.Contains("href=`"/Project?id=$parent`"") -and -not $search.Content.Contains("href=`"/Issue?id=$id`"") -and -not $search.Content.Contains("#plan-$milestoneId")) 'Unified search hides private projects and their content'
     $search=Invoke-WebRequest -UseBasicParsing "$base/Search?Query=qatest&Module=users" -WebSession $regular
     Assert ($search.Content.Contains("href=`"/Profile?id=$uid`"")) 'Directory search links to the matching profile'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='true'}
+    Assert ($page.Content.Contains('Prestani pratiti')) 'Viewer can watch a visible issue'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='true'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueWatchers WHERE IssueId=$publicIssue AND UserId=$uid") -eq 1) 'Repeated watch request does not duplicate subscription'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
+    Assert ($page.Content.Contains('Pratim (1)') -and $page.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Personal dashboard includes watched issues'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $admin
+    Assert ($page.Content.Contains('Pratim (0)')) 'Watch list is personal'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='false'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueWatchers WHERE IssueId=$publicIssue AND UserId=$uid") -eq 0) 'Viewer can stop watching'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
+    $page=Post "/Issue?id=$id&handler=Watch" $regular @{watch='true'}
+    Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$parent AND UserId=$uid" | Out-Null
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
+    Assert (-not $page.Content.Contains("href=`"/Issue?id=$id`"")) 'Watching does not preserve access after project permission is revoked'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

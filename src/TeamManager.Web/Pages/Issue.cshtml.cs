@@ -15,6 +15,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public bool CanEdit{get;set;}
     public bool CanComment{get;set;}
     public bool CanLogTime{get;set;} public bool ShowTime{get;set;}
+    public bool IsWatching {get;private set;}
     public List<RoadmapItem> RoadmapItems {get;set;}=[];
     public List<IssueLink> Links {get;set;}=[];
     public List<Team> CopyProjects {get;set;}=[];
@@ -31,6 +32,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
         {
+            IsWatching = await store.IsWatching(UserId, id.Value);
             Links = await links.List(UserId, id.Value, ProjectId);
             var canMove = CanEdit && await store.CanMove(UserId, ProjectId);
             foreach (var target in await store.Projects(UserId, "issues.create"))
@@ -118,6 +120,14 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         if (result is not PageResult) return result;
         ModelState.AddModelError("", error);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostWatchAsync(int id, bool? watch)
+    {
+        if (id <= 0 || watch is null) return BadRequest();
+        try { await store.SetWatching(UserId, id, watch.Value); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        return RedirectToPage(new { id });
     }
 
     public IActionResult OnPost()=>BadRequest();

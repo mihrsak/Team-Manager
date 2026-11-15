@@ -49,11 +49,11 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name FROM dbo.Projects ORDER BY Name",c);await using var r=await cmd.ExecuteReaderAsync();var all=new List<Team>();while(await r.ReadAsync())all.Add(new(r.GetInt32(0),r.GetString(1)));
         var result=new List<Team>();foreach(var project in all)if(await Can(user,project.Id,right))result.Add(project);return result;
     }
-    public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null,bool schedule=false,int? assigneeId=null,bool openOnly=false)
+    public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null,bool schedule=false,int? assigneeId=null,bool openOnly=false,bool watchedOnly=false)
     {
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@assignee IS NULL OR i.AssigneeId=@assignee) AND (@open=0 OR EXISTS(SELECT 1 FROM dbo.IssueStatuses st WHERE st.Name=i.Status AND st.IsClosed=0)) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC",c);
-        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule),new SqlParameter("@assignee",System.Data.SqlDbType.Int){Value=(object?)assigneeId??DBNull.Value},P("@open",openOnly)]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@watcher IS NULL OR EXISTS(SELECT 1 FROM dbo.IssueWatchers w WHERE w.IssueId=i.Id AND w.UserId=@watcher)) AND (@assignee IS NULL OR i.AssigneeId=@assignee) AND (@open=0 OR EXISTS(SELECT 1 FROM dbo.IssueStatuses st WHERE st.Name=i.Status AND st.IsClosed=0)) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC",c);
+        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule),new SqlParameter("@assignee",System.Data.SqlDbType.Int){Value=(object?)assigneeId??DBNull.Value},P("@open",openOnly),new SqlParameter("@watcher",System.Data.SqlDbType.Int){Value=watchedOnly?user:DBNull.Value}]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
@@ -61,6 +61,40 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         var project=r.GetInt32(0);if(!await Can(user,project,"issues.view"))return null;
         return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9),RoadmapItemId=r.IsDBNull(10)?null:r.GetInt32(10)});
     }
+    public async Task<bool> IsWatching(int user, int issue)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT 1 FROM dbo.IssueWatchers WHERE IssueId=@issue AND UserId=@user", connection);
+        command.Parameters.AddRange([P("@issue", issue), P("@user", user)]);
+        return await command.ExecuteScalarAsync() is not null;
+    }
+
+    public async Task SetWatching(int user, int id, bool watch)
+    {
+        var issue = await Get(user, id) ?? throw new UnauthorizedAccessException();
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+        await using var project = new SqlCommand(
+            "SELECT 1 FROM dbo.Projects WITH (HOLDLOCK) WHERE Id=@project AND IssuesEnabled=1", connection, transaction);
+        project.Parameters.Add(P("@project", issue.ProjectId));
+        if (await project.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
+        await RequireIssueProject(connection, transaction, id, issue.ProjectId);
+
+        await using var command = new SqlCommand(watch
+            ? """
+              INSERT dbo.IssueWatchers(IssueId,UserId)
+              SELECT @issue,@user WHERE NOT EXISTS (
+                  SELECT 1 FROM dbo.IssueWatchers WITH (UPDLOCK,HOLDLOCK) WHERE IssueId=@issue AND UserId=@user)
+              """
+            : "DELETE dbo.IssueWatchers WHERE IssueId=@issue AND UserId=@user", connection, transaction);
+        command.Parameters.AddRange([P("@issue", id), P("@user", user)]);
+        await command.ExecuteNonQueryAsync();
+        await transaction.CommitAsync();
+    }
+
     public async Task<List<Team>> Assignees(int project)
     {
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.Id,u.DisplayName FROM dbo.AppUsers u JOIN dbo.ProjectMembers m ON m.UserId=u.Id WHERE m.ProjectId=@p ORDER BY u.DisplayName",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();var list=new List<Team>();while(await r.ReadAsync())list.Add(new(r.GetInt32(0),r.GetString(1)));return list;

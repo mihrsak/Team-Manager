@@ -1,6 +1,12 @@
 @page
 @model TeamManager.Web.Pages.IssueModel
 <a href="/Issues">← Projektni zadaci</a><h1>@(Model.Id is null?"Novi zadatak":$"Zadatak #{Model.Id}")</h1><p>@Model.ProjectName</p>
+@if (Model.Id is not null)
+{
+    <form method="post" asp-page-handler="Watch" asp-route-id="@Model.Id">
+        <button name="watch" value="@(Model.IsWatching ? "false" : "true")">@(Model.IsWatching ? "Prestani pratiti" : "Prati zadatak")</button>
+    </form>
+}
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}<div asp-validation-summary="All"></div>
 <section class="card"><form method="post" asp-page-handler="Save" asp-route-id="@Model.Id" asp-route-projectId="@Model.ProjectId">
 <input type="hidden" asp-for="Input.Revision"><fieldset disabled="@(!Model.CanEdit)" style="border:0;padding:0"><label>Naslov<input asp-for="Input.Title" required maxlength="200"></label><label>Opis<textarea asp-for="Input.Description" rows="5" maxlength="4000" style="width:100%"></textarea></label>
