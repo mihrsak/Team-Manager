@@ -19,6 +19,7 @@ public sealed class IssueInput
 }
 public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision,string? AssigneeEmployeeNumber,DateTime? StartDate);
 public record IssueDetail(int Id,int ProjectId,IssueInput Input);
+public record ActivityRow(int Id,int IssueId,string Title,string Project,string Author,string Kind,DateTime At);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity);
 public record TimeReportRow(string Project,string Person,string EmployeeNumber,string Activity,decimal Hours);
@@ -244,6 +245,32 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
             rows.Add(new(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDecimal(4)));
+        return rows;
+    }
+
+    public async Task<List<ActivityRow>> RecentActivity(IEnumerable<int> projectIds)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            SELECT TOP (50) e.Id,i.Id,i.Title,p.Name,u.DisplayName,e.Kind,e.CreatedAt
+            FROM dbo.IssueEvents e
+            JOIN dbo.Issues i ON i.Id=e.IssueId
+            JOIN dbo.Projects p ON p.Id=i.ProjectId
+            JOIN dbo.AppUsers u ON u.Id=e.UserId
+            JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
+            WHERE p.IssuesEnabled=1 AND (e.Kind<>'time' OR p.TimeEnabled=1)
+            ORDER BY e.CreatedAt DESC,e.Id DESC
+            """, connection);
+        command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
+        {
+            Value = JsonSerializer.Serialize(projectIds)
+        });
+        var rows = new List<ActivityRow>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            rows.Add(new(reader.GetInt32(0), reader.GetInt32(1), reader.GetString(2), reader.GetString(3),
+                reader.GetString(4), reader.GetString(5), DateTime.SpecifyKind(reader.GetDateTime(6), DateTimeKind.Utc)));
         return rows;
     }
 }

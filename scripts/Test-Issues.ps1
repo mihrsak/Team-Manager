@@ -353,6 +353,20 @@ try {
     $copyRevision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$copy"
     $page=Post "/Issue?id=$copy&handler=Transfer" $admin @{revision=$copyRevision;destination=$project;move='true'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$copy AND ProjectId=$project AND RoadmapItemId IS NULL") -eq 1) 'Moving an issue clears its source roadmap assignment'
+    $activity=Invoke-WebRequest -UseBasicParsing "$base/Activity?ProjectId=$parent" -WebSession $admin
+    Assert ($activity.Content.Contains('QA scheduled') -and $activity.Content.Contains('Posljednjih')) 'Activity page lists recent project events'
+    $atom=Invoke-WebRequest -UseBasicParsing "$base/Activity?handler=Atom&ProjectId=$parent" -WebSession $admin
+    $atomXml=[xml][Text.Encoding]::UTF8.GetString($atom.RawContentStream.ToArray())
+    Assert ($atom.Headers['Content-Type'] -match 'application/atom\+xml' -and $atomXml.feed.entry.Count -gt 0) 'Atom export is valid XML with entries'
+    $rss=Invoke-WebRequest -UseBasicParsing "$base/Activity?handler=Rss" -WebSession $regular
+    $rssXml=[xml][Text.Encoding]::UTF8.GetString($rss.RawContentStream.ToArray())
+    $rssLinks=@($rssXml.rss.channel.item | ForEach-Object { $_.link })
+    Assert ($rss.Headers['Content-Type'] -match 'application/rss\+xml' -and $rssLinks -match "/Issue\?id=$copy$") 'RSS export includes public issue activity'
+    Assert (-not ($rssLinks -match "/Issue\?id=$id$")) 'RSS export excludes inaccessible issue activity'
+    Assert ($rss.Headers['Cache-Control'] -match 'no-store') 'Personalized feed disables caching'
+    $anon=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Activity?handler=Atom" -WebSession $anon
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Anonymous clients cannot access activity feeds'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

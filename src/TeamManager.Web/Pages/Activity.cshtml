@@ -1,0 +1,47 @@
+@page
+@model TeamManager.Web.Pages.ActivityModel
+@using TeamManager.Web.Pages
+<h1>Aktivnosti</h1>
+<section class="card">
+    <form method="get" class="actions">
+        <label>Projekt
+            <select asp-for="ProjectId">
+                <option value="">Svi dostupni projekti</option>
+                @foreach (var project in Model.Projects)
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </select>
+        </label>
+        <button>Prikaži</button>
+    </form>
+    <p>
+        <a asp-page-handler="Atom" asp-route-projectId="@Model.ProjectId">Atom</a> ·
+        <a asp-page-handler="Rss" asp-route-projectId="@Model.ProjectId">RSS</a>
+    </p>
+</section>
+
+@if (Model.Entries.Count == 0)
+{
+    <p>Nema aktivnosti u odabranim projektima.</p>
+}
+else
+{
+    <div class="card table">
+        <table>
+            <caption>Posljednjih @Model.Entries.Count aktivnosti</caption>
+            <thead><tr><th>Vrijeme (UTC)</th><th>Aktivnost</th><th>Zadatak</th><th>Projekt</th><th>Korisnik</th></tr></thead>
+            <tbody>
+                @foreach (var entry in Model.Entries)
+                {
+                    <tr>
+                        <td><time datetime="@entry.At.ToString("O")">@entry.At.ToString("dd.MM.yyyy HH:mm")</time></td>
+                        <td>@ActivityModel.KindLabel(entry.Kind)</td>
+                        <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a></td>
+                        <td>@entry.Project</td><td>@entry.Author</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
