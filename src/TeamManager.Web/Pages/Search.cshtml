@@ -1,0 +1,46 @@
+@page
+@model TeamManager.Web.Pages.SearchModel
+<h1>Pretraga</h1>
+<section class="card">
+    <form method="get" class="grid">
+        <div asp-validation-summary="All"></div>
+        <label>Pojam<input asp-for="Query" type="search" maxlength="200" required></label>
+        <label>Modul
+            <select asp-for="Module">
+                <option value="">Svi moduli</option>
+                <option value="projects">Projekti</option>
+                <option value="issues">Zadaci</option>
+                <option value="roadmap">Verzije i prekretnice</option>
+                <option value="users">Korisnici</option>
+            </select>
+        </label>
+        <div><button>Pretraži</button></div>
+    </form>
+</section>
+
+@if (Model.Searched)
+{
+    @if (Model.Results.Values.All(items => items.Count == 0))
+    {
+        <p>Nema rezultata za odabrani pojam.</p>
+    }
+    else
+    {
+        @foreach (var group in Model.Results.Where(group => group.Value.Count > 0))
+        {
+            <section class="card">
+                <h2>@group.Key</h2>
+                <ul>
+                    @foreach (var item in group.Value)
+                    {
+                        <li><a href="@item.Url">@item.Title</a>@if (item.Detail.Length > 0) { <span> · @item.Detail</span> }</li>
+                    }
+                </ul>
+                @if (group.Value.Count == 20)
+                {
+                    <p>Prikazano je najviše 20 rezultata po modulu.</p>
+                }
+            </section>
+        }
+    }
+}

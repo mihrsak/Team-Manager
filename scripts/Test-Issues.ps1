@@ -375,6 +375,14 @@ try {
     Sql "UPDATE dbo.Issues SET AssigneeId=NULL WHERE Id=$publicIssue" | Out-Null
     $dashboard=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
     Assert (-not $dashboard.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Dashboard excludes unassigned issues'
+    $search=Invoke-WebRequest -UseBasicParsing "$base/Search?Query=QA" -WebSession $admin
+    Assert ($search.Content.Contains('QA parent updated') -and $search.Content.Contains('QA scheduled') -and $search.Content.Contains('QA milestone') -and $search.Content.Contains('qatest')) 'Unified search finds projects, issues, roadmap items and users'
+    $search=Invoke-WebRequest -UseBasicParsing "$base/Search?Query=QA&Module=roadmap" -WebSession $admin
+    Assert ($search.Content.Contains("#plan-$milestoneId") -and -not $search.Content.Contains('<h2>Zadaci</h2>')) 'Module filter limits search and links to the roadmap item'
+    $search=Invoke-WebRequest -UseBasicParsing "$base/Search?Query=QA" -WebSession $regular
+    Assert (-not $search.Content.Contains("href=`"/Project?id=$parent`"") -and -not $search.Content.Contains("href=`"/Issue?id=$id`"") -and -not $search.Content.Contains("#plan-$milestoneId")) 'Unified search hides private projects and their content'
+    $search=Invoke-WebRequest -UseBasicParsing "$base/Search?Query=qatest&Module=users" -WebSession $regular
+    Assert ($search.Content.Contains("href=`"/Profile?id=$uid`"")) 'Directory search links to the matching profile'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

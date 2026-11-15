@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 namespace TeamManager.Web;
 
 public record AppUser(int Id, string EmployeeNumber, string DisplayName, string JobTitle, int? OrganizationUnitId, string PasswordHash, bool IsAdministrator, bool IsActive = true, int SessionVersion = 0);
+public record UserMatch(int Id, string Name, string EmployeeNumber, string JobTitle);
 public record DirectoryEntry(AppUser User, string Unit);
 public record Membership(int ScopeId, string Scope, string Role, bool IsAdditional);
 
@@ -44,6 +45,24 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         await using var cmd=new SqlCommand("SELECT u.Id,u.EmployeeNumber,u.DisplayName,u.JobTitle,u.OrganizationUnitId,u.PasswordHash,u.IsAdministrator,u.IsActive,u.SessionVersion,COALESCE(o.Name,N'—') FROM dbo.AppUsers u LEFT JOIN dbo.OrganizationUnits o ON o.Id=u.OrganizationUnitId ORDER BY u.DisplayName",c);
         await using var r=await cmd.ExecuteReaderAsync();var result=new List<DirectoryEntry>();while(await r.ReadAsync())result.Add(new(Read(r),r.GetString(9)));return result;
     }
+    public async Task<List<UserMatch>> Search(string query)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            SELECT TOP (20) Id,DisplayName,EmployeeNumber,JobTitle
+            FROM dbo.AppUsers
+            WHERE CHARINDEX(@query,DisplayName)>0 OR CHARINDEX(@query,EmployeeNumber)>0 OR CHARINDEX(@query,JobTitle)>0
+            ORDER BY DisplayName,EmployeeNumber
+            """, connection);
+        command.Parameters.Add(P("@query", query));
+        var matches = new List<UserMatch>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            matches.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3)));
+        return matches;
+    }
+
     public async Task<List<Team>> Choices(string kind)
     {
         var table=kind switch {"unit"=>"OrganizationUnits","team"=>"Teams","project"=>"Projects",_=>throw new ArgumentException("Unknown scope")};

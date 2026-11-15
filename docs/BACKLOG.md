@@ -47,7 +47,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | NOTIFY-01 | SMTP obavijesti, podsjetnici, red slanja i ponavljanje | Backlog |
 | MAIL-01 | Zaprimanje poruka e-pošte u zadatke | Backlog |
 | FEED-01 | Feed aktivnosti i Atom/RSS | Gotovo: zadnjih 50 aktivnosti zadataka, projektni filtar, Atom/RSS uz prijavu |
-| SEARCH-01 | Pretraživanje kroz module i osobna nadzorna ploča | Djelomično: osobni pregled otvorenih zadataka i rokova; preostaje pretraživanje kroz module |
+| SEARCH-01 | Pretraživanje kroz module i osobna nadzorna ploča | Gotovo: osobni pregled otvorenih zadataka i rokova te pretraga projekata, zadataka, verzija, prekretnica i korisnika |
 | API-01 | Dokumentirani REST API i pristupni tokeni | Backlog |
 | EXT-01 | Proširenja, teme i lokalizacija | Backlog |
 | AUDIT-01 | Revizijski zapisi administracije i promjena ovlasti | Backlog |

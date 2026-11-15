@@ -6,6 +6,8 @@ namespace TeamManager.Web;
 public sealed record RoadmapItem(int Id, string Kind, string Name, string Description,
     DateTime? TargetDate, bool IsComplete, int Revision);
 
+public sealed record RoadmapMatch(int ProjectId, string Project, int Id, string Kind, string Name);
+
 public sealed record RoadmapStatusCount(int ItemId, string Status, bool IsClosed, int Count);
 
 public sealed class RoadmapStore(IConfiguration configuration, ProjectStore projects)
@@ -28,6 +30,30 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
             items.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
                 reader.IsDBNull(4) ? null : reader.GetDateTime(4), reader.GetBoolean(5), reader.GetInt32(6)));
         return items;
+    }
+
+    public async Task<List<RoadmapMatch>> Search(IEnumerable<int> visibleProjects, string query)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            SELECT TOP (20) m.ProjectId,p.Name,m.Id,m.Kind,m.Name
+            FROM dbo.ProjectMilestones m
+            JOIN dbo.Projects p ON p.Id=m.ProjectId
+            JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
+            WHERE CHARINDEX(@query,m.Name)>0 OR CHARINDEX(@query,m.Description)>0
+            ORDER BY m.Name,p.Name,m.Id
+            """, connection);
+        command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
+        {
+            Value = System.Text.Json.JsonSerializer.Serialize(visibleProjects)
+        });
+        command.Parameters.Add(P("@query", query));
+        var matches = new List<RoadmapMatch>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            matches.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4)));
+        return matches;
     }
 
     public async Task<ILookup<int, RoadmapStatusCount>> Progress(int project)

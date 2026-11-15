@@ -17,7 +17,7 @@
 }
 @foreach (var item in entries)
 {
-    <section class="card">
+    <section class="card" id="@(item.Id > 0 ? $"plan-{item.Id}" : null)">
         <h2>@(item.Id == 0 ? "Nova verzija ili prekretnica" : item.Name)</h2>
         @if (item.Id != 0)
         {
