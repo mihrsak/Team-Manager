@@ -29,6 +29,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Events.OnValidatePrincipal = async context => {
         var id = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if(!int.TryParse(id,out var userId)){context.RejectPrincipal();return;}
+        var version = context.Principal?.FindFirst("session_version")?.Value;
+        var store = context.HttpContext.RequestServices.GetRequiredService<UserStore>();
+        if (!int.TryParse(version, out var sessionVersion) || !await store.IsSessionValid(userId, sessionVersion))
+        {
+            context.RejectPrincipal();
+            return;
+        }
         var rights = await context.HttpContext.RequestServices.GetRequiredService<Permissions>().Effective(userId);
         var identity = (System.Security.Claims.ClaimsIdentity)context.Principal!.Identity!;
         foreach(var claim in identity.FindAll(System.Security.Claims.ClaimTypes.Role).ToList())identity.RemoveClaim(claim);

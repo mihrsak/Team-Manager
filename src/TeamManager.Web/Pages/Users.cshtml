@@ -2,7 +2,7 @@
 @model TeamManager.Web.Pages.UsersModel
 <p class="muted">ORGANIZACIJA / KORISNICI</p><h1>Korisnici</h1><p>Brojevi radnika, funkcije i organizacijske jedinice.</p>
 <div class="card table"><table><thead><tr><th>Broj radnika</th><th>Ime i prezime</th><th>Funkcija</th><th>Organizacijska jedinica</th><th></th></tr></thead><tbody>
-@foreach(var entry in Model.Entries){<tr><td>@entry.User.EmployeeNumber</td><td>@entry.User.DisplayName</td><td>@entry.User.JobTitle</td><td>@entry.Unit</td><td><a asp-page="/Profile" asp-route-id="@entry.User.Id">Profil</a></td></tr>}
+@foreach(var entry in Model.Entries){<tr><td>@entry.User.EmployeeNumber</td><td>@entry.User.DisplayName @if (!entry.User.IsActive) { <span class="badge">Deaktiviran</span> }</td><td>@entry.User.JobTitle</td><td>@entry.Unit</td><td><a asp-page="/Profile" asp-route-id="@entry.User.Id">Profil</a></td></tr>}
 </tbody></table></div>
 <div asp-validation-summary="All"></div><div class="grid">
 @if(User.IsInRole("users.manage")){

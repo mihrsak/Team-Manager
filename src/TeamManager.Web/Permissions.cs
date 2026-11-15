@@ -45,8 +45,34 @@ public sealed class Permissions(IConfiguration config)
         await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();
         await using var mutex=new SqlCommand("DECLARE @result int; EXEC @result=sys.sp_getapplock @Resource='TeamManager.Roles',@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=10000; IF @result<0 THROW 51000,'Role changes are busy',1;",c,tx);await mutex.ExecuteNonQueryAsync();
         await action(c,tx);
-        await using var guard=new SqlCommand("IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles u JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName WHERE p.Permission='*') THROW 51001,'At least one full administrator is required',1;",c,tx);await guard.ExecuteNonQueryAsync();await tx.CommitAsync();
+        await using var guard=new SqlCommand("IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles u JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName JOIN dbo.AppUsers a ON a.Id=u.UserId WHERE p.Permission='*' AND a.IsActive=1) THROW 51001,'At least one full administrator is required',1;",c,tx);await guard.ExecuteNonQueryAsync();await tx.CommitAsync();
     }
+    public Task ManageAccount(int actorId, int targetId, bool? active, string? passwordHash)
+        => Mutate(async (connection, transaction) =>
+        {
+            const string sql = """
+                IF @actor=@target OR NOT EXISTS(
+                    SELECT 1 FROM dbo.UserRoles u
+                    JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName
+                    JOIN dbo.AppUsers a ON a.Id=u.UserId
+                    WHERE a.Id=@actor AND a.IsActive=1 AND p.Permission='*')
+                    THROW 51002,'Full administration is required',1;
+                UPDATE dbo.AppUsers
+                SET IsActive=COALESCE(@active,IsActive),
+                    PasswordHash=COALESCE(@hash,PasswordHash),
+                    FailedAttempts=CASE WHEN @hash IS NULL THEN FailedAttempts ELSE 0 END,
+                    LockoutUntil=CASE WHEN @hash IS NULL THEN LockoutUntil ELSE NULL END,
+                    SessionVersion=SessionVersion+1
+                WHERE Id=@target;
+                """;
+            await using var command = new SqlCommand(sql, connection, transaction);
+            command.Parameters.Add(P("@actor", actorId));
+            command.Parameters.Add(P("@target", targetId));
+            command.Parameters.Add(new SqlParameter("@active", System.Data.SqlDbType.Bit) { Value = (object?)active ?? DBNull.Value });
+            command.Parameters.Add(new SqlParameter("@hash", System.Data.SqlDbType.NVarChar, 500) { Value = (object?)passwordHash ?? DBNull.Value });
+            await command.ExecuteNonQueryAsync();
+        });
+
     public async Task Save(string name,string description,string[] rights,bool create)
     {
         await Mutate(async(c,tx)=>{

@@ -1,4 +1,4 @@
-param([string]$BaseUrl='https://localhost:7043',[string]$AdminEmployee='admin',[Parameter(Mandatory=$true)][string]$AdminPassword)
+param([string]$BaseUrl='https://localhost:7043',[string]$AdminEmployee='admin',[Parameter(Mandatory=$true)][string]$AdminPassword,[string]$Database='TeamManager')
 $ErrorActionPreference='Stop'
 function Assert($condition,$message){if(-not $condition){throw $message};Write-Host "PASS: $message"}
 function Get-Page($path,$session){Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl$path" -WebSession $session}
@@ -15,7 +15,7 @@ $suffix=[guid]::NewGuid().ToString('N').Substring(0,8)
 $employee="qa$suffix"
 $role="QA$suffix"
 $testPassword=[guid]::NewGuid().ToString('N')
-$db=New-Object System.Data.SqlClient.SqlConnection 'Server=localhost\SQLEXPRESS;Database=TeamManager;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
+$db=New-Object System.Data.SqlClient.SqlConnection "Server=localhost\SQLEXPRESS;Database=$Database;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
 $db.Open()
 try {
     $page=Get-Page '/Users' $regular
@@ -59,6 +59,28 @@ try {
     $fresh=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Changed password can log in'
+    $page=Post-Page "/Profile?id=$id&handler=Account" $fresh @{accountAction='revoke'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Regular user cannot revoke sessions'
+    $page=Post-Page "/Profile?id=$id&handler=Account" $admin @{accountAction='revoke'}
+    $page=Get-Page '/Users' $fresh
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Revoked cookie is rejected on next request'
+    $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Revocation preserves credentials'
+    $page=Post-Page "/Profile?id=$id&handler=Account" $admin @{accountAction='deactivate'}
+    $page=Get-Page '/Users' $fresh
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Deactivation revokes existing sessions'
+    $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Deactivated account cannot sign in'
+    $page=Post-Page "/Profile?id=$id&handler=Account" $admin @{accountAction='activate'}
+    $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Reactivated account can sign in'
+    $page=Post-Page "/Profile?id=$id&handler=Account" $admin @{accountAction='reset';password="Reset$testPassword"}
+    $page=Get-Page '/Users' $fresh
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Password reset revokes existing sessions'
+    $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="New$testPassword"}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Old password is rejected after reset'
+    $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="Reset$testPassword"}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Reset password works'
 } finally {
     $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

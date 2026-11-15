@@ -25,3 +25,11 @@ Nije pokriveno ovim skriptama: bankarski IIS/AD/OCP, opterećenje, backup restor
 PROJ-02: Test-Issues sada ima 35 provjera. Provjerava i kružne veze u hijerarhiji, konkurentno uređivanje projekta, privatnost, javno čitanje bez prava pisanja, zatvaranje/arhiviranje/ponovno otvaranje, izolaciju voditelja projekta i očuvanje postavki nakon ponovljene instalacije.
 
 PROJ-03: Test-Issues ima ukupno 51 provjeru. Novi scenariji provjeravaju ovlasti za module, skrivanje vremena i povijesti, zabranu izravnih GET/POST zahtjeva, konkurentne postavke, ponovljenu migraciju, ponovno uključivanje bez gubitka podataka i izolaciju projekata.
+
+## Životni ciklus računa
+
+Migracija `010-account-lifecycle.sql` postojeće račune zadržava aktivnima. Primijeni migraciju prije pokretanja nove verzije. Nakon nadogradnje postojeće sesije traže novu prijavu.
+
+U popisu korisnika otvori **Profil** testnog korisnika. Puni administrator može deaktivirati i ponovno aktivirati račun, resetirati lozinku ili opozvati sesije. Reset uklanja privremeno zaključavanje računa. Sve četiri radnje poništavaju prethodne sesije pri sljedećem zahtjevu. Za vlastitu lozinku koristi redovnu promjenu lozinke na vlastitom profilu.
+
+`Test-Users.ps1` pokriva ovlasti, prijavu deaktiviranog i ponovno aktiviranog korisnika, poništenje kolačića, te prihvaćanje nove i odbijanje stare lozinke nakon reseta.

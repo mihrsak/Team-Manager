@@ -16,7 +16,7 @@ public class LoginModel(UserStore store):PageModel
         if(!ModelState.IsValid)return Page();
         var user=await store.Authenticate(EmployeeNumber.Trim().ToLowerInvariant(),Password);
         if(user is null){ModelState.AddModelError("","Neispravna prijava ili privremeno zaključan račun. Nakon više pokušaja pričekajte pet minuta.");return Page();}
-        var claims=new List<Claim>{new(ClaimTypes.NameIdentifier,user.Id.ToString()),new(ClaimTypes.Name,user.EmployeeNumber)};
+        var claims=new List<Claim>{new(ClaimTypes.NameIdentifier,user.Id.ToString()),new(ClaimTypes.Name,user.EmployeeNumber),new("session_version",user.SessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture))};
         if(user.IsAdministrator)claims.Add(new(ClaimTypes.Role,"Administrator"));
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,new ClaimsPrincipal(new ClaimsIdentity(claims,CookieAuthenticationDefaults.AuthenticationScheme)));
         return RedirectToPage(user.EmployeeNumber=="admin" && Password=="admin" ? "/InitialPassword" : "/Users");

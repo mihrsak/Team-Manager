@@ -15,7 +15,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | AUTH-01 | Prijava brojem radnika, hash lozinke, odjava, privremeno zaključavanje | Gotovo |
 | AUTH-02 | Prvi admin/admin samo u praznoj bazi, neobvezni podsjetnik za promjenu | Gotovo |
 | AUTH-03 | Profil, funkcija, organizacijska jedinica, promjena lozinke | Gotovo |
-| AUTH-04 | Deaktivacija, reset lozinke, opoziv aktivnih sesija | Backlog |
+| AUTH-04 | Deaktivacija, reset lozinke, opoziv aktivnih sesija | Gotovo |
 | AUTH-05 | Registracija s odobrenjem / potvrdom e-pošte | Backlog |
 | AUTH-06 | AD/LDAP i autentikacija kroz bankarski SSO | Backlog |
 | ROLE-01 | Prilagodljive role, zbroj globalnih ovlasti, serverske provjere | Gotovo |

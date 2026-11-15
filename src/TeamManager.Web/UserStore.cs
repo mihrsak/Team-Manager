@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace TeamManager.Web;
 
-public record AppUser(int Id, string EmployeeNumber, string DisplayName, string JobTitle, int? OrganizationUnitId, string PasswordHash, bool IsAdministrator);
+public record AppUser(int Id, string EmployeeNumber, string DisplayName, string JobTitle, int? OrganizationUnitId, string PasswordHash, bool IsAdministrator, bool IsActive = true, int SessionVersion = 0);
 public record DirectoryEntry(AppUser User, string Unit);
 public record Membership(int ScopeId, string Scope, string Role);
 
@@ -11,11 +11,11 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
     public static SqlParameter P(string name, object? value) => new(name, value ?? DBNull.Value);
-    private static AppUser Read(SqlDataReader r) => new(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetInt32(4),r.GetString(5),r.GetBoolean(6));
+    private static AppUser Read(SqlDataReader r) => new(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetInt32(4),r.GetString(5),r.GetBoolean(6),r.GetBoolean(7),r.GetInt32(8));
     public async Task<AppUser?> Find(string employee)
     {
         await using var c=Connect(); await c.OpenAsync();
-        await using var cmd=new SqlCommand("SELECT Id,EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator FROM dbo.AppUsers WHERE EmployeeNumber=@employee",c);
+        await using var cmd=new SqlCommand("SELECT Id,EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator,IsActive,SessionVersion FROM dbo.AppUsers WHERE EmployeeNumber=@employee",c);
         cmd.Parameters.Add(P("@employee",employee));
         await using var r=await cmd.ExecuteReaderAsync(); return await r.ReadAsync()?Read(r):null;
     }
@@ -24,11 +24,11 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         // Serialize attempts per account so parallel requests cannot bypass the lockout counter.
         await using var c=Connect(); await c.OpenAsync();
         await using var tx=(SqlTransaction)await c.BeginTransactionAsync();
-        await using var cmd=new SqlCommand("SELECT Id,EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator,LockoutUntil FROM dbo.AppUsers WITH(UPDLOCK,ROWLOCK) WHERE EmployeeNumber=@employee",c,tx);
+        await using var cmd=new SqlCommand("SELECT Id,EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator,IsActive,SessionVersion,LockoutUntil FROM dbo.AppUsers WITH(UPDLOCK,ROWLOCK) WHERE EmployeeNumber=@employee",c,tx);
         cmd.Parameters.Add(P("@employee",employee));
         AppUser? user=null; DateTime? until=null;
-        await using(var r=await cmd.ExecuteReaderAsync()) { if(await r.ReadAsync()) {user=Read(r);until=r.IsDBNull(7)?null:r.GetDateTime(7);} }
-        if(user is null || until>DateTime.UtcNow) return null;
+        await using(var r=await cmd.ExecuteReaderAsync()) { if(await r.ReadAsync()) {user=Read(r);until=r.IsDBNull(9)?null:r.GetDateTime(9);} }
+        if(user is null || !user.IsActive || until>DateTime.UtcNow) return null;
         var valid=hasher.VerifyHashedPassword(user,user.PasswordHash,password)!=PasswordVerificationResult.Failed;
         cmd.Parameters.Clear();cmd.Parameters.Add(P("@id",user.Id));
         cmd.CommandText=valid?"UPDATE dbo.AppUsers SET FailedAttempts=0,LockoutUntil=NULL WHERE Id=@id":"UPDATE dbo.AppUsers SET LockoutUntil=CASE WHEN FailedAttempts>=4 THEN DATEADD(minute,5,SYSUTCDATETIME()) ELSE NULL END,FailedAttempts=CASE WHEN FailedAttempts>=4 THEN 0 ELSE FailedAttempts+1 END WHERE Id=@id";
@@ -41,8 +41,8 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     public async Task<List<DirectoryEntry>> Directory()
     {
         await using var c=Connect();await c.OpenAsync();
-        await using var cmd=new SqlCommand("SELECT u.Id,u.EmployeeNumber,u.DisplayName,u.JobTitle,u.OrganizationUnitId,u.PasswordHash,u.IsAdministrator,COALESCE(o.Name,N'—') FROM dbo.AppUsers u LEFT JOIN dbo.OrganizationUnits o ON o.Id=u.OrganizationUnitId ORDER BY u.DisplayName",c);
-        await using var r=await cmd.ExecuteReaderAsync();var result=new List<DirectoryEntry>();while(await r.ReadAsync())result.Add(new(Read(r),r.GetString(7)));return result;
+        await using var cmd=new SqlCommand("SELECT u.Id,u.EmployeeNumber,u.DisplayName,u.JobTitle,u.OrganizationUnitId,u.PasswordHash,u.IsAdministrator,u.IsActive,u.SessionVersion,COALESCE(o.Name,N'—') FROM dbo.AppUsers u LEFT JOIN dbo.OrganizationUnits o ON o.Id=u.OrganizationUnitId ORDER BY u.DisplayName",c);
+        await using var r=await cmd.ExecuteReaderAsync();var result=new List<DirectoryEntry>();while(await r.ReadAsync())result.Add(new(Read(r),r.GetString(9)));return result;
     }
     public async Task<List<Team>> Choices(string kind)
     {
@@ -83,5 +83,28 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         }
         await tx.CommitAsync();
     }
-    public async Task ChangePassword(AppUser user,string password) => await Execute("UPDATE dbo.AppUsers SET PasswordHash=@p WHERE Id=@id",P("@p",hasher.HashPassword(user,password)),P("@id",user.Id));
+    public async Task<bool> ChangePassword(AppUser user, string password)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand("""
+            UPDATE dbo.AppUsers SET PasswordHash=@hash, SessionVersion=SessionVersion+1
+            WHERE Id=@id AND IsActive=1 AND SessionVersion=@version
+            """, connection);
+        command.Parameters.Add(P("@hash", hasher.HashPassword(user, password)));
+        command.Parameters.Add(P("@id", user.Id));
+        command.Parameters.Add(P("@version", user.SessionVersion));
+        return await command.ExecuteNonQueryAsync() == 1;
+    }
+
+    public async Task<bool> IsSessionValid(int userId, int version)
+    {
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(
+            "SELECT 1 FROM dbo.AppUsers WHERE Id=@id AND IsActive=1 AND SessionVersion=@version", connection);
+        command.Parameters.Add(P("@id", userId));
+        command.Parameters.Add(P("@version", version));
+        return await command.ExecuteScalarAsync() is not null;
+    }
 }

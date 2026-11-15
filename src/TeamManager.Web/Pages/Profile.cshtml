@@ -3,6 +3,21 @@
 <p class="muted">KORISNICI / PROFIL</p><h1>@Model.Person!.DisplayName</h1><p>Broj radnika: <strong>@Model.Person.EmployeeNumber</strong></p>
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
 <div asp-validation-summary="All"></div>
+@if (User.IsInRole("*") && !Model.IsSelf)
+{
+    <section class="card">
+        <h2>Korisnički račun</h2>
+        <p>@(Model.Person.IsActive ? "Aktivan račun" : "Deaktiviran račun")</p>
+        <form method="post" asp-page-handler="Account" asp-route-id="@Model.Person.Id">
+            <button name="accountAction" value="@(Model.Person.IsActive ? "deactivate" : "activate")">@(Model.Person.IsActive ? "Deaktiviraj račun" : "Aktiviraj račun")</button>
+            <button name="accountAction" value="revoke">Opozovi sesije</button>
+        </form>
+        <form method="post" asp-page-handler="Account" asp-route-id="@Model.Person.Id">
+            <label>Nova lozinka<input name="password" type="password" required minlength="10" maxlength="200" autocomplete="new-password"></label>
+            <button name="accountAction" value="reset">Resetiraj lozinku</button>
+        </form>
+    </section>
+}
 <section class="card"><h2>Globalne role</h2><p>@(Model.GlobalRoles.Count==0?"Nema globalnih rola":string.Join(", ",Model.GlobalRoles))</p>
 @if(User.IsInRole("roles.manage")){<form method="post" asp-page-handler="GlobalRole" asp-route-id="@Model.Person.Id"><label>Rola<select name="role">@foreach(var role in Model.Roles){<option>@role.Name</option>}</select></label><button name="remove" value="false">Dodijeli</button> <button name="remove" value="true">Ukloni</button></form>}
 </section>

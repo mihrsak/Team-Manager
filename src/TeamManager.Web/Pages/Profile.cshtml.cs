@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web.Pages;
-public class ProfileModel(UserStore store,Permissions permissions):PageModel
+public class ProfileModel(UserStore store,Permissions permissions, Microsoft.AspNetCore.Identity.IPasswordHasher<AppUser> hasher):PageModel
 {
     public IActionResult OnPost()=>BadRequest();
     public AppUser? Person {get;set;}
@@ -46,8 +46,11 @@ public class ProfileModel(UserStore store,Permissions permissions):PageModel
     {
         await OnGetAsync(id);if(Person is null)return NotFound();if(!IsSelf)return Forbid();
         if(newPassword is null||newPassword.Length<10||newPassword.Length>200||newPassword!=confirmPassword||string.IsNullOrEmpty(currentPassword)||currentPassword.Length>200)return Invalid("Nova lozinka mora imati najmanje 10 znakova, a potvrda mora biti jednaka.");
-        if(await store.Authenticate(Person.EmployeeNumber,currentPassword) is null)return Invalid("Trenutna lozinka nije ispravna ili je račun privremeno zaključan.");
-        await store.ChangePassword(Person,newPassword);return Success(id,"Lozinka je promijenjena.");
+        var authenticated = await store.Authenticate(Person.EmployeeNumber,currentPassword);
+        if(authenticated is null || authenticated.SessionVersion != Person.SessionVersion)return Invalid("Trenutna lozinka nije ispravna ili je račun privremeno zaključan.");
+        if (!await store.ChangePassword(authenticated, newPassword))
+            return Invalid("Račun je u međuvremenu promijenjen. Ponovno se prijavi.");
+        return Success(id, "Lozinka je promijenjena. Ponovno se prijavi.");
     }
     public async Task<IActionResult> OnPostMembershipAsync(int id,string? kind,int scopeId,string? role)
     {
@@ -69,6 +72,26 @@ public class ProfileModel(UserStore store,Permissions permissions):PageModel
         catch(SqlException ex) when(ex.Number==547){return Invalid("Član ima dodijeljene zadatke. Najprije ih preraspodijeli.");}
         return Success(id,"Članstvo je uklonjeno.");
     }
+    public async Task<IActionResult> OnPostAccountAsync(int id, string? accountAction, string? password)
+    {
+        var actorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (!User.IsInRole("*") || actorId == id) return Forbid();
+        await OnGetAsync(id);
+        if (Person is null) return NotFound();
+
+        if (!ModelState.IsValid || accountAction is not ("activate" or "deactivate" or "reset" or "revoke"))
+            return Invalid("Odaberi valjanu radnju za račun.");
+        if (accountAction == "reset" && (password is null || password.Length is < 10 or > 200))
+            return Invalid("Nova lozinka mora imati od 10 do 200 znakova.");
+
+        bool? active = accountAction switch { "activate" => true, "deactivate" => false, _ => null };
+        var hash = accountAction == "reset" ? hasher.HashPassword(Person, password!) : null;
+        try { await permissions.ManageAccount(actorId, id, active, hash); }
+        catch (SqlException ex) when (ex.Number == 51002) { return Forbid(); }
+        catch (SqlException ex) when (ex.Number == 51001) { return Invalid("Mora ostati barem jedan aktivan puni administrator."); }
+        return Success(id, "Radnja je izvršena. Prethodne sesije su opozvane.");
+    }
+
     private IActionResult Invalid(string text){ModelState.AddModelError("",text);return Page();}
     public async Task<IActionResult> OnPostGlobalRoleAsync(int id,string role,bool remove)
     {

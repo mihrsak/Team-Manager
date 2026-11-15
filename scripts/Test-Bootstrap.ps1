@@ -24,7 +24,7 @@ function Post($path,$session,$data){
 }
 try {
     $connection.Open();Sql "CREATE DATABASE [$dbName]" | Out-Null;$connection.ChangeDatabase($dbName)
-    foreach($file in @('001-schema.sql','003-users.sql','004-roles.sql')){
+    foreach($file in @('001-schema.sql','003-users.sql','004-roles.sql','010-account-lifecycle.sql')){
         $sql=Get-Content (Join-Path $root "database\$file") -Raw -Encoding UTF8
         foreach($batch in [regex]::Split($sql,'(?im)^\s*GO\s*$')){if(-not [string]::IsNullOrWhiteSpace($batch)){Sql $batch | Out-Null}}
     }
