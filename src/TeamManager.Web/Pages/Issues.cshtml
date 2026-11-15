@@ -1,7 +1,31 @@
 @page
 @model TeamManager.Web.Pages.IssuesModel
+@using TeamManager.Web.Pages
+@{
+    var visibleColumns = IssuesModel.ColumnLabels.Where(column => Model.VisibleColumns.Contains(column.Key)).ToList();
+    var canSelect = Model.Items.Any(item => Model.CanEdit.Contains(item.ProjectId));
+}
 <p class="muted">PROJEKTI / ZADACI</p><h1>Projektni zadaci</h1><p>Prikazani su projekti za koje imaš ovlast pregleda zadataka.</p>
-<div class="card"><form method="get" class="grid"><label>Projekt<select asp-for="ProjectId"><option value="">Svi dostupni projekti</option>@foreach(var p in Model.Projects){<option value="@p.Id">@p.Name</option>}</select></label><label>Status<select asp-for="Status"><option value="">Svi statusi</option>@foreach(var s in Model.Statuses){<option>@s</option>}</select></label><label>Pretraga<input asp-for="Query" maxlength="200"></label><div><button>Filtriraj</button> <button name="handler" value="Csv">Izvezi CSV</button> <a href="/Issues">Očisti</a></div></form></div>
+<div class="card"><form method="get" class="grid"><label>Projekt<select asp-for="ProjectId"><option value="">Svi dostupni projekti</option>@foreach(var p in Model.Projects){<option value="@p.Id">@p.Name</option>}</select></label><label>Status<select asp-for="Status"><option value="">Svi statusi</option>@foreach(var s in Model.Statuses){<option>@s</option>}</select></label><label>Pretraga<input asp-for="Query" maxlength="200"></label><label>Sortiranje
+    <select asp-for="SortOrder">
+        @foreach(var sort in IssuesModel.SortLabels){<option value="@sort.Key">@sort.Value</option>}
+    </select>
+</label>
+<label>Grupiranje
+    <select asp-for="GroupBy">
+        <option value="">Bez grupiranja</option>
+        @foreach(var group in IssuesModel.GroupLabels){<option value="@group.Key">@group.Value</option>}
+    </select>
+</label>
+<fieldset>
+    <legend>Dodatni stupci</legend>
+    <input type="hidden" name="Column" value="title">
+    @foreach(var column in IssuesModel.ColumnLabels)
+    {
+        <label><input style="width:auto" type="checkbox" name="Column" value="@column.Key" checked="@Model.VisibleColumns.Contains(column.Key)"> @(column.Key == "id" ? "Broj zadatka" : column.Value)</label>
+    }
+</fieldset>
+<div><button>Primijeni</button> <button name="handler" value="Csv">Izvezi CSV</button> <a href="/Issues">Očisti</a></div></form></div>
 <div class="card"><h2>Projekti</h2>@foreach(var p in Model.Projects){<p><a asp-page="/Issues" asp-route-ProjectId="@p.Id">@p.Name</a> @if(Model.CanCreate.Contains(p.Id)){<a class="button" asp-page="/Issue" asp-route-projectId="@p.Id">Novi zadatak</a>}</p>}@if(Model.Projects.Count==0){<p>Nema dostupnih projekata. Administrator može kreirati projekt i dodijeliti članstvo.</p>}</div>
 @if(TempData["Notice"] is string notice){<p class="notice">@notice</p>}
 <div asp-validation-summary="All"></div>
@@ -11,19 +35,19 @@
     {
         <div class="actions">
             <a asp-page-handler="Saved" asp-route-id="@saved.Id">@saved.Name</a>
-            <form method="post" asp-page-handler="DeleteQuery" asp-route-id="@saved.Id" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query">
+            <form method="post" asp-page-handler="DeleteQuery" asp-route-id="@saved.Id" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
                 <button aria-label="Ukloni upit @saved.Name">Ukloni</button>
             </form>
         </div>
     }
-    <form method="post" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query">
+    <form method="post" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
         <label>Naziv upita<input name="name" maxlength="80" required></label>
-        <button>Spremi primijenjene filtre</button>
+        <button>Spremi filtre i prikaz</button>
     </form>
 </section>
-@if (Model.Items.Any(i => Model.CanEdit.Contains(i.ProjectId)))
+@if (canSelect)
 {
-    <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" class="card">
+    <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns" class="card">
         <h2>Skupno uređivanje</h2>
         <p>Označi do 100 zadataka na popisu.</p>
         <label>Status<select name="bulkStatus"><option value="">Zadrži postojeći</option>@foreach(var status in Model.Statuses){<option>@status</option>}</select></label>
@@ -31,6 +55,45 @@
         <button>Spremi odabrane zadatke</button>
     </form>
 }
-<div class="card table"><table><thead><tr><th>Odabir</th><th>#</th><th>Zadatak</th><th>Projekt</th><th>Status</th><th>Prioritet</th><th>Nositelj</th><th>Rok</th></tr></thead><tbody>
-@foreach(var i in Model.Items){<tr><td>@if(Model.CanEdit.Contains(i.ProjectId)){<input form="bulk-edit" type="checkbox" name="selection" value="@i.Id:@i.Revision" aria-label="Odaberi zadatak @i.Id">}</td><td>@i.Id</td><td><a asp-page="/Issue" asp-route-id="@i.Id">@i.Title</a></td><td>@i.Project</td><td><span class="badge">@i.Status</span></td><td>@i.Priority</td><td>@(i.Assignee??"Nije dodijeljen")</td><td>@i.DueDate?.ToString("dd.MM.yyyy")</td></tr>}
-</tbody></table>@if(Model.Items.Count==0){<p>Nema zadataka za odabrane filtre.</p>}</div>
+<div class="card table">
+    @if (Model.Items.Count == 0)
+    {
+        <p>Nema zadataka za odabrane filtre.</p>
+    }
+    else
+    {
+        <p>Ukupno zadataka: @Model.Items.Count</p>
+        @foreach (var group in Model.Groups)
+        {
+            <table>
+                @if (Model.GroupBy is not null)
+                {
+                    <caption>@group.Key · @group.Count() zadataka</caption>
+                }
+                <thead><tr>
+                    @if (canSelect) { <th>Odabir</th> }
+                    <th>Zadatak</th>
+                    @foreach (var column in visibleColumns) { <th>@column.Value</th> }
+                </tr></thead>
+                <tbody>
+                    @foreach (var item in group)
+                    {
+                        <tr>
+                            @if (canSelect)
+                            {
+                                <td>
+                                    @if (Model.CanEdit.Contains(item.ProjectId))
+                                    {
+                                        <input form="bulk-edit" type="checkbox" name="selection" value="@item.Id:@item.Revision" aria-label="Odaberi zadatak @item.Id">
+                                    }
+                                </td>
+                            }
+                            <td><a asp-page="/Issue" asp-route-id="@item.Id">@item.Title</a></td>
+                            @foreach (var column in visibleColumns) { <td>@IssuesModel.ColumnText(item, column.Key)</td> }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</div>

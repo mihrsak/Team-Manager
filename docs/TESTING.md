@@ -61,3 +61,5 @@ Nakon migracije `015-issue-links.sql` na detaljima zadatka unesite broj drugog z
 ## Osobni spremljeni upiti
 
 Nakon migracije `016-saved-issue-queries.sql` primijenite filtre na popisu zadataka, unesite naziv u odjeljak **Moji spremljeni upiti** i spremite ih. Upit pamti projekt, status i tekst pretrage. Vlasnik ga može ponovno otvoriti ili ukloniti. Rezultati pri svakom otvaranju ovise o tadašnjim projektnim ovlastima.
+
+Migracija `017-saved-issue-query-layout.sql` omogućuje spremanje odabranih stupaca, sortiranja i grupiranja uz filtre. Postojeći upiti zadržavaju zadani prikaz. Popis prikazuje ukupni broj rezultata i broj zadataka po grupi. CSV zadržava standardne stupce i primjenjuje filtre i sortiranje.

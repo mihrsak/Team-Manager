@@ -15,7 +15,7 @@ public sealed class IssueInput
     public DateTime? DueDate{get;set;}
     public int Revision{get;set;}
 }
-public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision);
+public record IssueRow(int Id,int ProjectId,string Project,string Title,string Status,string Priority,string? Assignee,DateTime? DueDate,int Revision,string? AssigneeEmployeeNumber);
 public record IssueDetail(int Id,int ProjectId,IssueInput Input);
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity);
@@ -49,8 +49,8 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query)
     {
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
-        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) ORDER BY i.Id DESC",c);
-        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??"")]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8)));return result;
+        await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE (@p IS NULL OR i.ProjectId=@p) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) ORDER BY i.Id DESC",c);
+        cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??"")]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {

@@ -259,11 +259,17 @@ try {
     $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$publicIssue;relation='blocks'}
     $page=Post "/Issue?id=$publicIssue&handler=Link" $admin @{otherId=$id;relation='blocks'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='blocks'") -eq 2) 'Transitive dependency cycle is rejected'
-    $page=Post "/Issues?handler=SaveQuery&ProjectId=$parent&Query=QA%2C" $admin @{name='QA saved filter'}
+    $page=Post "/Issues?handler=SaveQuery&ProjectId=$parent&Query=QA%2C&SortOrder=oldest&GroupBy=priority&Columns=title,priority" $admin @{name='QA saved filter'}
     Assert ($page.Content.Contains('QA saved filter')) 'Saved issue filter is listed for its owner'
     $savedId=Sql "SELECT Id FROM dbo.SavedIssueQueries WHERE Name=N'QA saved filter'"
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Saved&id=$savedId" -WebSession $admin
     Assert ($page.BaseResponse.ResponseUri.Query -match "ProjectId=$parent" -and [uri]::UnescapeDataString($page.BaseResponse.ResponseUri.Query) -match 'Query=QA,') 'Saved issue filter reapplies project and search'
+    Assert ($page.BaseResponse.ResponseUri.Query -match 'SortOrder=oldest' -and $page.BaseResponse.ResponseUri.Query -match 'GroupBy=priority') 'Saved query restores sort and grouping'
+    Assert ($page.Content.Contains('<th>Prioritet</th>') -and -not $page.Content.Contains('<th>Rok</th>')) 'Saved query restores selected columns'
+    Assert ($page.Content -match '<caption>Hitno\s*.\s*2 zadataka</caption>') 'Grouped list shows the count for matching issues'
+    $firstLink=$page.Content.IndexOf("href=`"/Issue?id=$id`"")
+    $secondLink=$page.Content.IndexOf("href=`"/Issue?id=$copy`"")
+    Assert ($firstLink -ge 0 -and $secondLink -gt $firstLink) 'Oldest-first ordering applies within a group'
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issues" -WebSession $regular
     Assert (-not $page.Content.Contains('QA saved filter')) 'Saved issue filters are private'
     try {
