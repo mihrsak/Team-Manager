@@ -45,8 +45,37 @@ Lokalno pokretanje iz izvornog koda: `dotnet dev-certs https --trust`, ASPNETCOR
 
 Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data Protection ključeve identiteta procesa pri nadogradnji. Zaustavite application pool, napravite backup baze i postavki, primijenite migracije, zamijenite aplikacijske datoteke, vratite lokalnu konfiguraciju i pokrenite pool. Povratak na staru verziju baze radi se iz provjerenog backupa, ne brisanjem tablica.
 
-SQL backup/restore, IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju; nisu potvrđeni lokalnim testovima.
+IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju.
 
 ## Zdravstvene provjere
 
 HTTPS GET na `/health/live` vraća 200 dok aplikacija odgovara. `/health/ready` vraća 200 kada aplikacija može otvoriti SQL vezu i čitati stupce računa koje koristi za provjeru sesija. Ako taj upit ne uspije, endpoint vraća 503. Oba endpointa dostupna su bez korisničke prijave i vraćaju samo status.
+
+## SQL Server backup i povratak nakon nadogradnje
+
+1. Zaustavite pisanje u bazu i sačuvajte prethodni aplikacijski paket, konfiguraciju i Data Protection ključeve. DBA izrađuje puni backup u novu datoteku na putanji dostupnoj SQL Server servisu. Sljedeći primjer koristi zasebnu datoteku za jednokratni backup prije migracije.
+
+   ```sql
+   BACKUP DATABASE [TeamManager]
+       TO DISK = N'D:\SQLBackups\TeamManager-pre-upgrade.bak'
+       WITH COPY_ONLY, CHECKSUM;
+   RESTORE VERIFYONLY
+       FROM DISK = N'D:\SQLBackups\TeamManager-pre-upgrade.bak'
+       WITH CHECKSUM;
+   ```
+
+2. Za probu obnove i povratak nakon neuspjele migracije obnovite kopiju pod novim imenom, s odvojenim fizičkim datotekama. Iz `RESTORE FILELISTONLY` preuzmite logičke nazive i navedite `MOVE` za svaku datoteku.
+
+   ```sql
+   RESTORE FILELISTONLY FROM DISK = N'D:\SQLBackups\TeamManager-pre-upgrade.bak';
+   RESTORE DATABASE [TeamManager_Restored]
+       FROM DISK = N'D:\SQLBackups\TeamManager-pre-upgrade.bak'
+       WITH CHECKSUM, RECOVERY,
+            MOVE N'TeamManager' TO N'D:\SQLData\TeamManager_Restored.mdf',
+            MOVE N'TeamManager_log' TO N'D:\SQLData\TeamManager_Restored.ldf';
+   DBCC CHECKDB ([TeamManager_Restored]) WITH NO_INFOMSGS;
+   ```
+
+3. Provjerite poznate podatke u obnovljenoj bazi i SQL ovlasti aplikacijskog identiteta. Za povratak pokrenite prethodni paket s prethodnom konfiguracijom i vezom na obnovljenu bazu. Prije otvaranja pristupa provjerite prijavu i prikaz projekta. Obnova punog backupa vraća stanje u trenutku kopije. Ako je nakon kopije bilo upisa, DBA treba utvrditi točku oporavka i provjeriti dostupne log backup kopije prije prebacivanja prometa.
+
+Lokalna provjera na odvojenim SQL Express bazama obuhvatila je backup s kontrolnom sumom, obnovu pod drugim imenom, DBCC CHECKDB i potvrdu da su obnovljeni projekti i korisnički podaci iz trenutka kopije. Povratak IIS paketa provjerava se u ciljnom okruženju.

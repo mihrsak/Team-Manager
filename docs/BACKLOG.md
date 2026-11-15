@@ -53,7 +53,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | AUDIT-01 | Revizijski zapisi administracije i promjena ovlasti | Backlog |
 | OPS-01 | Verzijske SQL skripte, ponovljiva instalacija i odvojeni demo podaci | Gotovo, provjereno na zasebnim bazama |
 | OPS-02 | Konfiguracija JSON/env, Windows publish paket i upute za IIS | Paket provjeren; ciljni IIS nije testiran |
-| OPS-03 | Backup/restore, rollback, nadzor, zdravstvene provjere i logovi | Djelomično: provjereni zdravstveni endpointi |
+| OPS-03 | Backup/restore, rollback, nadzor, zdravstvene provjere i logovi | Djelomično: provjereni zdravstveni endpointi i SQL backup/restore; postupak rollbacka dokumentiran |
 | OPS-04 | OCP manifesti i testiranje iza proxyja | Backlog |
 | DB-01 | SQL Server | Gotovo |
 | DB-02 | Oracle i Db2 LUW/zOS provider, migracije i integracijski testovi | Backlog |
