@@ -20,11 +20,11 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | AUTH-06 | AD/LDAP i autentikacija kroz bankarski SSO | Backlog |
 | ROLE-01 | Prilagodljive role, zbroj globalnih ovlasti, serverske provjere | Gotovo |
 | ROLE-02 | Članstva po timu/projektu, izolacija ovlasti između projekata | Gotovo |
-| ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Djelomično: više rola po članstvu i grupe s globalnim rolama; preostaje nasljeđivanje projektnih ovlasti |
+| ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Gotovo: više rola po članstvu, grupe s globalnim rolama i opcionalno nasljeđivanje projektnih rola |
 | ROLE-04 | Pravila vidljivosti privatnih zadataka i pojedinih polja | Backlog |
 | ORG-01 | Unos organizacijskih jedinica, timova i projekata | Gotovo |
 | PROJ-01 | Pregled projekata i pripadajućih zadataka prema ovlastima | Gotovo |
-| PROJ-02 | Hijerarhija, opis, zatvaranje/arhiviranje, privatni/javni projekti | Gotovo: javno prijavljenim korisnicima; bez nasljeđivanja ovlasti i stanja |
+| PROJ-02 | Hijerarhija, opis, zatvaranje/arhiviranje, privatni/javni projekti | Gotovo: javno prijavljenim korisnicima; stanje po projektu |
 | PROJ-03 | Uključivanje modula i postavke po projektu | Gotovo za postojeće module: zadaci/komentari i vrijeme; novi moduli dodaju se s vlastitim stavkama |
 | ISSUE-01 | Unos i uređivanje zadataka, tip, prioritet, status, rok, nositelj | Gotovo |
 | ISSUE-02 | Komentari i transakcijska povijest promjena | Gotovo: povijest s detaljima prije/poslije |

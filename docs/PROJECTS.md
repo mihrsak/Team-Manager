@@ -6,7 +6,7 @@ U navigaciji odaberite **Projekti**, zatim naziv projekta ili **Novi projekt**. 
 - Privatni projekt vide korisnici s projektnom ovlasti pregleda zadataka ili upravljanja projektom i administratori.
 - Stvaranje zahtijeva globalnu ovlast `organization.manage`. Kreator novog projekta dobiva projektnu rolu Voditelj. Uređivanje zahtijeva `projects.manage` na projektu ili punu administraciju. Migracija dodaje tu ovlast zadanoj roli Voditelj.
 - Promjena nadređenog projekta zahtijeva upravljanje odabranim novim nadređenim projektom. Postojećeg nedostupnog roditelja moguće je zadržati bez otkrivanja njegova naziva. Kružne veze se odbijaju; istodobne promjene hijerarhije su serijalizirane.
-- Hijerarhija ne nasljeđuje članstva, ovlasti, vidljivost ni stanje. Svaki potprojekt ima vlastite postavke.
+- Potprojekt može uključiti nasljeđivanje uloga nadređenog projekta. Za uključivanje je potrebna ovlast upravljanja i potprojektom i nadređenim projektom. Uloge se zbrajaju kroz uzastopne veze s uključenim nasljeđivanjem. Vidljivost, stanje, postavke modula i popis izravnih članova pripadaju pojedinom projektu. Za dodjelu nositelja zadatka potrebno je izravno članstvo.
 - Zatvoren i arhiviran projekt zadržavaju pregled zadataka i povijesti. Kreiranje/uređivanje zadataka, komentari i unos vremena su blokirani, uključujući administratora. Ponovno aktiviranje vraća rad. Arhivirani projekti ostaju navedeni sa svojim stanjem, bez brisanja podataka.
 - Korisnik s pravom upravljanja projektom može mijenjati njegove postavke i ponovno ga otvoriti. Upravljanje članovima zadržava zasebnu ovlast `members.manage`.
 - Provjera revizije štiti od prepisivanja novije izmjene projekta zastarjelim obrascem.
@@ -22,3 +22,4 @@ Isključen modul zadataka uklanja zadatke iz popisa/pretrage i blokira izravne U
 Vrijeme zahtijeva i uključen modul zadataka. Odabir vremena ostaje sačuvan kad se zadaci isključe. Isključivanje ne briše podatke; ponovno uključivanje vraća prethodne podatke. Ponovljena migracija ne mijenja odabire. Revizija projekta štiti i ove postavke od zastarjelog obrasca. Ne postoji automatsko nasljeđivanje postavki potprojektima.
 
 Moduli koji još nisu implementirani (wiki, dokumenti i ostalo) ostaju u svojim backlog stavkama. Nasljeđivanje članstava i više rola zasebna su stavka ROLE-03.
+Migracija `013-project-role-inheritance.sql` dodaje mogućnost nasljeđivanja svim projektima s početnom vrijednošću isključeno. Uključuje se na obrascu projekta pod **Naslijedi uloge nadređenog projekta**.

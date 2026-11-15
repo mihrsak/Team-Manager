@@ -1,9 +1,10 @@
+param([string]$DotnetPath, [string]$ApplicationDll)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $dbName='TeamManager_IssueTest_'+[guid]::NewGuid().ToString('N')
 $base='https://localhost:7443'
-$dotnet=Join-Path $root '.tools\dotnet\dotnet.exe'
-$dll=Join-Path $root 'artifacts\release-build\TeamManager.Web.dll'
+$dotnet=if($DotnetPath){$DotnetPath}else{Join-Path $root '.tools\dotnet\dotnet.exe'}
+$dll=if($ApplicationDll){$ApplicationDll}else{Join-Path $root 'artifacts\release-build\TeamManager.Web.dll'}
 $connection=New-Object System.Data.SqlClient.SqlConnection 'Server=localhost\SQLEXPRESS;Database=master;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
 $oldConnection=$env:ConnectionStrings__TeamManager
 $oldEnvironment=$env:ASPNETCORE_ENVIRONMENT
@@ -168,6 +169,28 @@ try {
     $page=Post "/Project?id=$child&handler=Modules" $regular @{issuesEnabled='false';timeEnabled='false';revision='2'}
     Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$child") -eq 0) 'Scoped project manager can configure own project modules'
     Assert ((Sql "SELECT CAST(IssuesEnabled AS int) FROM dbo.Projects WHERE Id=$project") -eq 1) 'Module configuration is isolated between projects'
+    $childInput['Input.ParentId']=$parent
+    $childInput['Input.Revision']='3'
+    $childInput['Input.InheritParentRoles']='true'
+    $page=Post "/Project?id=$child" $regular $childInput
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Child manager cannot enable inheritance without parent authority'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
+    $inheritedInput=@{'Input.Name'='QA inherited';'Input.ParentId'=$parent;'Input.State'='Active';'Input.Revision'='0'}
+    $page=Post '/Project' $admin $inheritedInput
+    $inherited=Sql "SELECT Id FROM dbo.Projects WHERE Name='QA inherited'"
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Projects" -WebSession $regular
+    Assert (-not $page.Content.Contains('QA inherited')) 'Private child is hidden before inheritance is enabled'
+    $inheritedInput['Input.Revision']='1'
+    $inheritedInput['Input.InheritParentRoles']='true'
+    $page=Post "/Project?id=$inherited" $admin $inheritedInput
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Project?id=$inherited" -WebSession $regular
+    Assert ($page.Content.Contains('QA inherited')) 'Parent role grants access to opted-in private child'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectMembers WHERE ProjectId=$inherited AND UserId=$uid") -eq 0) 'Inheritance keeps direct memberships separate'
+    $inheritedInput['Input.Revision']='2'
+    $inheritedInput['Input.InheritParentRoles']='false'
+    $page=Post "/Project?id=$inherited" $admin $inheritedInput
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Projects" -WebSession $regular
+    Assert (-not $page.Content.Contains('QA inherited')) 'Disabling inheritance immediately revokes inherited access'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment
