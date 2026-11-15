@@ -64,6 +64,16 @@ public sealed class Permissions(IConfiguration config)
                     LockoutUntil=CASE WHEN @hash IS NULL THEN LockoutUntil ELSE NULL END,
                     SessionVersion=SessionVersion+1
                 WHERE Id=@target;
+                IF @@ROWCOUNT=1
+                    INSERT dbo.AdministrationAudit(ActorId,ActorEmployeeNumber,Action,Subject)
+                    SELECT actor.Id,actor.EmployeeNumber,
+                        CASE WHEN @hash IS NOT NULL THEN 'account.reset'
+                             WHEN @active=1 THEN 'account.activate'
+                             WHEN @active=0 THEN 'account.deactivate'
+                             ELSE 'account.revoke' END,
+                        target.EmployeeNumber
+                    FROM dbo.AppUsers actor CROSS JOIN dbo.AppUsers target
+                    WHERE actor.Id=@actor AND target.Id=@target;
                 """;
             await using var command = new SqlCommand(sql, connection, transaction);
             command.Parameters.Add(P("@actor", actorId));

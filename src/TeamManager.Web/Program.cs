@@ -22,6 +22,7 @@ builder.Services.AddScoped<RoadmapStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<Permissions>();
+builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => {

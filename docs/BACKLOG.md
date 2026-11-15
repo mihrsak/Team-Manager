@@ -50,7 +50,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | SEARCH-01 | Pretraživanje kroz module i osobna nadzorna ploča | Gotovo: osobni pregled otvorenih zadataka i rokova te pretraga projekata, zadataka, verzija, prekretnica i korisnika |
 | API-01 | Dokumentirani REST API i pristupni tokeni | Backlog |
 | EXT-01 | Proširenja, teme i lokalizacija | Backlog |
-| AUDIT-01 | Revizijski zapisi administracije i promjena ovlasti | Backlog |
+| AUDIT-01 | Revizijski zapisi administracije i promjena ovlasti | Djelomično: administracija računa i pregled zapisa; preostaju promjene ovlasti i ostale administrativne radnje |
 | OPS-01 | Verzijske SQL skripte, ponovljiva instalacija i odvojeni demo podaci | Gotovo, provjereno na zasebnim bazama |
 | OPS-02 | Konfiguracija JSON/env, Windows publish paket i upute za IIS | Paket provjeren; ciljni IIS nije testiran |
 | OPS-03 | Backup/restore, rollback, nadzor, zdravstvene provjere i logovi | Lokalno provjereni health endpointi, backup/restore i logovi nadzora; čeka povratak prethodnog paketa i nadzor na ciljnom IIS-u |

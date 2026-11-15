@@ -106,6 +106,15 @@ try {
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Old password is rejected after reset'
     $page=Post-Page '/Login' $fresh @{EmployeeNumber=$employee;Password="Reset$testPassword"}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Reset password works'
+    $page=Get-Page '/AdministrationAudit' $admin
+    Assert ($page.Content.Contains($employee) -and $page.Content.Contains('Reset lozinke')) 'Full administrator can view account audit'
+    $page=Get-Page '/AdministrationAudit' $fresh
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Regular account cannot read the audit log'
+    $cmd=$db.CreateCommand()
+    $cmd.CommandText="SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE ActorEmployeeNumber=@actor AND Subject=@subject AND Action IN ('account.reset','account.activate','account.deactivate','account.revoke')"
+    [void]$cmd.Parameters.AddWithValue('@actor',$AdminEmployee)
+    [void]$cmd.Parameters.AddWithValue('@subject',$employee)
+    Assert ($cmd.ExecuteScalar() -eq 4) 'Exactly one record per successful administrator action; rejected actions leave no entry'
 } finally {
     $cmd=$db.CreateCommand();$cmd.CommandText='DELETE dbo.UserGroupMembers WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroupRoles WHERE GroupId IN (SELECT Id FROM dbo.UserGroups WHERE Name=@r); DELETE dbo.UserGroups WHERE Name=@r; DELETE dbo.ProjectMembers WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.Projects WHERE Name=@r; DELETE dbo.UserRoles WHERE UserId IN (SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e); DELETE dbo.AppUsers WHERE EmployeeNumber=@e; DELETE dbo.RolePermissions WHERE RoleName=@r; DELETE dbo.Roles WHERE Name=@r';[void]$cmd.Parameters.AddWithValue('@e',$employee);[void]$cmd.Parameters.AddWithValue('@r',$role);[void]$cmd.ExecuteNonQuery();$db.Dispose()
 }

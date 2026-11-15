@@ -1,6 +1,7 @@
 @page
 @model TeamManager.Web.Pages.RolesModel
-<h1>Role i ovlasti</h1><p>Kreiraj rolu i odaberi prava koja daje. Globalne role vrijede u cijeloj aplikaciji; role članstva samo u dodijeljenom timu ili projektu.</p><div asp-validation-summary="All"></div>
+<h1>Role i ovlasti</h1>
+@if (User.IsInRole("*")) { <p><a asp-page="/AdministrationAudit">Revizijski zapis</a></p> }<p>Kreiraj rolu i odaberi prava koja daje. Globalne role vrijede u cijeloj aplikaciji; role članstva samo u dodijeljenom timu ili projektu.</p><div asp-validation-summary="All"></div>
 @if(User.IsInRole("*")){<p><a asp-page="/Groups">Grupe korisnika</a></p>}
 <div class="grid">@foreach(var role in Model.Roles){<section class="card"><h2>@role.Name</h2><form method="post"><input type="hidden" name="name" value="@role.Name"><label>Opis<input name="description" value="@role.Description" maxlength="200"></label>
 @foreach(var permission in Permissions.Catalog){<label><input style="display:inline;width:auto" type="checkbox" name="rights" value="@permission.Key" checked="@role.Permissions.Contains(permission.Key)"> @permission.Value</label>}
