@@ -85,3 +85,7 @@ Puni administrator može otvoriti **Role i ovlasti → Revizijski zapis** i preg
 ## Projektne novosti
 
 Nakon migracije `025-project-news.sql` na detaljima projekta otvorite **Novosti**. Objavljivanje zahtijeva upravljanje aktivnim projektom, a komentiranje ovlast `news.comment`. Migracija je dodjeljuje postojećim standardnim ulogama Voditelj, Developer, Moderator i Član. Pregled prati vidljivost projekta. Na zatvorenim i arhiviranim projektima postojeće objave i komentari dostupni su za čitanje.
+
+## Projektni wiki
+
+Nakon migracije `026-project-wiki.sql` na detaljima projekta otvorite **Wiki**. Čitanje stranica i povijesti prati vidljivost projekta. Za uređivanje aktivnog projekta potrebna je ovlast `wiki.edit`, koju migracija dodjeljuje standardnim ulogama Voditelj i Developer. Svako spremanje stvara novu verziju naslova i teksta. Na stranici možete otvoriti stariju verziju ili odabrati dvije verzije za usporedbu jednu uz drugu. Wiki prikazuje običan tekst.

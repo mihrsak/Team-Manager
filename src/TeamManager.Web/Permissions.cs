@@ -16,6 +16,7 @@ public sealed class Permissions(IConfiguration config)
         Catalog["issues.edit"]="Uređivanje projektnih zadataka";
         Catalog["issues.comment"]="Komentiranje projektnih zadataka";
         Catalog["time.log"]="Evidentiranje vremena na zadacima";
+        Catalog["wiki.edit"]="Uređivanje projektnog wikija";
         Catalog["news.comment"]="Komentiranje projektnih novosti";
         Catalog["workflow.manage"]="Uređivanje šifrarnika i tijeka rada";
     }

@@ -1,0 +1,87 @@
+@page
+@model TeamManager.Web.Pages.WikiModel
+<p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
+<h1>Projektni wiki</h1>
+<div asp-validation-summary="All"></div>
+
+@if (Model.Selected is null)
+{
+    @if (Model.Pages.Count == 0)
+    {
+        <p>Projekt još nema wiki stranica.</p>
+    }
+    else
+    {
+        <ul class="card">
+            @foreach (var article in Model.Pages)
+            {
+                <li><a asp-page="/Wiki" asp-route-projectId="@Model.Project.Id" asp-route-wikiId="@article.Id">@article.Title</a></li>
+            }
+        </ul>
+    }
+}
+else
+{
+    var displayed = Model.Displayed!;
+    <p><a asp-page="/Wiki" asp-route-projectId="@Model.Project.Id">Sve wiki stranice</a></p>
+    <div class="@(Model.Compared is null ? "" : "grid")">
+        <article class="card">
+            <h2>@displayed.Title</h2>
+            <p>Verzija @displayed.Number · @displayed.Author · @displayed.At.ToString("dd.MM.yyyy HH:mm") UTC</p>
+            <p style="white-space:pre-wrap;overflow-wrap:anywhere">@displayed.Body</p>
+        </article>
+        @if (Model.Compared is { } compared)
+        {
+            <article class="card">
+                <h2>@compared.Title</h2>
+                <p>Verzija @compared.Number · @compared.Author · @compared.At.ToString("dd.MM.yyyy HH:mm") UTC</p>
+                <p style="white-space:pre-wrap;overflow-wrap:anywhere">@compared.Body</p>
+            </article>
+        }
+    </div>
+    <section class="card">
+        <h2>Povijest verzija</h2>
+        <ul>
+            @foreach (var revision in Model.History)
+            {
+                <li><a asp-page="/Wiki" asp-route-projectId="@Model.Project.Id" asp-route-wikiId="@Model.Selected.Id" asp-route-revision="@revision.Number">Verzija @revision.Number</a>
+                    · @revision.Author · @revision.At.ToString("dd.MM.yyyy HH:mm") UTC
+                </li>
+            }
+        </ul>
+        @if (Model.History.Count > 1)
+        {
+            <form method="get" class="actions">
+                <input type="hidden" name="projectId" value="@Model.Project.Id">
+                <input type="hidden" name="wikiId" value="@Model.Selected.Id">
+                <label>Prva verzija<select name="revision">
+                    @foreach (var revision in Model.History)
+                    {
+                        <option value="@revision.Number" selected="@(revision.Number == displayed.Number)">@revision.Number</option>
+                    }
+                </select></label>
+                <label>Druga verzija<select name="compare">
+                    @foreach (var revision in Model.History)
+                    {
+                        <option value="@revision.Number" selected="@(revision.Number == (Model.Compared?.Number ?? Model.History.Last().Number))">@revision.Number</option>
+                    }
+                </select></label>
+                <button>Usporedi</button>
+            </form>
+        }
+    </section>
+}
+
+@if (Model.CanEdit && Model.Compared is null &&
+    (Model.Selected is null || Model.Displayed?.Number == Model.Selected.Revision))
+{
+    <section class="card">
+        <h2>@(Model.Selected is null ? "Nova wiki stranica" : "Uredi stranicu")</h2>
+        <form method="post" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id" asp-route-wikiId="@Model.Selected?.Id">
+            <input type="hidden" name="revision" value="@(Model.Selected?.Revision ?? 0)">
+            <label>Naslov<input name="title" maxlength="120" required value="@(Model.DraftTitle ?? Model.Displayed?.Title)"></label>
+            <label>Sadržaj<textarea name="body" rows="10" maxlength="20000" required>@(Model.DraftBody ?? Model.Displayed?.Body)</textarea></label>
+            <button>Spremi stranicu</button>
+        </form>
+    </section>
+}

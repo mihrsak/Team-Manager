@@ -449,6 +449,28 @@ try {
     Sql "UPDATE dbo.Projects SET State='Closed' WHERE Id=$project" | Out-Null
     $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $admin @{body='Forbidden on closed project'}
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks new comments even for administrator'
+    $page=Post "/Wiki?handler=Save&projectId=$parent" $admin @{title='QA wiki first';body='QA <first> revision'}
+    $wikiId=Sql "SELECT Id FROM dbo.ProjectWikiPages WHERE ProjectId=$parent AND Title=N'QA wiki first'"
+    Assert ($page.Content.Contains('QA &lt;first&gt; revision')) 'Wiki creation stores plain text and displays it escaped'
+    $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
+    $page=Post "/Wiki?handler=Save&projectId=$parent&wikiId=$wikiId" $regular @{title='QA wiki second';body='QA second revision';revision='1'}
+    Assert ($page.Content.Contains('QA second revision') -and $page.Content.Contains('Verzija 2')) 'Wiki editor can create a new revision'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Wiki?projectId=$parent&wikiId=$wikiId&revision=1&compare=2" -WebSession $admin
+    Assert ($page.Content.Contains('QA &lt;first&gt; revision') -and $page.Content.Contains('QA second revision')) 'Wiki displays two historical revisions for comparison'
+    $page=Post "/Wiki?handler=Save&projectId=$parent&wikiId=$wikiId" $admin @{title='QA stale wiki';body='Stale content';revision='1'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectWikiRevisions WHERE PageId=$wikiId") -eq 2) 'Stale wiki edit does not create a revision'
+    Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$parent AND UserId=$uid" | Out-Null
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Wiki?projectId=$parent&wikiId=$wikiId&revision=1&compare=2" -WebSession $regular | Out-Null
+        throw 'Private wiki comparison was visible'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Wiki hides private page history after project access is revoked'
+    }
+    $page=Post "/Wiki?handler=Save&projectId=$project" $admin @{title='Forbidden';body='Closed project'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks wiki edits'
+    Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$project; DELETE dbo.ProjectMembers WHERE ProjectId=$project AND UserId=$uid" | Out-Null
+    $page=Post "/Wiki?handler=Save&projectId=$project" $regular @{title='Forbidden';body='Missing wiki permission'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant wiki editing'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

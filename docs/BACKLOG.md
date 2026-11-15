@@ -40,7 +40,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | TIME-02 | Izvještaji prema osobi, projektu, aktivnosti i razdoblju | Gotovo |
 | FIELD-01 | Korisnička polja za zadatke, korisnike, projekte i vrijeme | Backlog |
 | DOC-01 | Dokumenti, datoteke i kontrolirani prilozi | Backlog |
-| WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Backlog |
+| WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Gotovo: tekstualne stranice, povijest i usporedba dviju verzija uz projektne ovlasti |
 | NEWS-01 | Novosti i komentari | Gotovo: projektne objave i komentari s projektnim ovlastima |
 | FORUM-01 | Forumi, teme, odgovori i moderiranje | Backlog |
 | SCM-01 | Veze s Git repozitorijima, pregled commitova i razlika | Backlog |
