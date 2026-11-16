@@ -53,6 +53,8 @@ public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : P
         "registration.reject" => "Odbijanje registracije",
         "project.issue-field.restrict" => "Ograničavanje vidljivosti polja zadatka",
         "project.issue-field.share" => "Dijeljenje polja zadatka",
+        "project.repository.add" => "Dodavanje Git repozitorija",
+        "project.repository.remove" => "Uklanjanje Git repozitorija",
         _ => action
     };
 }

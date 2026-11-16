@@ -712,6 +712,32 @@ try {
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Assignee cannot make another author private issue public'
     $page=Post "/Issue?handler=Save&projectId=$project" $regular @{'Input.Title'='QA private by author';'Input.Description'='Author test';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.IsPrivate'='true'}
     Assert ($page.Content.Contains('QA private by author') -and $page.Content.Contains('Privatni zadatak')) 'Issue creator can read their private unassigned issue'
+    $page=Post "/Repositories?projectId=$project&handler=Add" $admin @{name='QA repository';url='https://example.com/engineering/team-manager'}
+    Assert ($page.Content.Contains('<h1>Git repositories</h1>') -and $page.Content.Contains('https://example.com/engineering/team-manager')) 'Project manager can link a repository in English'
+    $repositoryId=Sql "SELECT Id FROM dbo.ProjectRepositories WHERE ProjectId=$project AND Name=N'QA repository'"
+    $page=Invoke-WebRequest -UseBasicParsing "$base/Repositories?projectId=$project" -WebSession $regular
+    Assert ($page.Content.Contains('<h1>Git repozitoriji</h1>') -and $page.Content.Contains('QA repository')) 'Project viewer can see linked repositories in Croatian'
+    $page=Post "/Repositories?projectId=$project&handler=Add" $regular @{name='QA forbidden repository';url='https://example.com/other'}
+    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Repository management requires project management permission'
+    $page=Post "/Repositories?projectId=$project&handler=Add" $admin @{name='QA invalid repository';url='https://example.com/repo?token=example'}
+    Assert ($page.Content.Contains('without credentials, query parameters, or a fragment') -and (Sql "SELECT COUNT(*) FROM dbo.ProjectRepositories WHERE Name=N'QA invalid repository'") -eq 0) 'Repository rejects URLs containing query parameters'
+    $page=Post "/Repositories?projectId=$parent&handler=Add" $admin @{name='QA private repository';url='https://example.com/private/repo'}
+    Sql "DELETE dbo.ProjectMembers WHERE ProjectId=$parent AND UserId=$uid" | Out-Null
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/Repositories?projectId=$parent" -WebSession $regular | Out-Null
+        throw 'Private project repositories were visible'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Repository list respects private project access'
+    }
+    try {
+        Post "/Repositories?projectId=$parent&handler=Remove&repositoryId=$repositoryId" $admin @{} | Out-Null
+        throw 'Repository could be removed from another project'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Repository removal checks project ownership'
+    }
+    $page=Post "/Repositories?projectId=$project&handler=Remove&repositoryId=$repositoryId" $admin @{}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectRepositories WHERE Id=$repositoryId") -eq 0) 'Project manager can unlink a repository'
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE (Action='project.repository.add' AND Subject=N'QA repository') OR (Action='project.repository.remove' AND Subject=N'#$repositoryId')") -eq 2) 'Repository linking and unlinking are audited'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

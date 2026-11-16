@@ -1,0 +1,41 @@
+@page
+@model TeamManager.Web.Pages.RepositoriesModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+
+<p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
+<h1>@Text["Git repozitoriji"]</h1>
+<div asp-validation-summary="All"></div>
+
+@if (Model.CanEdit)
+{
+    <section class="card">
+        <h2>@Text["Poveži repozitorij"]</h2>
+        <form method="post" asp-page-handler="Add" asp-route-projectId="@Model.Project.Id">
+            <label>@Text["Naziv"]<input name="name" maxlength="80" required></label>
+            <label>@Text["HTTPS adresa repozitorija"]<input name="url" type="url" maxlength="500" required></label>
+            <button>@Text["Dodaj repozitorij"]</button>
+        </form>
+    </section>
+}
+
+@if (Model.Repositories.Count == 0)
+{
+    <p>@Text["Projekt još nema povezanih repozitorija."]</p>
+}
+else
+{
+    <ul class="card">
+        @foreach (var repository in Model.Repositories)
+        {
+            <li class="actions">
+                <a href="@repository.Url" referrerpolicy="no-referrer">@repository.Name</a>
+                @if (Model.CanEdit)
+                {
+                    <form method="post" asp-page-handler="Remove" asp-route-projectId="@Model.Project.Id" asp-route-repositoryId="@repository.Id">
+                        <button aria-label="@Text["Ukloni repozitorij {0}", repository.Name]">@Text["Ukloni"]</button>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}

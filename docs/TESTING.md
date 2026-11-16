@@ -119,3 +119,7 @@ Nakon migracije `035-issue-field-visibility.sql` upravitelj aktivnog projekta mo
 Migracija `036-private-issues.sql` postojećim zadacima daje standardnu vidljivost. Pri stvaranju zadatka može se označiti **Privatni zadatak**. Naknadno vidljivost mijenja autor ili upravitelj projekta s pravom uređivanja zadatka. Uz aktualno pravo pregleda projekta privatni zadatak mogu vidjeti njegov autor, nositelj i upravitelji projekta. Praćenje zadatka ne daje pristup.
 
 Ista provjera vrijedi za popise, pretragu, CSV, kalendar, Gantt, povezane zadatke, aktivnosti, obavijesti, priloge, evidenciju vremena i sažetke karte planova. Kopiranje i premještanje zadržavaju oznaku privatnosti. U odredišnom projektu primjenjuju se njegove aktualne ovlasti. Sučelje i upute dostupni su na hrvatskom i engleskom.
+
+## Git repozitoriji projekta
+
+Nakon migracije `037-project-repositories.sql` otvorite **Git repozitoriji** na detaljima projekta. Upravitelj aktivnog projekta može dodati ili ukloniti imenovanu HTTPS poveznicu na repozitorij. Adresa se unosi bez vjerodajnica, parametara i fragmenta. Pregled poveznica prati vidljivost projekta, a pristup sadržaju repozitorija provjerava njegovo Git okruženje. Dodavanje i uklanjanje ulaze u revizijski zapis. Pregled commitova i razlika unutar aplikacije preostaje za SCM-01.

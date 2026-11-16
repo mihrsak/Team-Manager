@@ -1267,4 +1267,13 @@
   <data name="Dijeljenje polja zadatka" xml:space="preserve"><value>Issue field shared</value></data>
   <data name="Privatni zadatak" xml:space="preserve"><value>Private issue</value></data>
   <data name="Privatni zadatak mogu vidjeti autor, nositelj i upravitelji s pristupom projektu." xml:space="preserve"><value>The creator, assignee, and managers with access to the project can view a private issue.</value></data>
+  <data name="Git repozitoriji" xml:space="preserve"><value>Git repositories</value></data>
+  <data name="Poveži repozitorij" xml:space="preserve"><value>Link a repository</value></data>
+  <data name="HTTPS adresa repozitorija" xml:space="preserve"><value>Repository HTTPS address</value></data>
+  <data name="Dodaj repozitorij" xml:space="preserve"><value>Add repository</value></data>
+  <data name="Projekt još nema povezanih repozitorija." xml:space="preserve"><value>No repositories are linked to this project yet.</value></data>
+  <data name="Ukloni repozitorij {0}" xml:space="preserve"><value>Remove repository {0}</value></data>
+  <data name="Unesi naziv do 80 znakova i HTTPS adresu repozitorija bez vjerodajnica, parametara ili fragmenta." xml:space="preserve"><value>Enter a name up to 80 characters and a repository HTTPS address without credentials, query parameters, or a fragment.</value></data>
+  <data name="Dodavanje Git repozitorija" xml:space="preserve"><value>Git repository linked</value></data>
+  <data name="Uklanjanje Git repozitorija" xml:space="preserve"><value>Git repository unlinked</value></data>
 </root>

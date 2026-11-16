@@ -43,7 +43,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | WIKI-01 | Wiki po projektu, verzije, usporedba i prava uređivanja | Gotovo: tekstualne stranice, povijest i usporedba dviju verzija uz projektne ovlasti |
 | NEWS-01 | Novosti i komentari | Gotovo: projektne objave i komentari s projektnim ovlastima |
 | FORUM-01 | Forumi, teme, odgovori i moderiranje | Gotovo: jedan forum po projektu, teme i odgovori, zaključavanje i otključavanje tema |
-| SCM-01 | Veze s Git repozitorijima, pregled commitova i razlika | Backlog |
+| SCM-01 | Veze s Git repozitorijima, pregled commitova i razlika | Djelomično: projektne HTTPS poveznice, HR/EN; preostaje pregled commitova i razlika |
 | NOTIFY-01 | SMTP obavijesti, podsjetnici, red slanja i ponavljanje | Backlog |
 | MAIL-01 | Zaprimanje poruka e-pošte u zadatke | Backlog |
 | FEED-01 | Feed aktivnosti i Atom/RSS | Gotovo: zadnjih 50 aktivnosti zadataka, projektni filtar, Atom/RSS uz prijavu |
