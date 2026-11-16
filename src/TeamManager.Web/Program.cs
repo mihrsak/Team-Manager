@@ -52,6 +52,8 @@ builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ApiTokenStore>();
 builder.Services.AddScoped<RegistrationStore>();
+builder.Services.AddSingleton<ImapImportMonitor>();
+builder.Services.AddHostedService<ImapIssueImporter>();
 builder.Services.AddScoped<Permissions>();
 builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();

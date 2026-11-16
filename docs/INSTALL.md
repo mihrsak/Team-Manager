@@ -167,4 +167,10 @@ Pouzdani vanjski pristupnik provjerava pošiljatelja i politiku prihvaćanja por
 }
 ```
 
-Zadržite isti `messageId` pri ponavljanju isporuke. Prvi prihvat vraća `201` i novi ID. Ponovljena poruka vraća `200` s oznakom `duplicate`. Zaprimanje stvara privatni zadatak u ciljanom projektu pod konfiguriranim računom. Ulaz podržava predmet do 200 znakova, tekst do 4000 znakova i tijelo zahtjeva do 64 KiB. Povezivanje sandučića, MIME dekodiranje i pretvorba poruke u ovaj zahtjev pripadaju pristupniku.
+Zadržite isti `messageId` pri ponavljanju isporuke. Prvi prihvat vraća `201` i novi ID. Ponovljena poruka vraća `200` s oznakom `duplicate`. Zaprimanje stvara privatni zadatak u ciljanom projektu pod konfiguriranim računom. Ulaz podržava predmet do 200 znakova, tekst do 4000 znakova i tijelo zahtjeva do 64 KiB. Ako koristite vanjski pristupnik, on vodi povezivanje sandučića, MIME dekodiranje i pretvorbu poruke u ovaj zahtjev.
+
+### Izravni IMAP sandučić
+
+Umjesto vanjskog pristupnika možete povezati namjensku IMAP mapu s projektom. Za lokalni demo projekt ID 3 postavite vrijednosti pod `MailIntake:Imap:3` u lokalnoj konfiguraciji. `Host` je naziv IMAP poslužitelja, `Port` zadano 993, `Folder` je puna putanja namjenske mape, a `EmployeeNumber` je aktivan Team Manager račun s ovlastima pregleda i kreiranja zadataka. Postavite `MailIntake__Imap__3__Username` i `MailIntake__Imap__3__Password` kroz lokalno okruženje ili odgovarajući spremnik tajni. Postavite `Enabled` na `true` kad je mapa spremna.
+
+Konektor koristi IMAP preko TLS-a i traži korisničko ime i lozinku aplikacije. U mapu usmjerite samo poruke koje smiju otvarati zadatke. Prihvaćaju se nepročitane MIME poruke do 1 MiB s naslovom do 200 znakova i običnim tekstom do 4000 znakova. Nakon uspješnog uvoza ili prepoznavanja ponovljene poruke, konektor označuje poruku pročitanom. Poruke koje ne ispunjavaju uvjete ostaju nepročitane. U **Ulaznoj e-pošti** upravitelj vidi vrijeme zadnje provjere i poveznicu na posljednji uvezeni zadatak ako mu je dostupan.

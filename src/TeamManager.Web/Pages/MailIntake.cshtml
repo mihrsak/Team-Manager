@@ -18,3 +18,24 @@
         }
     </dl>
 </section>
+
+<section class="card">
+    <h2>@Text["IMAP sandučić"]</h2>
+    @if (!Model.ImapConfigured)
+    {
+        <p>@Text["IMAP sandučić nije konfiguriran."]</p>
+    }
+    else if (Model.ImapStatus is not { } status)
+    {
+        <p>@Text["Čeka prvu provjeru sandučića."]</p>
+    }
+    else
+    {
+        <p>@Text[status.Healthy ? "Zadnja provjera sandučića uspjela je." : "Provjera sandučića ili uvoz nisu uspjeli."]</p>
+        <p><time datetime="@status.CheckedAt.ToString("O")">@status.CheckedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</time></p>
+        @if (status.LastIssueId is int issueId)
+        {
+            <p><a asp-page="/Issue" asp-route-id="@issueId">@Text["Posljednji uvezeni zadatak"]</a></p>
+        }
+    }
+</section>

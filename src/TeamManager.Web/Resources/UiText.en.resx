@@ -1311,4 +1311,10 @@
   <data name="Pristupnik je konfiguriran." xml:space="preserve"><value>The gateway is configured.</value></data>
   <data name="Putanja za zaprimanje" xml:space="preserve"><value>Intake endpoint</value></data>
   <data name="Račun za kreiranje zadataka" xml:space="preserve"><value>Issue creation account</value></data>
+  <data name="IMAP sandučić" xml:space="preserve"><value>IMAP mailbox</value></data>
+  <data name="IMAP sandučić nije konfiguriran." xml:space="preserve"><value>The IMAP mailbox is not configured.</value></data>
+  <data name="Čeka prvu provjeru sandučića." xml:space="preserve"><value>Waiting for the first mailbox check.</value></data>
+  <data name="Zadnja provjera sandučića uspjela je." xml:space="preserve"><value>The last mailbox check succeeded.</value></data>
+  <data name="Provjera sandučića ili uvoz nisu uspjeli." xml:space="preserve"><value>The mailbox check or import failed.</value></data>
+  <data name="Posljednji uvezeni zadatak" xml:space="preserve"><value>Last imported issue</value></data>
 </root>

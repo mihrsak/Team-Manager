@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class MailIntakeModel(ProjectStore projects, IConfiguration configuration) : PageModel
+public sealed class MailIntakeModel(ProjectStore projects, IConfiguration configuration, ImapImportMonitor monitor, IssueStore issues) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
+    public bool ImapConfigured { get; private set; }
+    public ImapImportStatus? ImapStatus { get; private set; }
     public string? EmployeeNumber { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(int projectId)
@@ -19,6 +21,10 @@ public sealed class MailIntakeModel(ProjectStore projects, IConfiguration config
         Response.Headers.CacheControl = "private, no-store";
         Project = project;
         EmployeeNumber = IncomingMail.ConfiguredAccount(configuration,projectId);
+        ImapConfigured = ImapMailbox.Configured(configuration.GetSection($"MailIntake:Imap:{projectId}")) is not null;
+        ImapStatus = monitor.Get(projectId);
+        if (ImapStatus?.LastIssueId is int id && (await issues.Get(user,id))?.ProjectId != projectId)
+            ImapStatus = ImapStatus with { LastIssueId = null };
         return Page();
     }
 }
