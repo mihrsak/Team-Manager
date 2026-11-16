@@ -61,6 +61,8 @@ IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju
 
 ## OpenShift
 
+Lokalna provjera slike provedena je naredbom `podman build -t localhost/team-manager:ops04-local .` i na zasebnoj bazi u SQL Server 2022 Express kontejneru. Migracije i web pokrenuti su iz iste slike s UID-om 10001, uz odvojene SQL račune. Lokalni HTTPS pregled objavljen je na [localhost:7550](https://localhost:7550/) dok aplikacijski i SQL kontejner rade. Provjereni su liveness, readiness, prijava, prikaz demo projekta i valjanost sesije nakon restarta uz trajni volumen za ključeve.
+
 Izgradite Linux sliku iz korijena repozitorija (`docker build -t "$image" .`) i objavite je u registru koji ciljni OpenShift projekt može čitati. Koristite istu verziju slike za migraciju i web. Pripremite praznu SQL Server bazu pri prvoj instalaciji i dvije različite SQL veze u OpenShift Secret objektima:
 
 - `team-manager-db`, ključ `connection-string`, za aplikacijski SQL račun s pravima čitanja i pisanja u bazi.
@@ -68,6 +70,15 @@ Izgradite Linux sliku iz korijena repozitorija (`docker build -t "$image" .`) i 
 - `team-manager-bootstrap`, ključ `password`, za početni račun `admin` pri prvoj instalaciji. Lozinka mora imati najmanje 12 znakova. Nakon uspješne inicijalizacije Secret možete ukloniti. Instalacija na praznu bazu zahtijeva tajnu.
 
 Za Route koristite DNS ime pokriveno certifikatom Ingress Controllera. Od administratora klastera preuzmite pouzdani CIDR neposrednih ingress proxyja kako ih vidi aplikacija. Taj CIDR određuje koje adrese smiju postaviti proslijeđenu shemu i klijentsku adresu. Predložak očekuje router u namespaceu `openshift-ingress` i upisiv RWO volumen iz zadane StorageClass za trajne ključeve sesije. Ako se nazivi u klasteru razlikuju, prilagodite NetworkPolicy odnosno PVC prije primjene. Pohranite ključeve na zaštićeni volumen.
+
+Prije provjere na ciljnom klasteru pripremite:
+
+- Namjenski testni projekt i korisnika ili servisni račun koji smije primijeniti predloške, pratiti Job i Deployment te čitati događaje i logove. Service Account aplikacije treba moći preuzeti sliku iz registra.
+- Tag ili digest izgrađene Linux slike, registry pull secret ako je registar privatan i provjeru da arhitektura slike odgovara worker čvorovima.
+- Testnu SQL Server bazu i prohodan, šifriran pristup iz podova. Pripremite aplikacijsku i migracijsku SQL vezu te, za praznu bazu, tajnu za inicijalizaciju administratora. Veza treba koristiti identitet dostupan iz Linux poda. Ako SQL koristi internu CA, osigurajte da joj slika vjeruje.
+- DNS i TLS za Route, stvarni CIDR neposrednih ingress proxyja, odgovarajući ingress namespace i StorageClass čiji RWO volumen daje pravo pisanja UID-u koji dodjeljuje OpenShift.
+
+Prije primjene provjerite oba obrađena predloška s `oc apply --dry-run=server -f -` u testnom projektu. Nakon instalacije provjerite i ostaje li prijava valjana nakon ponovnog pokretanja poda. Time provjeravate da novi pod može čitati ključeve sa zajedničkog PVC-a.
 
 Iz administratorske konzole s odabranim ciljnim OpenShift projektom postavite `$image`, `$routeHost` i `$ingressCidr`, pa pokrenite:
 

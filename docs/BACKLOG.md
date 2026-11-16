@@ -54,7 +54,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | OPS-01 | Verzijske SQL skripte, ponovljiva instalacija i odvojeni demo podaci | Gotovo, provjereno na zasebnim bazama |
 | OPS-02 | Konfiguracija JSON/env, Windows publish paket i upute za IIS | Provjereno na lokalnom IIS-u: Windows paket, HTTPS, izdvojeni application pool i SQL Express baza; čeka provjeru na ciljnom IIS-u |
 | OPS-03 | Backup/restore, rollback, nadzor, zdravstvene provjere i logovi | Na lokalnom IIS-u provjereni liveness i readiness, nadogradnja, obnova baze i povratak prethodnog paketa uz prijavu i prikaz obnovljenog projekta; čeka povratak i nadzor na ciljnom IIS-u |
-| OPS-04 | OCP manifesti i testiranje iza proxyja | Predlošci obrađeni lokalno s `oc process`; lokalno provjereni HTTPS proxy, prijava, cookie i zdravstvene provjere. Čeka izgradnju slike i provjeru na ciljnom OCP klasteru |
+| OPS-04 | OCP manifesti i testiranje iza proxyja | Predlošci obrađeni s `oc process`; lokalno provjeren HTTPS proxy. Linux OCI slika izgrađena i provjerena u Podmanu s odvojenom SQL bazom, migracijama, neprivilegiranim UID-om, HTTPS prijavom i sesijom nakon restarta. Čeka ciljni OCP klaster |
 | DB-01 | SQL Server | Gotovo |
 | DB-02 | Oracle i Db2 LUW/zOS provider, migracije i integracijski testovi | Backlog |
 | QA-01 | Integracijske provjere ovlasti, bootstrapa i novih modula | Kontinuirano |
