@@ -1,6 +1,15 @@
-param([string]$ApplicationDll='artifacts/imap-preview/TeamManager.Web.dll')
+param(
+    [string]$ApplicationDll,
+    [switch]$Preview
+)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
+if(!$ApplicationDll){
+    $outputDirectory=Join-Path $root 'artifacts/imap-test'
+    dotnet build (Join-Path $root 'src/TeamManager.Web/TeamManager.Web.csproj') -o $outputDirectory
+    if($LASTEXITCODE){throw 'Build failed'}
+    $ApplicationDll=Join-Path $outputDirectory 'TeamManager.Web.dll'
+}
 $dll=(Resolve-Path $ApplicationDll).Path
 $db='TeamManager_ImapTest_'+[guid]::NewGuid().ToString('N')
 $log=Join-Path ([IO.Path]::GetTempPath()) "$db.log"
@@ -131,6 +140,7 @@ $mailbox=[TestImapMailbox]::new($cert)
 try {
     Set-TestVariable 'ConnectionStrings__TeamManager' "Server=localhost\SQLEXPRESS;Database=$db;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
     Set-TestVariable 'ASPNETCORE_ENVIRONMENT' 'Development'
+    Set-TestVariable 'Smtp__Enabled' 'false'
     Set-TestVariable 'MailIntake__PollSeconds' '5'
     Set-TestVariable 'MailIntake__Imap__1__Enabled' 'true'
     Set-TestVariable 'MailIntake__Imap__1__Host' 'localhost'
@@ -151,6 +161,15 @@ try {
     $count=Sql $db 'SELECT COUNT(*) FROM dbo.ReceivedIssueMail'
     if($count -ne '1'){throw 'Message receipt was not persisted'}
     'PASS: Mailbox acknowledges delivery after the issue and receipt commit'
+    if($Preview){
+        $url='https://localhost:7544/MailIntake?projectId=1'
+        Invoke-WebRequest 'https://localhost:7544/health/ready' | Out-Null
+        Write-Host "Local preview: $url"
+        Write-Host 'Sign in to the temporary database with admin / admin.'
+        Write-Host 'Open the last imported issue from the Incoming email page.'
+        Start-Process $url
+        [void](Read-Host 'Press Enter to stop the preview and remove the temporary database')
+    }
 } catch {
     if(Test-Path -LiteralPath $log){Get-Content -Tail 14 -LiteralPath $log}
     throw

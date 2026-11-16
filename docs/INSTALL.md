@@ -171,6 +171,10 @@ Zadržite isti `messageId` pri ponavljanju isporuke. Prvi prihvat vraća `201` i
 
 ### Izravni IMAP sandučić
 
+Za lokalnu provjeru iz korijena repozitorija pokrenite `pwsh -NoProfile -File scripts/Test-Imap.ps1 -Preview`. Potrebni su lokalni SQL Server Express (`localhost\SQLEXPRESS`) i pouzdani razvojni HTTPS certifikat (`dotnet dev-certs https --trust`). Skripta podiže lokalni TLS IMAP simulator s jednom testnom porukom i pokreće aplikaciju na zasebnoj privremenoj bazi.
+
+Na [stranici Ulazna e-pošta](https://localhost:7544/MailIntake?projectId=1) prijavite se s `admin / admin` i otvorite posljednji uvezeni zadatak. Pritisnite Enter u terminalu za gašenje pregleda i brisanje privremene baze. Bez opcije `-Preview` skripta provjerava rezultat i sama završava.
+
 Umjesto vanjskog pristupnika možete povezati namjensku IMAP mapu s projektom. Za lokalni demo projekt ID 3 postavite vrijednosti pod `MailIntake:Imap:3` u lokalnoj konfiguraciji. `Host` je naziv IMAP poslužitelja, `Port` zadano 993, `Folder` je puna putanja namjenske mape, a `EmployeeNumber` je aktivan Team Manager račun s ovlastima pregleda i kreiranja zadataka. Postavite `MailIntake__Imap__3__Username` i `MailIntake__Imap__3__Password` kroz lokalno okruženje ili odgovarajući spremnik tajni. Postavite `Enabled` na `true` kad je mapa spremna.
 
 Konektor koristi IMAP preko TLS-a i traži korisničko ime i lozinku aplikacije. U mapu usmjerite samo poruke koje smiju otvarati zadatke. Prihvaćaju se nepročitane MIME poruke do 1 MiB s naslovom do 200 znakova i običnim tekstom do 4000 znakova. Nakon uspješnog uvoza ili prepoznavanja ponovljene poruke, konektor označuje poruku pročitanom. Poruke koje ne ispunjavaju uvjete ostaju nepročitane. U **Ulaznoj e-pošti** upravitelj vidi vrijeme zadnje provjere i poveznicu na posljednji uvezeni zadatak ako mu je dostupan.
