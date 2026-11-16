@@ -58,7 +58,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | DB-01 | SQL Server | Gotovo |
 | DB-02 | Oracle i Db2 LUW/zOS provider, migracije i integracijski testovi | Backlog |
 | QA-01 | Integracijske provjere ovlasti, bootstrapa i novih modula | Kontinuirano |
-| QA-02 | Browser E2E, pristupačnost, opterećenje i produkcijski pregled | Lokalni Edge E2E i projektne ovlasti provjereni; 18 automatiziranih provjera WCAG A/AA u HR/EN i navigacija tipkovnicom. Preostaju širi ručni pregled pristupačnosti, opterećenje i produkcijski pregled |
+| QA-02 | Browser E2E, pristupačnost, opterećenje i produkcijski pregled | Lokalni IIS: Edge E2E i ovlasti, 18 automatiziranih WCAG A/AA provjera, ručni HR/EN pregled fokusa, oznaka i uskog prikaza, kontrola IIS konfiguracije te 34.377 zahtjeva bez grešaka. Na 25 paralelnih zahtjeva p95 22 ms. Kapacitet i konfiguracija na ciljnom produkcijskom IIS-u ostaju za provjeru |
 
 ## Pravilo isporuke
 

@@ -48,6 +48,23 @@ async function audit(page, route, language) {
     violations.push(...failures.map(failure => ({ route, language, ...failure })));
 }
 
+async function checkLoginError(page, language) {
+    await page.goto('/Login');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator(':focus').getAttribute('href'), '#main-content');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator(':focus').getAttribute('id'), 'EmployeeNumber');
+    await page.keyboard.type('invalid-' + suffix);
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator(':focus').getAttribute('id'), 'Password');
+    await page.keyboard.type('invalid-password');
+    await page.keyboard.press('Enter');
+    const error = page.getByRole('alert');
+    assert.match(await error.innerText(), language === 'en' ? /Sign-in failed/ : /Neispravna prijava/);
+    assert.equal(await page.locator(':focus').getAttribute('id'), 'sign-in-errors');
+}
+
 async function addIssue(page, title, privateIssue = false) {
     await page.goto('/Issue?projectId=1');
     const form = page.locator('form').filter({ has: page.locator('#Input_Title') });
@@ -67,8 +84,12 @@ async function run() {
         const admin = await browser.newContext({ baseURL, locale: 'hr-HR' });
         const page = await admin.newPage();
         await audit(page, '/Login', 'hr');
+        await checkLoginError(page, 'hr');
         const english = await browser.newContext({ baseURL, locale: 'en-US' });
-        await audit(await english.newPage(), '/Login', 'en');
+        const englishLogin = await english.newPage();
+        await audit(englishLogin, '/Login', 'en');
+        await checkLoginError(englishLogin, 'en');
+        await englishLogin.close();
         await login(page, 'admin', 'admin');
         const issue = await addIssue(page, title);
         const privateIssue = await addIssue(page, privateTitle, true);
@@ -112,6 +133,12 @@ async function run() {
                 await audit(page, route, language);
             }
             await page.goto('/Search');
+            await page.setViewportSize({ width: 320, height: 720 });
+            assert.ok(await page.locator('main .card').evaluate(card => {
+                const right = card.getBoundingClientRect().right;
+                return [...card.querySelectorAll('input, select')].every(field => field.getBoundingClientRect().right < right);
+            }), 'Search controls fit within their card at 320px');
+            await page.setViewportSize({ width: 1280, height: 720 });
             await page.getByLabel(language === 'en' ? 'Module' : 'Modul').selectOption('issues');
             await page.locator('#Query').fill(title);
             await page.locator('main form button').click();

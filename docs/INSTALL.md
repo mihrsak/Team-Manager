@@ -65,6 +65,10 @@ IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju
 
 Pokrenite aplikaciju na `https://localhost:7560` s pouzdanim razvojnim certifikatom i zasebnom, svježe inicijaliziranom SQL bazom (`--apply-schema --create-database --seed-demo`). Skripta koristi početni račun `admin / admin` i demo projekt ID 1. Stvara testne korisnike, zadatke, komentare i zapise vremena. Kod ponavljanja koristite zasebnu QA bazu jer testni zapisi ostaju u njoj. Rezultati axe provjere pokrivaju automatizirana WCAG A/AA pravila na pregledanim stranicama.
 
+Za isti preglednički test na lokalnom IIS testnom siteu postavite `$env:TEAM_MANAGER_QA_URL='https://localhost:7443'`. Lokalni test opterećenja pokrenite naredbom `node scripts/Test-IisLoad.cjs`. Ako Node ne prepoznaje lokalni certifikat, postavite `NODE_EXTRA_CA_CERTS` na putanju javnog PEM certifikata tog sitea. Skripta provjerava zdravstvene endpointove, zaštitu prijave i CSRF prije mjerenja te mjeri šest ruta za čitanje tijekom 10 sekundi po razini (1, 10 i 25 paralelnih zahtjeva). Rezultat ispisuje broj odgovora, zahtjeve u sekundi, medijan, p95 i greške.
+
+Ručni HR/EN pregled obuhvaća redoslijed fokusa od prečaca do prijave, lokalizirane oznake i pogreške te čitljivost glavnih stranica na širini od 320 px. Pristupačna imena provjeravaju se i u stablu pristupačnosti preglednika. Potpuni pregled uz čitač zaslona i provjera kapaciteta u ciljnom produkcijskom okruženju zasebne su provjere.
+
 ## OpenShift
 
 Lokalna provjera slike provedena je naredbom `podman build -t localhost/team-manager:ops04-local .` i na zasebnoj bazi u SQL Server 2022 Express kontejneru. Migracije i web pokrenuti su iz iste slike s UID-om 10001, uz odvojene SQL račune. Lokalni HTTPS pregled objavljen je na [localhost:7550](https://localhost:7550/) dok aplikacijski i SQL kontejner rade. Provjereni su liveness, readiness, prijava, prikaz demo projekta i valjanost sesije nakon restarta uz trajni volumen za ključeve.
