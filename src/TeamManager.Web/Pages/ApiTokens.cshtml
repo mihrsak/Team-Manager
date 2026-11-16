@@ -1,0 +1,45 @@
+@page
+@model TeamManager.Web.Pages.ApiTokensModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+<p><a asp-page="/Profile">@Text["Moj profil"]</a></p>
+<h1>@Text["API tokeni"]</h1>
+
+@if (Model.NewToken is { } secret)
+{
+    <section class="card">
+        <h2>@Text["Novi pristupni token"]</h2>
+        <p>@Text["Kopiraj token sada. Prikazuje se samo jednom."]</p>
+        <input aria-label="@Text["Novi pristupni token"]" value="@secret" readonly autocomplete="off">
+    </section>
+}
+
+<section class="card">
+    <h2>@Text["Izradi token"]</h2>
+    <p>@Text["Token vrijedi 30 dana i omogućuje čitanje projekata i zadataka prema tvojim ovlastima."]</p>
+    <div asp-validation-summary="All"></div>
+    <form method="post" asp-page-handler="Create">
+        <label>@Text["Naziv"]<input name="name" maxlength="80" required></label>
+        <button>@Text["Izradi token"]</button>
+    </form>
+</section>
+
+@if (Model.Tokens.Count > 0)
+{
+    <div class="card table">
+        <table>
+            <thead><tr><th>@Text["Naziv"]</th><th>@Text["Istječe (UTC)"]</th><th>@Text["Status"]</th><th>@Text["Radnja"]</th></tr></thead>
+            <tbody>
+                @foreach (var token in Model.Tokens)
+                {
+                    <tr>
+                        <td>@token.Name</td><td>@token.ExpiresAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@Text[token.Active ? "Aktivan" : "Neaktivan token"]</td>
+                        <td><form method="post" asp-page-handler="Revoke" asp-route-id="@token.Id">
+                            <button>@Text["Opozovi token"]</button>
+                        </form></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -763,6 +763,50 @@ try {
     $page=Post "/Repositories?projectId=$project&handler=Remove&repositoryId=$repositoryId" $admin @{}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectRepositories WHERE Id=$repositoryId") -eq 0) 'Project manager can unlink a repository'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE (Action='project.repository.add' AND Subject=N'QA repository') OR (Action='project.repository.remove' AND Subject=N'#$repositoryId')") -eq 2) 'Repository linking and unlinking are audited'
+    $page=Post '/Profile?handler=Language' $admin @{language='en'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/ApiTokens" -WebSession $admin
+    Assert ($page.Content.Contains('<h1>API tokens</h1>')) 'API token settings are available in English'
+    $page=Post '/ApiTokens?handler=Create' $regular @{name='QA read token'}
+    $apiToken=[regex]::Match($page.Content,'value="(tm_[a-f0-9]{64})"').Groups[1].Value
+    Assert ($apiToken.Length -eq 67 -and $page.Content.Contains('<h1>API tokeni</h1>') -and $page.Headers['Cache-Control'] -match 'no-store') 'Token is shown once in the Croatian creation response'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/ApiTokens" -WebSession $regular
+    Assert (-not $page.Content.Contains('tm_') -and $page.Content.Contains('QA read token')) 'Token list omits the secret'
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -WebSession $regular | Out-Null
+        throw 'API accepted a session cookie'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'API requires a bearer token even with a signed-in web session'
+    }
+    $bearer=@{Authorization="Bearer $apiToken"}
+    $api=Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -Headers $bearer
+    Assert ($api.Content.Contains('"id":'+$project) -and -not $api.Content.Contains('QA parent updated')) 'Valid token lists only accessible projects'
+    Sql "UPDATE dbo.Issues SET AssigneeId=NULL WHERE Id=$secretIssue" | Out-Null
+    $api=Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects/$project/issues" -Headers $bearer
+    Assert ($api.Content.Contains('"id":'+$publicIssue) -and -not $api.Content.Contains('QA confidential issue')) 'Issue API excludes private issues without access'
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/api/v1/issues/$secretIssue" -Headers $bearer | Out-Null
+        throw 'API disclosed a private issue'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Issue detail API enforces privacy'
+    }
+    $tokenId=Sql "SELECT Id FROM dbo.ApiTokens WHERE UserId=$uid AND Name=N'QA read token'"
+    $page=Post "/ApiTokens?handler=Revoke&id=$tokenId" $regular @{}
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -Headers $bearer | Out-Null
+        throw 'API accepted a revoked token'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Revoked token is rejected'
+    }
+    $page=Post '/ApiTokens?handler=Create' $regular @{name='QA session token'}
+    $sessionToken=[regex]::Match($page.Content,'value="(tm_[a-f0-9]{64})"').Groups[1].Value
+    Assert ($sessionToken.Length -eq 67) 'Account can create a replacement token'
+    $page=Post "/Profile?id=$uid&handler=Account" $admin @{accountAction='revoke'}
+    try {
+        Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -Headers @{Authorization="Bearer $sessionToken"} | Out-Null
+        throw 'API accepted an invalidated session version'
+    } catch [System.Net.WebException] {
+        Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Revoking account sessions also invalidates existing tokens'
+    }
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

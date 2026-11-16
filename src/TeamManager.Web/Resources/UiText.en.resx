@@ -1283,4 +1283,13 @@
   <data name="Ovaj commit nema tekstualnih razlika." xml:space="preserve"><value>This commit has no textual diff.</value></data>
   <data name="Posljednjih {0} commitova" xml:space="preserve"><value>Latest {0} commits</value></data>
   <data name="Povijest repozitorija trenutačno nije dostupna." xml:space="preserve"><value>Repository history is currently unavailable.</value></data>
+  <data name="API tokeni" xml:space="preserve"><value>API tokens</value></data>
+  <data name="Novi pristupni token" xml:space="preserve"><value>New access token</value></data>
+  <data name="Kopiraj token sada. Prikazuje se samo jednom." xml:space="preserve"><value>Copy the token now. It is shown only once.</value></data>
+  <data name="Izradi token" xml:space="preserve"><value>Create token</value></data>
+  <data name="Token vrijedi 30 dana i omogućuje čitanje projekata i zadataka prema tvojim ovlastima." xml:space="preserve"><value>The token is valid for 30 days and can read projects and issues according to your permissions.</value></data>
+  <data name="Istječe (UTC)" xml:space="preserve"><value>Expires (UTC)</value></data>
+  <data name="Neaktivan token" xml:space="preserve"><value>Inactive</value></data>
+  <data name="Opozovi token" xml:space="preserve"><value>Revoke token</value></data>
+  <data name="Unesi naziv tokena do 80 znakova." xml:space="preserve"><value>Enter a token name of up to 80 characters.</value></data>
 </root>

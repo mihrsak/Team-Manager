@@ -10,6 +10,7 @@
 }
 @if (Model.IsSelf)
 {
+    <p><a asp-page="/ApiTokens">@Text["API tokeni"]</a></p>
     var language = User.FindFirst(UserStore.LanguageClaim)?.Value ?? "hr";
     <section class="card" lang="@language">
         <h2>@Text["Jezik sučelja"]</h2>
