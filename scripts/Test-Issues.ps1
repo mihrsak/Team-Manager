@@ -828,6 +828,36 @@ try {
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE UserId=$uid") -eq 0) 'Disabling email preferences clears pending deliveries'
     $page=Post "/Issue?id=$publicIssue&handler=Comment" $admin @{text='QA event after opt-out'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE UserId=$uid") -eq 0) 'Opted-out watcher receives no new email jobs'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/MailIntake?projectId=$project" -WebSession $admin
+    Assert ($page.Content.Contains('<h1>Incoming email</h1>')) 'Email intake settings are visible in English to project managers'
+    $page=Post '/Profile?handler=Language' $admin @{language='hr'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/MailIntake?projectId=$project" -WebSession $admin
+    Assert ($page.Content -match '<html lang="hr"' -and $page.Content.Contains("POST /mail/intake/$project")) 'Email intake settings render in Croatian'
+    $intakeSecret=[Environment]::GetEnvironmentVariable("MailIntake__Routes__${project}__Secret")
+    if ($intakeSecret) {
+        $endpoint="$base/mail/intake/$project"
+        $payload=@{messageId='<qa-inbound@example.test>';subject='QA received email';text='QA plain email body'} | ConvertTo-Json -Compress
+        try {
+            Invoke-WebRequest -UseBasicParsing $endpoint -Method Post -ContentType 'application/json' -Body $payload | Out-Null
+            throw 'Unauthenticated intake accepted the message'
+        } catch [System.Net.WebException] {
+            Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Email intake requires a separate gateway secret'
+        }
+        $gatewayHeader=@{Authorization="Bearer $intakeSecret"}
+        $response=Invoke-WebRequest -UseBasicParsing $endpoint -Method Post -ContentType 'application/json' -Body $payload -Headers $gatewayHeader
+        $issueFromMail=($response.Content | ConvertFrom-Json).issueId
+        Assert ($response.StatusCode -eq 201 -and (Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$issueFromMail AND ProjectId=$project AND IsPrivate=1 AND Description=N'QA plain email body'") -eq 1) 'Gateway email creates a private issue in the configured project'
+        $response=Invoke-WebRequest -UseBasicParsing $endpoint -Method Post -ContentType 'application/json' -Body $payload -Headers $gatewayHeader
+        Assert ($response.StatusCode -eq 200 -and ($response.Content | ConvertFrom-Json).duplicate -and (Sql "SELECT COUNT(*) FROM dbo.ReceivedIssueMail WHERE IssueId=$issueFromMail") -eq 1) 'Replaying a message does not duplicate the issue'
+        $page=Invoke-WebRequest -UseBasicParsing "$base/Issues?ProjectId=$project" -WebSession $regular
+        Assert (-not $page.Content.Contains('QA received email')) 'Imported email content respects private issue rules'
+        try {
+            Invoke-WebRequest -UseBasicParsing "$base/mail/intake/$parent" -Method Post -ContentType 'application/json' -Body $payload -Headers $gatewayHeader | Out-Null
+            throw 'Gateway credential could be reused for another project'
+        } catch [System.Net.WebException] {
+            Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Unconfigured project route is unavailable'
+        }
+    }
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

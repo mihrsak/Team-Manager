@@ -152,3 +152,19 @@ Primijenite migraciju `040-smtp-delivery.sql`. Šalje se samo kada je `Smtp:Enab
 Ako poslužitelj traži prijavu, postavite `Smtp__Username` i `Smtp__Password` kroz konfiguraciju tajni okruženja. Pod **Moj profil → Obavijesti e-poštom** korisnici zasebno uključuju obavijesti za praćene zadatke i podsjetnike za otvorene zadatke dodijeljene njima na dan roka. Vremenska zona podsjetnika zadano je UTC. Poruka koristi jezik računa i sadrži poveznicu za pregled nakon prijave.
 
 Obrada ponovno provjerava pristup i postavke primatelja. Nakon neuspjeha slanja red ponavlja pokušaj uz rastući odmak i zaključuje zapis nakon pet neuspjelih pokušaja. Podsjetnik se priprema jednom po zadatku, nositelju i datumu roka. Ako proces stane nakon što SMTP prihvati poruku i prije nego što SQL zabilježi završetak, ponovni pokušaj može poslati drugu kopiju.
+
+## Ulazna e-pošta
+
+Nakon migracije `041-incoming-issue-mail.sql` upravitelj projekta može otvoriti **Ulazna e-pošta** i provjeriti status i adresu za primitak poruka. Za projekt ID 3 postavite `MailIntake__Routes__3__EmployeeNumber` na namjenski aktivni račun s ovlastima pregleda i kreiranja zadataka te `MailIntake__Routes__3__Secret` na odvojenu tajnu od 32 nasumična bajta u 64 heksadekadska znaka.
+
+Pouzdani vanjski pristupnik provjerava pošiljatelja i politiku prihvaćanja poruka, dekodira obični tekst te šalje HTTPS zahtjev `POST /mail/intake/3` sa zaglavljima `Authorization: Bearer …` i `Content-Type: application/json`. Primjer tijela zahtjeva:
+
+```json
+{
+  "messageId": "<example-id@example.com>",
+  "subject": "Naslov zadatka",
+  "text": "Obični tekst poruke."
+}
+```
+
+Zadržite isti `messageId` pri ponavljanju isporuke. Prvi prihvat vraća `201` i novi ID. Ponovljena poruka vraća `200` s oznakom `duplicate`. Zaprimanje stvara privatni zadatak u ciljanom projektu pod konfiguriranim računom. Ulaz podržava predmet do 200 znakova, tekst do 4000 znakova i tijelo zahtjeva do 64 KiB. Povezivanje sandučića, MIME dekodiranje i pretvorba poruke u ovaj zahtjev pripadaju pristupniku.

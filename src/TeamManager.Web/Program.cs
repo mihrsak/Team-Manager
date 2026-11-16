@@ -149,4 +149,5 @@ app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnony
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapRazorPages();
 app.MapTeamManagerApi();
+app.MapIncomingMail();
 app.Run();

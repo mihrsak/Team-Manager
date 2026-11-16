@@ -113,6 +113,37 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         return issueId;
     }
 
+    public async Task<int?> ImportMail(int user, int project, byte[] messageHash, IssueInput input)
+    {
+        if (!await Can(user, project, "issues.create") || !await Can(user, project, "issues.view"))
+            throw new UnauthorizedAccessException();
+
+        await using var connection = Connect();
+        await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
+        await RequireActive(connection,transaction,project);
+        await using var account = new SqlCommand(
+            "SELECT 1 FROM dbo.AppUsers WITH(HOLDLOCK) WHERE Id=@user AND IsActive=1",connection,transaction);
+        account.Parameters.Add(P("@user",user));
+        if (await account.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
+
+        await using var receipt = new SqlCommand("""
+            SELECT IssueId FROM dbo.ReceivedIssueMail WITH(UPDLOCK,HOLDLOCK)
+            WHERE ProjectId=@project AND MessageHash=@hash
+            """,connection,transaction);
+        receipt.Parameters.AddRange([P("@project",project),P("@hash",messageHash)]);
+        if (await receipt.ExecuteScalarAsync() is not null) return null;
+
+        var issue = await SaveInTransaction(connection,transaction,user,project,null,input);
+        receipt.CommandText = """
+            INSERT dbo.ReceivedIssueMail(ProjectId,MessageHash,IssueId) VALUES(@project,@hash,@issue)
+            """;
+        receipt.Parameters.Add(P("@issue",issue));
+        await receipt.ExecuteNonQueryAsync();
+        await transaction.CommitAsync();
+        return issue;
+    }
+
     private async Task<int> SaveInTransaction(SqlConnection c, SqlTransaction tx, int user, int project, int? id, IssueInput input)
     {
         await RequireActive(c,tx,project);

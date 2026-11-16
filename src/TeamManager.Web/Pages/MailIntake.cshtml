@@ -1,0 +1,20 @@
+@page
+@model TeamManager.Web.Pages.MailIntakeModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+<p><a asp-page="/Project" asp-route-id="@Model.Project.Id">@Model.Project.Input.Name</a></p>
+<h1>@Text["Ulazna e-pošta"]</h1>
+
+<section class="card">
+    <p>@Text["Pristupnik e-pošte šalje tekst poruke ovoj aplikaciji i otvara privatni zadatak."]</p>
+    <dl>
+        <dt>@Text["Status konfiguracije"]</dt>
+        <dd>@Text[Model.EmployeeNumber is null ? "Pristupnik nije konfiguriran." : "Pristupnik je konfiguriran."]</dd>
+        <dt>@Text["Putanja za zaprimanje"]</dt>
+        <dd><code>POST @Url.Content($"~/mail/intake/{Model.Project.Id}")</code></dd>
+        @if (Model.EmployeeNumber is not null)
+        {
+            <dt>@Text["Račun za kreiranje zadataka"]</dt>
+            <dd>@Model.EmployeeNumber</dd>
+        }
+    </dl>
+</section>

@@ -1304,4 +1304,11 @@
   <data name="Spremi postavke e-pošte" xml:space="preserve"><value>Save email settings</value></data>
   <data name="Unesi valjanu adresu e-pošte za obavijesti." xml:space="preserve"><value>Enter a valid email address for notifications.</value></data>
   <data name="Postavke e-pošte su spremljene." xml:space="preserve"><value>Email settings saved.</value></data>
+  <data name="Ulazna e-pošta" xml:space="preserve"><value>Incoming email</value></data>
+  <data name="Pristupnik e-pošte šalje tekst poruke ovoj aplikaciji i otvara privatni zadatak." xml:space="preserve"><value>The email gateway submits the message text to this application and creates a private issue.</value></data>
+  <data name="Status konfiguracije" xml:space="preserve"><value>Configuration status</value></data>
+  <data name="Pristupnik nije konfiguriran." xml:space="preserve"><value>The gateway is not configured.</value></data>
+  <data name="Pristupnik je konfiguriran." xml:space="preserve"><value>The gateway is configured.</value></data>
+  <data name="Putanja za zaprimanje" xml:space="preserve"><value>Intake endpoint</value></data>
+  <data name="Račun za kreiranje zadataka" xml:space="preserve"><value>Issue creation account</value></data>
 </root>
