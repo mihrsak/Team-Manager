@@ -3,7 +3,7 @@ using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web;
 
-public sealed record EmailNotificationPreferences(string? Address, bool SendWatchedIssues);
+public sealed record EmailNotificationPreferences(string? Address, bool SendWatchedIssues, bool SendDueReminders);
 
 public sealed class EmailNotificationStore(IConfiguration config)
 {
@@ -14,13 +14,13 @@ public sealed class EmailNotificationStore(IConfiguration config)
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
-            "SELECT Address,SendWatchedIssues FROM dbo.EmailNotificationPreferences WHERE UserId=@user", connection);
+            "SELECT Address,SendWatchedIssues,SendDueReminders FROM dbo.EmailNotificationPreferences WHERE UserId=@user", connection);
         command.Parameters.Add(P("@user",user));
         await using var reader = await command.ExecuteReaderAsync();
-        return await reader.ReadAsync() ? new(reader.IsDBNull(0)?null:reader.GetString(0),reader.GetBoolean(1)) : new(null,false);
+        return await reader.ReadAsync() ? new(reader.IsDBNull(0)?null:reader.GetString(0),reader.GetBoolean(1),reader.GetBoolean(2)) : new(null,false,false);
     }
 
-    public async Task Save(int user, string? address, bool sendWatchedIssues)
+    public async Task Save(int user, string? address, bool sendWatchedIssues, bool sendDueReminders)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -29,14 +29,16 @@ public sealed class EmailNotificationStore(IConfiguration config)
             DECLARE @oldAddress nvarchar(254);
             SELECT @oldAddress=Address FROM dbo.EmailNotificationPreferences WITH(UPDLOCK,HOLDLOCK) WHERE UserId=@user;
             IF @@ROWCOUNT=0
-                INSERT dbo.EmailNotificationPreferences(UserId,Address,SendWatchedIssues) VALUES(@user,@address,@send);
+                INSERT dbo.EmailNotificationPreferences(UserId,Address,SendWatchedIssues,SendDueReminders) VALUES(@user,@address,@send,@reminders);
             ELSE
-                UPDATE dbo.EmailNotificationPreferences SET Address=@address,SendWatchedIssues=@send WHERE UserId=@user;
+                UPDATE dbo.EmailNotificationPreferences SET Address=@address,SendWatchedIssues=@send,SendDueReminders=@reminders WHERE UserId=@user;
 
             IF @send=0 OR COALESCE(@oldAddress,N'')<>COALESCE(@address,N'')
-                DELETE dbo.IssueEmailQueue WHERE UserId=@user;
+                DELETE dbo.IssueEmailQueue WHERE UserId=@user AND CompletedAt IS NULL;
+            IF @reminders=0 OR COALESCE(@oldAddress,N'')<>COALESCE(@address,N'')
+                DELETE dbo.IssueReminderQueue WHERE UserId=@user AND CompletedAt IS NULL;
             """, connection, transaction);
-        command.Parameters.AddRange([P("@user",user),P("@address",address),P("@send",sendWatchedIssues)]);
+        command.Parameters.AddRange([P("@user",user),P("@address",address),P("@send",sendWatchedIssues),P("@reminders",sendDueReminders)]);
         await command.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
     }

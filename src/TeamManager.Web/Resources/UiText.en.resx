@@ -1293,7 +1293,12 @@
   <data name="Opozovi token" xml:space="preserve"><value>Revoke token</value></data>
   <data name="Unesi naziv tokena do 80 znakova." xml:space="preserve"><value>Enter a token name of up to 80 characters.</value></data>
   <data name="Obavijesti e-poštom" xml:space="preserve"><value>Email notifications</value></data>
-  <data name="Obavijesti se pohranjuju u redu čekanja. SMTP isporuka je u pripremi." xml:space="preserve"><value>Notifications are queued. SMTP delivery is in development.</value></data>
+  <data name="SMTP slanje je uključeno u konfiguraciji." xml:space="preserve"><value>SMTP delivery is enabled in configuration.</value></data>
+  <data name="SMTP slanje je isključeno u konfiguraciji." xml:space="preserve"><value>SMTP delivery is disabled in configuration.</value></data>
+  <data name="Podsjeti me na dan roka za dodijeljene otvorene zadatke" xml:space="preserve"><value>Remind me on the due date of open issues assigned to me</value></data>
+  <data name="Aktivnost na praćenom zadatku" xml:space="preserve"><value>Activity on a watched issue</value></data>
+  <data name="Zadatak dospijeva danas" xml:space="preserve"><value>An issue is due today</value></data>
+  <data name="Za pregled se prijavi u Team Manager: {0}" xml:space="preserve"><value>Sign in to Team Manager to view the issue: {0}</value></data>
   <data name="Adresa e-pošte" xml:space="preserve"><value>Email address</value></data>
   <data name="Obavijesti o aktivnostima na praćenim zadacima" xml:space="preserve"><value>Notify me about activity on watched issues</value></data>
   <data name="Spremi postavke e-pošte" xml:space="preserve"><value>Save email settings</value></data>

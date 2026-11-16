@@ -130,3 +130,25 @@ Povežite repozitorij na stranici **Git repozitoriji**, zatim dodajte njegov ID 
 ```
 
 Identitet aplikacije treba moći pokrenuti `git` i čitati konfiguriranu radnu kopiju. Prikaz koristi posljednjih 40 commitova s lokalnog `HEAD`-a i tekstualni diff prema prvom roditelju. Veliki diffovi ograničeni su na 128 Ki znakova. Aplikacija koristi lokalne Git operacije čitanja. Sinkronizacija s udaljenim repozitorijem vodi se izvan aplikacije. Omogućite ovlast `repositories.view` samo korisnicima kojima želite dopustiti pregled izvornog koda i koji imaju pravo pregleda projekta. Puna administracija uključuje tu ovlast.
+
+## SMTP obavijesti i podsjetnici
+
+Primijenite migraciju `040-smtp-delivery.sql`. Šalje se samo kada je `Smtp:Enabled` uključen i aplikacija ima valjanu SMTP konfiguraciju. Primjer postavki za poslužitelj:
+
+```json
+{
+  "Smtp": {
+    "Enabled": true,
+    "Host": "smtp.example.com",
+    "Port": 587,
+    "UseTls": true,
+    "From": "team-manager@example.com",
+    "BaseUrl": "https://team-manager.example.com",
+    "ReminderTimeZone": "Europe/Zagreb"
+  }
+}
+```
+
+Ako poslužitelj traži prijavu, postavite `Smtp__Username` i `Smtp__Password` kroz konfiguraciju tajni okruženja. Pod **Moj profil → Obavijesti e-poštom** korisnici zasebno uključuju obavijesti za praćene zadatke i podsjetnike za otvorene zadatke dodijeljene njima na dan roka. Vremenska zona podsjetnika zadano je UTC. Poruka koristi jezik računa i sadrži poveznicu za pregled nakon prijave.
+
+Obrada ponovno provjerava pristup i postavke primatelja. Nakon neuspjeha slanja red ponavlja pokušaj uz rastući odmak i zaključuje zapis nakon pet neuspjelih pokušaja. Podsjetnik se priprema jednom po zadatku, nositelju i datumu roka. Ako proces stane nakon što SMTP prihvati poruku i prije nego što SQL zabilježi završetak, ponovni pokušaj može poslati drugu kopiju.

@@ -53,5 +53,6 @@ Invoke-SqlFile '036-private-issues.sql' 'TeamManager'
 Invoke-SqlFile '037-project-repositories.sql' 'TeamManager'
 Invoke-SqlFile '038-api-tokens.sql' 'TeamManager'
 Invoke-SqlFile '039-email-notification-queue.sql' 'TeamManager'
+Invoke-SqlFile '040-smtp-delivery.sql' 'TeamManager'
 if ($Demo) { Invoke-SqlFile '002-demo.sql' 'TeamManager' }
 Write-Host 'TeamManager database is ready.'

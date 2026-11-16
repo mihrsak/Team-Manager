@@ -44,7 +44,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | NEWS-01 | Novosti i komentari | Gotovo: projektne objave i komentari s projektnim ovlastima |
 | FORUM-01 | Forumi, teme, odgovori i moderiranje | Gotovo: jedan forum po projektu, teme i odgovori, zaključavanje i otključavanje tema |
 | SCM-01 | Veze s Git repozitorijima, pregled commitova i razlika | Gotovo: HTTPS poveznice i HR/EN pregled commitova i razlika iz konfiguriranih lokalnih Git repozitorija |
-| NOTIFY-01 | SMTP obavijesti, podsjetnici, red slanja i ponavljanje | Djelomično: HR/EN postavke e-pošte i trajni red za praćene zadatke; preostaju SMTP isporuka, ponovni pokušaji i podsjetnici |
+| NOTIFY-01 | SMTP obavijesti, podsjetnici, red slanja i ponavljanje | Gotovo: SMTP za praćene zadatke i podsjetnike na dan roka, trajni red i ponovni pokušaji; HR/EN |
 | MAIL-01 | Zaprimanje poruka e-pošte u zadatke | Backlog |
 | FEED-01 | Feed aktivnosti i Atom/RSS | Gotovo: zadnjih 50 aktivnosti zadataka, projektni filtar, Atom/RSS uz prijavu |
 | SEARCH-01 | Pretraživanje kroz module i osobna nadzorna ploča | Gotovo: osobni pregled otvorenih zadataka i rokova te pretraga projekata, zadataka, verzija, prekretnica i korisnika |

@@ -126,4 +126,6 @@ Nakon migracije `037-project-repositories.sql` otvorite **Git repozitoriji** na 
 
 ## Postavke e-pošte i red čekanja
 
-Nakon migracije `039-email-notification-queue.sql` pod **Moj profil → Obavijesti e-poštom** možete spremiti adresu i omogućiti pripremu obavijesti za aktivnosti drugih korisnika na praćenim zadacima. U red ulaze samo obavijesti za zadatke dostupne primatelju u trenutku nastanka aktivnosti. U red se spremaju identifikatori, a adresa ostaje u postavkama korisnika. Promjena adrese, isključivanje obavijesti ili prestanak praćenja uklanjaju pripadajuće zapise iz reda. SMTP isporuka, provjera aktualnog pristupa prije isporuke, ponovni pokušaji i podsjetnici preostaju za NOTIFY-01.
+Nakon migracije `039-email-notification-queue.sql` pod **Moj profil → Obavijesti e-poštom** možete spremiti adresu i omogućiti pripremu obavijesti za aktivnosti drugih korisnika na praćenim zadacima. U red ulaze samo obavijesti za zadatke dostupne primatelju u trenutku nastanka aktivnosti. U red se spremaju identifikatori, a adresa ostaje u postavkama korisnika. Promjena adrese, isključivanje obavijesti ili prestanak praćenja uklanjaju pripadajuće zapise iz reda. Migracija `040-smtp-delivery.sql` dodaje SMTP isporuku, provjeru aktualnog pristupa prije isporuke, ponovne pokušaje i podsjetnike.
+
+`pwsh -File scripts/Test-Smtp.ps1` koristi privremenu SQL bazu i SMTP prijamnik na lokalnoj petlji. Test provjerava isporuku, hrvatski i engleski naslov, privremeni SMTP odgovor 451 i ponovni pokušaj, provjeru pristupa prije slanja te deduplikaciju podsjetnika.

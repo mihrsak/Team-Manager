@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class EmailNotificationsModel(EmailNotificationStore notifications) : PageModel
+public sealed class EmailNotificationsModel(EmailNotificationStore notifications, IConfiguration configuration) : PageModel
 {
-    public EmailNotificationPreferences Settings { get; private set; } = new(null,false);
+    public EmailNotificationPreferences Settings { get; private set; } = new(null,false,false);
+    public bool DeliveryEnabled => configuration.GetValue<bool>("Smtp:Enabled");
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task OnGetAsync()
@@ -16,11 +17,11 @@ public sealed class EmailNotificationsModel(EmailNotificationStore notifications
         Settings = await notifications.Get(UserId);
     }
 
-    public async Task<IActionResult> OnPostAsync(string? address, bool sendWatchedIssues)
+    public async Task<IActionResult> OnPostAsync(string? address, bool sendWatchedIssues, bool sendDueReminders)
     {
         address = address?.Trim();
         if (string.IsNullOrEmpty(address)) address = null;
-        if (!ModelState.IsValid || (address is null && sendWatchedIssues) ||
+        if (!ModelState.IsValid || (address is null && (sendWatchedIssues || sendDueReminders)) ||
             (address is not null && (address.Length > 254 || address.Any(char.IsControl) ||
               !MailAddress.TryCreate(address,out var email) || !email.Address.Equals(address,StringComparison.Ordinal))))
         {
@@ -29,7 +30,7 @@ public sealed class EmailNotificationsModel(EmailNotificationStore notifications
             return Page();
         }
 
-        await notifications.Save(UserId,address,sendWatchedIssues);
+        await notifications.Save(UserId,address,sendWatchedIssues,sendDueReminders);
         TempData["Notice"] = "Postavke e-pošte su spremljene.";
         return RedirectToPage();
     }
