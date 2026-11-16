@@ -78,7 +78,9 @@ HTTPS GET na `/health/live` vraća 200 dok aplikacija odgovara. `/health/ready` 
 
 3. Provjerite poznate podatke u obnovljenoj bazi i SQL ovlasti aplikacijskog identiteta. Za povratak pokrenite prethodni paket s prethodnom konfiguracijom i vezom na obnovljenu bazu. Prije otvaranja pristupa provjerite prijavu i prikaz projekta. Obnova punog backupa vraća stanje u trenutku kopije. Ako je nakon kopije bilo upisa, DBA treba utvrditi točku oporavka i provjeriti dostupne log backup kopije prije prebacivanja prometa.
 
-Lokalna provjera na odvojenim SQL Express bazama obuhvatila je backup s kontrolnom sumom, obnovu pod drugim imenom, DBCC CHECKDB i potvrdu da su obnovljeni projekti i korisnički podaci iz trenutka kopije. Povratak IIS paketa provjerava se u ciljnom okruženju.
+Lokalna provjera na odvojenim SQL Express bazama obuhvatila je backup s kontrolnom sumom, obnovu pod drugim imenom, DBCC CHECKDB i potvrdu da su obnovljeni projekti i korisnički podaci iz trenutka kopije.
+
+Za ponovljivu probu nadogradnje i povratka pokrenite `pwsh -File scripts/Test-Rollback.ps1 -PreviousPackage <stara-mapa> -CurrentPackage <nova-mapa>`. Potreban je pouzdan razvojni HTTPS certifikat. Skripta koristi privremenu SQL Express bazu, kopiju s kontrolnom sumom i lokalni HTTPS port 7545. Provjerava prijavu i prikaz testnog projekta u oba paketa, a zatim u prethodnom paketu na obnovljenoj bazi. Za automatsko brisanje kopije po potrebi navedite `-BackupDirectory` s apsolutnom putanjom u koju SQL Server može pisati, a korisnik skripte može brisati vlastitu testnu datoteku. Ako brisanje ne uspije, skripta ispisuje putanju za čišćenje. IIS nadzor i povratak application poola provjeravaju se na IIS-u.
 
 ## Nadzor i logovi
 
