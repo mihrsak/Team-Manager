@@ -41,6 +41,18 @@ Službena referenca: https://learn.microsoft.com/en-us/aspnet/core/host-and-depl
 
 Lokalno pokretanje iz izvornog koda: `dotnet dev-certs https --trust`, ASPNETCORE_ENVIRONMENT=Development, konfigurirana veza na bazu, pa `dotnet run --project src/TeamManager.Web --urls https://localhost:7043`.
 
+### Proba na lokalnom IIS-u
+
+Na testnoj radnoj stanici s IIS-om, ASP.NET Core 10 Hosting Bundleom, SQL Server Expressom i alatom `sqlcmd` pokrenite iz korijena repozitorija u administratorskom **Windows PowerShellu**:
+
+```powershell
+.\scripts\Install-LocalIisTest.ps1 -PreviousPackage '<stara-mapa>' -CurrentPackage '<nova-mapa>'
+```
+
+Skripta postavlja site `TeamManager-LocalTest`, namjenski application pool i bazu `TeamManager_IisTest`. Podržava HTTPS preko IPv4 i IPv6 loopback adresa i dodaje namjenski razvojni certifikat u spremnik pouzdanih certifikata trenutnog korisnika. SQL račun application poola ima pravo čitanja i pisanja u testnoj bazi, a migracije izvršava korisnik skripte. Skripta odbija prepisati postojeću instalaciju s istim imenom.
+
+Nakon provjere prijave, zdravstvenih provjera, nadogradnje i povratka, skripta ostavlja aktualni paket na [lokalnoj IIS adresi](https://localhost:7443/). Prijava `admin / admin` i projekt **IIS rollback test project** služe samo toj izdvojenoj bazi. Kopija baze prije nadogradnje ostaje u SQL Serverovoj mapi za sigurnosne kopije.
+
 ## Podaci i nadogradnja aplikacije
 
 Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data Protection ključeve identiteta procesa pri nadogradnji. Zaustavite application pool, napravite backup baze i postavki, primijenite migracije, zamijenite aplikacijske datoteke, vratite lokalnu konfiguraciju i pokrenite pool. Povratak na staru verziju baze radi se iz provjerenog backupa, ne brisanjem tablica.
