@@ -1,0 +1,20 @@
+@page
+@model TeamManager.Web.Pages.EmailNotificationsModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+<p><a asp-page="/Profile">@Text["Moj profil"]</a></p>
+<h1>@Text["Obavijesti e-poštom"]</h1>
+<p>@Text["Obavijesti se pohranjuju u redu čekanja. SMTP isporuka je u pripremi."]</p>
+
+@if (TempData["Notice"] is string notice) { <p class="notice">@Text[notice]</p> }
+<div asp-validation-summary="All"></div>
+<section class="card">
+    <form method="post">
+        <label>@Text["Adresa e-pošte"]
+            <input name="address" type="email" value="@Model.Settings.Address" maxlength="254" autocomplete="email">
+        </label>
+        <label><input name="sendWatchedIssues" type="checkbox" value="true" checked="@Model.Settings.SendWatchedIssues">
+            @Text["Obavijesti o aktivnostima na praćenim zadacima"]
+        </label>
+        <button>@Text["Spremi postavke e-pošte"]</button>
+    </form>
+</section>

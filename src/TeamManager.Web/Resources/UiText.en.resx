@@ -1292,4 +1292,11 @@
   <data name="Neaktivan token" xml:space="preserve"><value>Inactive</value></data>
   <data name="Opozovi token" xml:space="preserve"><value>Revoke token</value></data>
   <data name="Unesi naziv tokena do 80 znakova." xml:space="preserve"><value>Enter a token name of up to 80 characters.</value></data>
+  <data name="Obavijesti e-poštom" xml:space="preserve"><value>Email notifications</value></data>
+  <data name="Obavijesti se pohranjuju u redu čekanja. SMTP isporuka je u pripremi." xml:space="preserve"><value>Notifications are queued. SMTP delivery is in development.</value></data>
+  <data name="Adresa e-pošte" xml:space="preserve"><value>Email address</value></data>
+  <data name="Obavijesti o aktivnostima na praćenim zadacima" xml:space="preserve"><value>Notify me about activity on watched issues</value></data>
+  <data name="Spremi postavke e-pošte" xml:space="preserve"><value>Save email settings</value></data>
+  <data name="Unesi valjanu adresu e-pošte za obavijesti." xml:space="preserve"><value>Enter a valid email address for notifications.</value></data>
+  <data name="Postavke e-pošte su spremljene." xml:space="preserve"><value>Email settings saved.</value></data>
 </root>

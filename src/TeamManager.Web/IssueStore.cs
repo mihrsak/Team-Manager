@@ -244,6 +244,24 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         SELECT @eventId,@id,w.UserId
         FROM dbo.IssueWatchers w WITH (HOLDLOCK)
         WHERE w.IssueId=@id AND w.UserId<>@user;
+
+        INSERT dbo.IssueEmailQueue(UserId,EventId)
+        SELECT n.UserId,n.EventId
+        FROM dbo.IssueNotifications n
+        JOIN dbo.EmailNotificationPreferences preferences ON preferences.UserId=n.UserId
+        JOIN dbo.AppUsers recipient ON recipient.Id=n.UserId
+        JOIN dbo.Issues issue ON issue.Id=n.IssueId
+        JOIN dbo.Projects project ON project.Id=issue.ProjectId
+        WHERE n.EventId=@eventId AND preferences.SendWatchedIssues=1 AND recipient.IsActive=1
+          AND project.IssuesEnabled=1 AND (@kind<>'time' OR project.TimeEnabled=1)
+          AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(n.UserId,issue.ProjectId,issue.IsPrivate,issue.CreatedBy,issue.AssigneeId))
+          AND (project.IsPublic=1 OR EXISTS(
+                  SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName
+                  WHERE r.UserId=n.UserId AND p.Permission IN ('*','issues.view'))
+              OR EXISTS(
+                  SELECT 1 FROM dbo.EffectiveProjectRoles(issue.ProjectId,n.UserId) r
+                  JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName WHERE p.Permission IN ('*','issues.view')))
+        OPTION(MAXRECURSION 0);
         """,c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@kind",kind),P("@text",text)]);await cmd.ExecuteNonQueryAsync();}
     public async Task Comment(int user,int id,string text)
     {

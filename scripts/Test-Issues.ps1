@@ -807,6 +807,27 @@ try {
     } catch [System.Net.WebException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Revoking account sessions also invalidates existing tokens'
     }
+    $regular=New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $page=Post '/Login' $regular @{EmployeeNumber='qatest';Password='QA-password-123'}
+    $page=Invoke-WebRequest -UseBasicParsing "$base/EmailNotifications" -WebSession $admin
+    Assert ($page.Content.Contains('<h1>Email notifications</h1>')) 'Email settings are available in English'
+    $page=Post '/EmailNotifications' $regular @{address='not-an-email';sendWatchedIssues='true'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.EmailNotificationPreferences WHERE UserId=$uid") -eq 0) 'Invalid addresses cannot enable email notifications'
+    $page=Post '/EmailNotifications' $regular @{address='qa@example.test';sendWatchedIssues='true'}
+    Assert ($page.Content.Contains('qa@example.test') -and $page.Content -match '<html lang="hr"') 'User can save personal email settings in Croatian'
+    $page=Invoke-WebRequest -UseBasicParsing "$base/EmailNotifications" -WebSession $admin
+    Assert (-not $page.Content.Contains('qa@example.test')) 'Email address preference is private to its owner'
+    $page=Post "/Issue?id=$publicIssue&handler=Watch" $regular @{watch='true'}
+    $page=Post "/Issue?id=$publicIssue&handler=Comment" $admin @{text='QA email event'}
+    $emailEvent=Sql "SELECT MAX(Id) FROM dbo.IssueEvents WHERE IssueId=$publicIssue"
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE UserId=$uid AND EventId=$emailEvent") -eq 1) 'Watched issue activity for opted-in recipient is queued'
+    $page=Post "/Issue?id=$secretIssue&handler=Comment" $admin @{text='QA forbidden email event'}
+    $privateEvent=Sql "SELECT MAX(Id) FROM dbo.IssueEvents WHERE IssueId=$secretIssue"
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE EventId=$privateEvent") -eq 0) 'Activity on an inaccessible private issue is not queued'
+    $page=Post '/EmailNotifications' $regular @{address='qa@example.test'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE UserId=$uid") -eq 0) 'Disabling email preferences clears pending deliveries'
+    $page=Post "/Issue?id=$publicIssue&handler=Comment" $admin @{text='QA event after opt-out'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEmailQueue WHERE UserId=$uid") -eq 0) 'Opted-out watcher receives no new email jobs'
 } finally {
     Stop-App
     $env:ConnectionStrings__TeamManager=$oldConnection;$env:ASPNETCORE_ENVIRONMENT=$oldEnvironment

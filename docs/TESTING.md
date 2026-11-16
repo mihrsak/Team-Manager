@@ -123,3 +123,7 @@ Ista provjera vrijedi za popise, pretragu, CSV, kalendar, Gantt, povezane zadatk
 ## Git repozitoriji projekta
 
 Nakon migracije `037-project-repositories.sql` otvorite **Git repozitoriji** na detaljima projekta. Upravitelj aktivnog projekta može dodati ili ukloniti imenovanu HTTPS poveznicu na repozitorij. Adresa se unosi bez vjerodajnica, parametara i fragmenta. Pregled poveznica prati vidljivost projekta, a pristup sadržaju repozitorija provjerava njegovo Git okruženje. Dodavanje i uklanjanje ulaze u revizijski zapis. Pregled commitova i razlika unutar aplikacije preostaje za SCM-01.
+
+## Postavke e-pošte i red čekanja
+
+Nakon migracije `039-email-notification-queue.sql` pod **Moj profil → Obavijesti e-poštom** možete spremiti adresu i omogućiti pripremu obavijesti za aktivnosti drugih korisnika na praćenim zadacima. U red ulaze samo obavijesti za zadatke dostupne primatelju u trenutku nastanka aktivnosti. U red se spremaju identifikatori, a adresa ostaje u postavkama korisnika. Promjena adrese, isključivanje obavijesti ili prestanak praćenja uklanjaju pripadajuće zapise iz reda. SMTP isporuka, provjera aktualnog pristupa prije isporuke, ponovni pokušaji i podsjetnici preostaju za NOTIFY-01.
