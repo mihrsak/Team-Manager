@@ -59,6 +59,34 @@ Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data 
 
 IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju.
 
+## OpenShift
+
+Izgradite Linux sliku iz korijena repozitorija (`docker build -t "$image" .`) i objavite je u registru koji ciljni OpenShift projekt može čitati. Koristite istu verziju slike za migraciju i web. Pripremite praznu SQL Server bazu pri prvoj instalaciji i dvije različite SQL veze u OpenShift Secret objektima:
+
+- `team-manager-db`, ključ `connection-string`, za aplikacijski SQL račun s pravima čitanja i pisanja u bazi.
+- `team-manager-migration`, ključ `connection-string`, za račun koji može primijeniti skripte sheme i inicijalizirati korisnika.
+- `team-manager-bootstrap`, ključ `password`, za početni račun `admin` pri prvoj instalaciji. Lozinka mora imati najmanje 12 znakova. Nakon uspješne inicijalizacije Secret možete ukloniti. Instalacija na praznu bazu zahtijeva tajnu.
+
+Za Route koristite DNS ime pokriveno certifikatom Ingress Controllera. Od administratora klastera preuzmite pouzdani CIDR neposrednih ingress proxyja kako ih vidi aplikacija. Taj CIDR određuje koje adrese smiju postaviti proslijeđenu shemu i klijentsku adresu. Predložak očekuje router u namespaceu `openshift-ingress` i upisiv RWO volumen iz zadane StorageClass za trajne ključeve sesije. Ako se nazivi u klasteru razlikuju, prilagodite NetworkPolicy odnosno PVC prije primjene. Pohranite ključeve na zaštićeni volumen.
+
+Iz administratorske konzole s odabranim ciljnim OpenShift projektom postavite `$image`, `$routeHost` i `$ingressCidr`, pa pokrenite:
+
+```powershell
+$job = 'team-manager-migrate-v1' # Novo ime za svaku nadogradnju.
+oc process --local -f deployment/openshift/migrate.yaml -p "IMAGE=$image" -p "JOB_NAME=$job" | oc apply -f -
+oc wait --for=condition=complete "job/$job" --timeout=5m
+# Nastavite nakon uspješnog završetka Joba.
+oc process --local -f deployment/openshift/app.yaml -p "IMAGE=$image" -p "ROUTE_HOST=$routeHost" -p "TRUSTED_INGRESS_CIDR=$ingressCidr" | oc apply -f -
+oc rollout status deployment/team-manager
+curl.exe --fail "https://$routeHost/health/ready"
+```
+
+Prije nadogradnje napravite sigurnosnu kopiju baze i skalirajte postojeći Deployment na nula replika dok se primjenjuju migracije. Nakon rollouta provjerite HTTP preusmjeravanje na HTTPS, prijavu, `/health/live` i `/health/ready`. Route završava TLS na ingressu i promet prema podu šalje preko HTTP-a. Pod koristi HTTP zdravstvene provjere s očekivanim `Host` zaglavljem.
+
+### Lokalna provjera kroz HTTPS proxy
+
+Uz Node.js, pouzdani razvojni certifikat (`dotnet dev-certs https --trust`) i zasebnu bazu `TeamManager_IisTest` iz lokalne IIS probe pokrenite `pwsh -NoProfile -File scripts/Test-ReverseProxy.ps1 -Preview`. Skripta podiže HTTPS proxy na [localhost:7547](https://localhost:7547/) i pozadinski HTTP na loopbacku. Provjerava prijavu u testni projekt, `Secure` cookie, zdravstvene provjere i da aplikacija zanemaruje proslijeđenu HTTPS oznaku s nepouzdane adrese. Bez `-Preview` oba se procesa po završetku zaustavljaju. Preview ispisuje PID-ove pokrenutih procesa za kasnije gašenje.
+
 ## Zdravstvene provjere
 
 HTTPS GET na `/health/live` vraća 200 dok aplikacija odgovara. `/health/ready` vraća 200 kada aplikacija može otvoriti SQL vezu i čitati stupce računa koje koristi za provjeru sesija. Ako taj upit ne uspije, endpoint vraća 503. Oba endpointa dostupna su bez korisničke prijave i vraćaju samo status.

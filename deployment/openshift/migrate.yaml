@@ -1,0 +1,50 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: team-manager-migrate
+parameters:
+  - name: IMAGE
+    required: true
+  - name: JOB_NAME
+    required: true
+  - name: MIGRATION_SECRET
+    value: team-manager-migration
+  - name: BOOTSTRAP_SECRET
+    value: team-manager-bootstrap
+objects:
+  - apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: ${JOB_NAME}
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: migrate
+              image: ${IMAGE}
+              args: [--apply-schema]
+              securityContext:
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ALL]
+              env:
+                - name: ConnectionStrings__TeamManager
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${MIGRATION_SECRET}
+                      key: connection-string
+                - name: Bootstrap__RequirePassword
+                  value: "true"
+                - name: Bootstrap__Password
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${BOOTSTRAP_SECRET}
+                      key: password
+                      optional: true

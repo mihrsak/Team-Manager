@@ -5,9 +5,31 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
+var proxy = builder.Configuration.GetSection("ReverseProxy");
+var trustedProxyNetwork = proxy["TrustedNetwork"];
+if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
+{
+    var network = System.Net.IPNetwork.Parse(trustedProxyNetwork);
+    if (network.PrefixLength == 0)
+        throw new InvalidOperationException("Configure a trusted ingress network with a nonzero prefix length.");
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+        options.KnownIPNetworks.Add(network);
+    });
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = proxy.GetValue("HttpsPort", 443));
+}
+if (builder.Configuration["DataProtection:KeyDirectory"] is { Length: > 0 } keyDirectory)
+    builder.Services.AddDataProtection().SetApplicationName("TeamManager")
+        .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
 builder.Services.AddScoped<LocalizedValidationFilter>();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSingleton<IProjectNavigationExtension, ConfiguredProjectLinks>();
@@ -115,15 +137,19 @@ if (args.Contains("--apply-schema") || args.Contains("--seed-demo"))
     return;
 }
 var app = builder.Build();
+if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
+    app.UseForwardedHeaders();
 using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider.GetRequiredService<UserStore>().Bootstrap();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
-    app.UseHttpsRedirection();
 }
-app.UseHttpsRedirection();
+if (string.IsNullOrWhiteSpace(trustedProxyNetwork))
+    app.UseHttpsRedirection();
+else
+    app.UseWhen(context => !context.Request.Path.StartsWithSegments("/health"), branch => branch.UseHttpsRedirection());
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {

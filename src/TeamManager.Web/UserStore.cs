@@ -113,6 +113,9 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         await using var check=new SqlCommand("SELECT COUNT(*) FROM dbo.AppUsers WITH(TABLOCKX,HOLDLOCK)",c,tx);
         if(Convert.ToInt32(await check.ExecuteScalarAsync())==0)
         {
+            var password = config["Bootstrap:Password"];
+            if (config.GetValue<bool>("Bootstrap:RequirePassword") && (password is null || password.Length < 12))
+                throw new InvalidOperationException("Bootstrap requires an administrator password of at least 12 characters for an empty database.");
             var user=new AppUser(0,"admin","Administrator","",null,"",true);
             await using var cmd=new SqlCommand("""
                 IF NOT EXISTS(SELECT 1 FROM dbo.Roles WHERE Name=N'Administrator')
@@ -123,7 +126,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
                     VALUES('admin',N'Administrator',@hash,1);
                 INSERT dbo.UserRoles(UserId,RoleName) VALUES(CONVERT(int,SCOPE_IDENTITY()),N'Administrator');
                 """,c,tx);
-            cmd.Parameters.Add(P("@hash",hasher.HashPassword(user,"admin")));
+            cmd.Parameters.Add(P("@hash",hasher.HashPassword(user,password ?? "admin")));
             await cmd.ExecuteNonQueryAsync();
         }
         await tx.CommitAsync();

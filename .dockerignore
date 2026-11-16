@@ -1,0 +1,10 @@
+*
+!src/
+!src/TeamManager.Web/
+!src/TeamManager.Web/**
+!database/
+!database/*.sql
+**/bin/
+**/obj/
+**/appsettings.Local.json
+**/appsettings.Development.json
