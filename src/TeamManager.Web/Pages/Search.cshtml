@@ -6,7 +6,7 @@
     <form method="get" class="grid">
         <div asp-validation-summary="All"></div>
         <label>@Text["Pojam"]<input asp-for="Query" type="search" maxlength="200" required></label>
-        <label>Modul
+        <label>@Text["Modul"]
             <select asp-for="Module">
                 <option value="">@Text["Svi moduli"]</option>
                 <option value="projects">@Text["Projekti"]</option>

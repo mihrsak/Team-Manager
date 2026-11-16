@@ -1317,4 +1317,5 @@
   <data name="Zadnja provjera sandučića uspjela je." xml:space="preserve"><value>The last mailbox check succeeded.</value></data>
   <data name="Provjera sandučića ili uvoz nisu uspjeli." xml:space="preserve"><value>The mailbox check or import failed.</value></data>
   <data name="Posljednji uvezeni zadatak" xml:space="preserve"><value>Last imported issue</value></data>
+  <data name="Preskoči na glavni sadržaj" xml:space="preserve"><value>Skip to main content</value></data>
 </root>

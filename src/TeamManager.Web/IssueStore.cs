@@ -7,7 +7,7 @@ namespace TeamManager.Web;
 public sealed class IssueInput
 {
     [Required,StringLength(200)] public string Title{get;set;}="";
-    [StringLength(4000)] public string Description{get;set;}="";
+    [StringLength(4000)] public string? Description{get;set;}="";
     [Required] public string Type{get;set;}="Zadatak";
     [Required] public string Priority{get;set;}="Normalan";
     [Required] public string Status{get;set;}="Novo";

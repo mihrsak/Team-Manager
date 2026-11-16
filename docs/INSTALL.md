@@ -59,6 +59,12 @@ Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data 
 
 IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju.
 
+## Pregledničke provjere QA-02
+
+`node scripts/Test-Browser.cjs` pokreće automatsku provjeru u Microsoft Edgeu. Potrebni su Node.js, Edge te paketi `playwright-core` 1.56.1 raspakiran u `artifacts/qa-browser/playwright` i `axe-core` 4.11.1 raspakiran u `artifacts/qa-browser/axe`. Raspakirajte sadržaj korijenske mape paketa (`package/`) izravno u odgovarajuću ciljnu mapu.
+
+Pokrenite aplikaciju na `https://localhost:7560` s pouzdanim razvojnim certifikatom i zasebnom, svježe inicijaliziranom SQL bazom (`--apply-schema --create-database --seed-demo`). Skripta koristi početni račun `admin / admin` i demo projekt ID 1. Stvara testne korisnike, zadatke, komentare i zapise vremena. Kod ponavljanja koristite zasebnu QA bazu jer testni zapisi ostaju u njoj. Rezultati axe provjere pokrivaju automatizirana WCAG A/AA pravila na pregledanim stranicama.
+
 ## OpenShift
 
 Lokalna provjera slike provedena je naredbom `podman build -t localhost/team-manager:ops04-local .` i na zasebnoj bazi u SQL Server 2022 Express kontejneru. Migracije i web pokrenuti su iz iste slike s UID-om 10001, uz odvojene SQL račune. Lokalni HTTPS pregled objavljen je na [localhost:7550](https://localhost:7550/) dok aplikacijski i SQL kontejner rade. Provjereni su liveness, readiness, prijava, prikaz demo projekta i valjanost sesije nakon restarta uz trajni volumen za ključeve.
