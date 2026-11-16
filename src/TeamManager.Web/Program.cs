@@ -41,6 +41,7 @@ builder.Services.AddScoped<ProjectForumStore>();
 builder.Services.AddScoped<SavedIssueQueryStore>();
 builder.Services.AddScoped<ProjectStore>();
 builder.Services.AddScoped<ProjectRepositoryStore>();
+builder.Services.AddScoped<RepositoryHistory>();
 builder.Services.AddScoped<RoadmapStore>();
 builder.Services.AddScoped<ProjectNewsStore>();
 builder.Services.AddScoped<ProjectWikiStore>();

@@ -1276,4 +1276,11 @@
   <data name="Unesi naziv do 80 znakova i HTTPS adresu repozitorija bez vjerodajnica, parametara ili fragmenta." xml:space="preserve"><value>Enter a name up to 80 characters and a repository HTTPS address without credentials, query parameters, or a fragment.</value></data>
   <data name="Dodavanje Git repozitorija" xml:space="preserve"><value>Git repository linked</value></data>
   <data name="Uklanjanje Git repozitorija" xml:space="preserve"><value>Git repository unlinked</value></data>
+  <data name="Pregled Git commitova i razlika" xml:space="preserve"><value>View Git commits and diffs</value></data>
+  <data name="Pregled commitova" xml:space="preserve"><value>Commit history</value></data>
+  <data name="Razlike u commitu" xml:space="preserve"><value>Commit diff</value></data>
+  <data name="Prikazan je početak razlike jer je izlaz prevelik." xml:space="preserve"><value>Only the beginning of the diff is shown because it is too large.</value></data>
+  <data name="Ovaj commit nema tekstualnih razlika." xml:space="preserve"><value>This commit has no textual diff.</value></data>
+  <data name="Posljednjih {0} commitova" xml:space="preserve"><value>Latest {0} commits</value></data>
+  <data name="Povijest repozitorija trenutačno nije dostupna." xml:space="preserve"><value>Repository history is currently unavailable.</value></data>
 </root>

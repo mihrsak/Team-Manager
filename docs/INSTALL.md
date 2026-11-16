@@ -114,3 +114,19 @@ Izostavite `ProjectId` za prikaz poveznice u svim dostupnim projektima. Konfigur
 Nakon migracije `034-registration-approval.sql` postavite `Registration__Enabled=true` ili `Registration:Enabled` na `true` u konfiguraciji aplikacije kako biste ponudili zahtjev za registraciju na stranici za prijavu. Zadano je isključena. Zahtjev sadrži broj radnika, ime i sažetak lozinke. Prijava je moguća tek nakon odobrenja.
 
 Puni administrator otvara **Korisnici → Zahtjevi za registraciju**. Prije odobrenja provjerite broj radnika i potvrdite s radnikom da je osobno poslao zahtjev. Odobreni račun dobiva redovan pristup, a uloge se dodjeljuju zasebno. Odbijanje uklanja zahtjev. Odluke se bilježe u revizijskom zapisu. Registracija prihvaća do 10 POST zahtjeva po udaljenoj IP adresi u pet minuta. Iza proxyja ograničenje koristi IP adresu koju aplikacija vidi.
+
+## Pregled Git commitova i razlika
+
+Povežite repozitorij na stranici **Git repozitoriji**, zatim dodajte njegov ID iz poveznice za pregled ili iz tablice `ProjectRepositories` u lokalnu konfiguraciju aplikacije. Primjer za repozitorij s ID-jem 1:
+
+```json
+{
+  "RepositoryHistory": {
+    "Paths": {
+      "1": "C:/Git/Team-Manager"
+    }
+  }
+}
+```
+
+Identitet aplikacije treba moći pokrenuti `git` i čitati konfiguriranu radnu kopiju. Prikaz koristi posljednjih 40 commitova s lokalnog `HEAD`-a i tekstualni diff prema prvom roditelju. Veliki diffovi ograničeni su na 128 Ki znakova. Aplikacija koristi lokalne Git operacije čitanja. Sinkronizacija s udaljenim repozitorijem vodi se izvan aplikacije. Omogućite ovlast `repositories.view` samo korisnicima kojima želite dopustiti pregled izvornog koda i koji imaju pravo pregleda projekta. Puna administracija uključuje tu ovlast.

@@ -5,10 +5,11 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositoryStore repositories) : PageModel
+public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositoryStore repositories, Permissions permissions, RepositoryHistory history) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<ProjectRepository> Repositories { get; private set; } = [];
+    public HashSet<int> Browsable { get; private set; } = [];
     public bool CanEdit { get; private set; }
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -23,6 +24,9 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
         Project = project;
         CanEdit = project.Input.State == "Active" && await projects.CanManage(UserId, projectId);
         Repositories = await repositories.List(projectId);
+        var rights = await permissions.Effective(UserId, "project", projectId);
+        if (rights.Contains("*") || rights.Contains("repositories.view"))
+            Browsable = Repositories.Where(repo => history.IsConfigured(repo.Id)).Select(repo => repo.Id).ToHashSet();
         return Page();
     }
 

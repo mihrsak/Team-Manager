@@ -735,6 +735,31 @@ try {
     } catch [System.Net.WebException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Repository removal checks project ownership'
     }
+    $historyPath=[Environment]::GetEnvironmentVariable("RepositoryHistory__Paths__$repositoryId")
+    if ($historyPath) {
+        $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId" -WebSession $admin
+        $head=(& git -C $historyPath rev-parse HEAD).Trim()
+        Assert ($page.Content.Contains('<h1>Commit history</h1>') -and $page.Content.Contains($head.Substring(0,12))) 'Commit history lists real Git commits in English'
+        $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId&commit=$head" -WebSession $admin
+        Assert ($page.Content.Contains('Commit diff') -and $page.Content.Contains('diff --git')) 'Selected commit shows a real Git diff'
+        $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId" -WebSession $regular
+        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Git source requires explicit repository permission'
+        try {
+            Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$parent&repositoryId=$repositoryId" -WebSession $admin | Out-Null
+            throw 'History was accessible with wrong project'
+        } catch [System.Net.WebException] {
+            Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Git history checks repository ownership'
+        }
+        try {
+            Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId&commit=HEAD" -WebSession $admin | Out-Null
+            throw 'Git accepted an arbitrary ref'
+        } catch [System.Net.WebException] {
+            Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Only listed commit IDs are accepted'
+        }
+        $page=Post '/Profile?handler=Language' $admin @{language='hr'}
+        $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId&commit=$head" -WebSession $admin
+        Assert ($page.Content.Contains('Pregled commitova') -and $page.Content.Contains('Razlike u commitu')) 'History and diff render Croatian labels'
+    }
     $page=Post "/Repositories?projectId=$project&handler=Remove&repositoryId=$repositoryId" $admin @{}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.ProjectRepositories WHERE Id=$repositoryId") -eq 0) 'Project manager can unlink a repository'
     Assert ((Sql "SELECT COUNT(*) FROM dbo.AdministrationAudit WHERE (Action='project.repository.add' AND Subject=N'QA repository') OR (Action='project.repository.remove' AND Subject=N'#$repositoryId')") -eq 2) 'Repository linking and unlinking are audited'

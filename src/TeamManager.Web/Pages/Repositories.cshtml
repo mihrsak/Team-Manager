@@ -29,6 +29,10 @@ else
         {
             <li class="actions">
                 <a href="@repository.Url" referrerpolicy="no-referrer">@repository.Name</a>
+                @if (Model.Browsable.Contains(repository.Id))
+                {
+                    <a asp-page="/RepositoryHistory" asp-route-projectId="@Model.Project.Id" asp-route-repositoryId="@repository.Id">@Text["Pregled commitova"]</a>
+                }
                 @if (Model.CanEdit)
                 {
                     <form method="post" asp-page-handler="Remove" asp-route-projectId="@Model.Project.Id" asp-route-repositoryId="@repository.Id">

@@ -1,0 +1,50 @@
+@page
+@model TeamManager.Web.Pages.RepositoryHistoryModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+
+<p><a asp-page="/Repositories" asp-route-projectId="@Model.ProjectId">@Text["Git repozitoriji"]</a></p>
+<h1>@Text["Pregled commitova"]</h1>
+<p>@Model.Repository.Name</p>
+<div asp-validation-summary="All"></div>
+
+@if (Model.Patch is { } patch && Model.Selected is { } selected)
+{
+    <section class="card" aria-labelledby="patch-title">
+        <h2 id="patch-title">@Text["Razlike u commitu"]</h2>
+        <p>@selected.Subject <code>@selected.Id</code></p>
+        @if (patch.Truncated)
+        {
+            <p>@Text["Prikazan je početak razlike jer je izlaz prevelik."]</p>
+        }
+        @if (patch.Text.Length == 0)
+        {
+            <p>@Text["Ovaj commit nema tekstualnih razlika."]</p>
+        }
+        else
+        {
+            <pre style="overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere">@patch.Text</pre>
+        }
+    </section>
+}
+
+@if (Model.Commits.Count > 0)
+{
+    <div class="card table">
+        <table>
+            <caption>@Text["Posljednjih {0} commitova", Model.Commits.Count]</caption>
+            <thead><tr><th>@Text["Commit"]</th><th>@Text["Autor"]</th><th>@Text["Datum"]</th><th>@Text["Opis"]</th></tr></thead>
+            <tbody>
+                @foreach (var commit in Model.Commits)
+                {
+                    <tr>
+                        <td><a asp-page="/RepositoryHistory" asp-route-projectId="@Model.ProjectId"
+                            asp-route-repositoryId="@Model.Repository.Id" asp-route-commit="@commit.Id"><code>@commit.Id[..12]</code></a></td>
+                        <td>@commit.Author</td>
+                        <td>@commit.Date.ToString("yyyy-MM-dd HH:mm zzz")</td>
+                        <td>@commit.Subject</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
