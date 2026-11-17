@@ -57,7 +57,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | OPS-04 | OCP manifesti i testiranje iza proxyja | Predlošci obrađeni s `oc process`; lokalno provjeren HTTPS proxy. Linux OCI slika izgrađena i provjerena u Podmanu s odvojenom SQL bazom, migracijama, neprivilegiranim UID-om, HTTPS prijavom i sesijom nakon restarta. Čeka ciljni OCP klaster |
 | DB-01 | SQL Server | Gotovo |
 | DB-02 | Oracle i Db2 LUW/zOS provider, migracije i integracijski testovi | Backlog |
-| QA-01 | Integracijske provjere ovlasti, bootstrapa i novih modula | Lokalni paket provjera s jednim pokretanjem na privremenim bazama: bootstrap, ovlasti i moduli, API i Git, gateway e-pošte te lokalni SMTP i TLS IMAP |
+| QA-01 | Integracijske provjere ovlasti, bootstrapa i novih modula | Lokalni paket provjera na privremenim bazama: bootstrap, ovlasti i moduli, API i Git, gateway e-pošte te lokalni SMTP i TLS IMAP. Provjeravaju se i granica naziva tipa (50 znakova) te odvojeno demo učitavanje u Windows paketu |
 | QA-02 | Browser E2E, pristupačnost, opterećenje i produkcijski pregled | Lokalni IIS: Edge E2E i ovlasti, 18 automatiziranih WCAG A/AA provjera, ručni pregled i NVDA najave glavnih tokova u HR/EN, kontrola IIS konfiguracije te 34.377 zahtjeva bez grešaka. Na 25 paralelnih zahtjeva p95 22 ms. Kapacitet i konfiguracija na ciljnom produkcijskom IIS-u ostaju za provjeru |
 
 ## Pravilo isporuke

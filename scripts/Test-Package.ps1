@@ -12,13 +12,19 @@ try{
     if(-not(Test-Path (Join-Path $PackagePath 'web.config'))){throw 'Missing IIS web.config'}
     $env:ConnectionStrings__TeamManager="Server=localhost\SQLEXPRESS;Database=$dbName;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
     $env:ASPNETCORE_ENVIRONMENT='Production'
-    & (Join-Path $PackagePath 'Install-Database.ps1') -CreateDatabase -Demo
+    & (Join-Path $PackagePath 'Install-Database.ps1') -CreateDatabase
     $connection.Open();$connection.ChangeDatabase($dbName)
+    if((Sql 'SELECT COUNT(*) FROM dbo.Projects') -ne 0){throw 'Standard installation loaded demo projects'}
+    if((Sql 'SELECT COUNT(*) FROM dbo.IssueTypes') -ne 3){throw 'Standard installation loaded demo types'}
+    if((Sql 'SELECT COUNT(*) FROM dbo.IssuePriorities') -ne 4){throw 'Standard installation loaded demo priorities'}
+    if((Sql 'SELECT COUNT(*) FROM dbo.IssueStatuses') -ne 4){throw 'Standard installation loaded demo statuses'}
+    Write-Host 'PASS: Standard installation leaves the demo catalog out.'
+    & (Join-Path $PackagePath 'Install-Database.ps1') -Demo
     if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 80){throw 'Demo issues missing'}
     & (Join-Path $PackagePath 'Install-Database.ps1') -Demo
     if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 80){throw 'Demo duplicated'}
     if((Sql 'SELECT COUNT(*) FROM dbo.AppUsers') -ne 1){throw 'Bootstrap duplicated'}
-    Write-Host 'PASS: Self-contained package installs a new database, schema, admin and demo data in Production mode.'
+    Write-Host 'PASS: Self-contained package installs a new database, schema, admin and optional demo data in Production mode.'
     Write-Host 'PASS: Repeated package installation preserves data.'
     Write-Host 'PASS: Package contains IIS config and excludes local/development settings.'
 }finally{

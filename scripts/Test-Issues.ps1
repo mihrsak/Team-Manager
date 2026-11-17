@@ -81,6 +81,12 @@ try {
     $newPriority='🔴++ Kritično'
     $page=Post "/Issue?projectId=$typeProject&handler=Save" $admin @{'Input.Title'='QA long catalog type';'Input.Type'=$longType;'Input.Priority'=$newPriority;'Input.Status'='Novo';'Input.Revision'='0'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE ProjectId=$typeProject AND Title=N'QA long catalog type' AND Type=N'$longType' AND Priority=N'$newPriority'") -eq 1) 'Issue form saves a long type and new priority unchanged'
+    $maxType='QA maximum issue type'.PadRight(50,'x')
+    $page=Post '/Workflow?handler=Value' $admin @{kind='type';name=$maxType}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueTypes WHERE Name=N'$maxType' AND DATALENGTH(Name)=100") -eq 1) 'Workflow saves a type with 50 characters'
+    $overlongType=$maxType+'x'
+    $page=Post '/Workflow?handler=Value' $admin @{kind='type';name=$overlongType}
+    Assert ($page.Content.Contains('validation-summary-errors') -and (Sql "SELECT COUNT(*) FROM dbo.IssueTypes WHERE Name LIKE N'QA maximum issue type%'") -eq 1) 'Workflow rejects a type with 51 characters without inserting it'
     $input=@{'Input.Title'='QA issue';'Input.Description'='QA description';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.DueDate'='2026-12-01';'Input.Revision'='0'}
     $page=Post "/Issue?projectId=$project&handler=Save" $admin $input
     $id=Sql "SELECT Id FROM dbo.Issues WHERE Title='QA issue'"
