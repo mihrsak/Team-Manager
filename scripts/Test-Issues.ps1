@@ -45,17 +45,31 @@ try {
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --create-database --seed-demo;if($LASTEXITCODE -ne 0){throw 'Installer failed'}}finally{Pop-Location}
     $connection.ChangeDatabase($dbName)
-    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 3) 'Fresh installation creates demo issues'
+    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 19) 'Fresh installation creates three standard and sixteen status demo issues'
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Repeated installation failed'}}finally{Pop-Location}
-    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 3) 'Repeated migration/demo does not duplicate or reset data'
+    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 19) 'Repeated migration/demo does not duplicate or reset data'
     $process=Start-Process -FilePath $dotnet -ArgumentList @('"'+$dll+'"','--urls',$base) -WorkingDirectory (Join-Path $root 'src\TeamManager.Web') -WindowStyle Hidden -PassThru
     $ready=$false
     for($i=0;$i -lt 30;$i++){try{Invoke-WebRequest -UseBasicParsing "$base/health/ready" | Out-Null;$ready=$true;break}catch{Start-Sleep -Milliseconds 500}}
     if(!$ready -or $process.HasExited){throw 'Issue test server failed to start.'}
     $admin=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post '/Login' $admin @{EmployeeNumber='admin';Password='admin'}
-    $project=Sql 'SELECT TOP(1) Id FROM dbo.Projects'
+    $project=Sql "SELECT Id FROM dbo.Projects WHERE Name=N'Demo • Team Manager'"
+    $statusProject=Sql "SELECT Id FROM dbo.Projects WHERE Name=N'Demo • Statusi zadataka'"
+    $demoStatuses=@(
+        '📋 Nije započeto','🧠 U planiranju','⏳ U tijeku','🕓 Na čekanju','❌ Blokirano',
+        '🔁 U reviziji / testiranju','✅ Završen','🗃 Arhivirano','🚫 Otkazano','📞 U podršci',
+        '♾️ Kontinuirano','🔄 Neprekidno','🔧 Održavanje / Support','📝 Nominacija projekta','⛔ Odbijen','🧾 UAT'
+    )
+    foreach($demoStatus in $demoStatuses){
+        $encoded=[uri]::EscapeDataString($demoStatus)
+        $filtered=Invoke-WebRequest -UseBasicParsing "$base/Issues?ProjectId=$statusProject&Status=$encoded" -WebSession $admin
+        $html=[Net.WebUtility]::HtmlDecode($filtered.Content)
+        $titles=@([regex]::Matches($html,'Demo · [^<]+') | ForEach-Object { $_.Value.Trim() })
+        Assert ($titles.Count -eq 1 -and $titles[0] -ceq "Demo · $demoStatus") "Demo status filters its own issue: $demoStatus"
+    }
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues i JOIN dbo.IssueStatuses s ON s.Name=i.Status WHERE i.ProjectId=$statusProject AND s.IsClosed=1") -eq 4) 'Demo distinguishes closed statuses from active statuses'
     $input=@{'Input.Title'='QA issue';'Input.Description'='QA description';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.DueDate'='2026-12-01';'Input.Revision'='0'}
     $page=Post "/Issue?projectId=$project&handler=Save" $admin $input
     $id=Sql "SELECT Id FROM dbo.Issues WHERE Title='QA issue'"
