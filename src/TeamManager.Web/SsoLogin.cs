@@ -27,24 +27,6 @@ internal static class SsoLogin
             ? employees[0]!.Trim().ToLowerInvariant() : null;
     }
 
-    internal static ClaimsPrincipal LocalPrincipal(AppUser user, string? issuer = null, string? subject = null)
-    {
-        var identity = new ClaimsIdentity(
-        [
-            new(ClaimTypes.NameIdentifier, user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            new(ClaimTypes.Name, user.EmployeeNumber),
-            new("session_version", user.SessionVersion.ToString(System.Globalization.CultureInfo.InvariantCulture))
-        ], CookieAuthenticationDefaults.AuthenticationScheme);
-
-        if (user.IsAdministrator) identity.AddClaim(new(ClaimTypes.Role, "Administrator"));
-        if (issuer is not null && subject is not null)
-        {
-            identity.AddClaim(new(IssuerClaim, issuer));
-            identity.AddClaim(new(SubjectClaim, subject));
-        }
-        return new(identity);
-    }
-
     internal static void AddProvider(AuthenticationBuilder authentication, IConfiguration configuration)
     {
         if (!Enabled(configuration)) return;
@@ -81,7 +63,7 @@ internal static class SsoLogin
                     context.Fail("SSO identity is not linked to an active account.");
                     return;
                 }
-                context.Principal = LocalPrincipal(user, issuer, subject);
+                context.Principal = LocalSession.Create(user, new(IssuerClaim, issuer), new(SubjectClaim, subject!));
             };
             options.Events.OnRemoteFailure = context =>
             {

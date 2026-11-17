@@ -14,6 +14,10 @@
         <button>@Text["Prijavi se putem SSO-a"]</button>
     </form>
 }
+@if (LdapDirectory.IsEnabled(Configuration))
+{
+    <p><a asp-page="/LdapLogin">@Text["LDAP prijava"]</a></p>
+}
 @if (Configuration.GetValue<bool>("Registration:Enabled"))
 {
     <p><a asp-page="/Register">@Text["Zahtjev za registraciju"]</a></p>

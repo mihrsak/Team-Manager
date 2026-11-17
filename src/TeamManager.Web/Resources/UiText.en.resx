@@ -1320,4 +1320,8 @@
   <data name="Preskoči na glavni sadržaj" xml:space="preserve"><value>Skip to main content</value></data>
   <data name="Prijavi se putem SSO-a" xml:space="preserve"><value>Sign in with SSO</value></data>
   <data name="SSO prijava nije uspjela ili identitet nije povezan s aktivnim računom." xml:space="preserve"><value>SSO sign-in failed or the identity is not linked to an active account.</value></data>
+  <data name="LDAP prijava" xml:space="preserve"><value>LDAP sign-in</value></data>
+  <data name="Lozinka direktorija" xml:space="preserve"><value>Directory password</value></data>
+  <data name="Prijavi se putem LDAP-a" xml:space="preserve"><value>Sign in with LDAP</value></data>
+  <data name="LDAP prijava nije uspjela. Provjeri podatke ili se obrati administratoru." xml:space="preserve"><value>LDAP sign-in failed. Check your credentials or contact your administrator.</value></data>
 </root>

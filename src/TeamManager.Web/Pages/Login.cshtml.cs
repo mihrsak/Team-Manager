@@ -26,7 +26,7 @@ public class LoginModel(UserStore store, IConfiguration configuration):PageModel
         if(!ModelState.IsValid)return Page();
         var user=await store.Authenticate(EmployeeNumber.Trim().ToLowerInvariant(),Password);
         if(user is null){ModelState.AddModelError("","Neispravna prijava ili privremeno zaključan račun. Nakon više pokušaja pričekajte pet minuta.");return Page();}
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,SsoLogin.LocalPrincipal(user));
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,LocalSession.Create(user));
         return RedirectToPage(user.EmployeeNumber=="admin" && Password=="admin" ? "/InitialPassword" : "/Users");
     }
 }

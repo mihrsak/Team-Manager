@@ -44,11 +44,19 @@ builder.Services.AddRateLimiter(options =>
             Window = TimeSpan.FromMinutes(5)
         })
         : RateLimitPartition.GetNoLimiter("read"));
+    options.AddPolicy("LdapLogin", context => HttpMethods.IsPost(context.Request.Method)
+        ? RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new()
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(5)
+        })
+        : RateLimitPartition.GetNoLimiter("read"));
 });
 builder.Services.AddRazorPages(options => {
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.ServiceFilterAttribute(typeof(LocalizedValidationFilter)));
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
+    options.Conventions.AllowAnonymousToPage("/LdapLogin");
     options.Conventions.AllowAnonymousToPage("/Register");
     options.Conventions.AllowAnonymousToPage("/Error");
 });
@@ -73,6 +81,7 @@ builder.Services.AddScoped<ProjectNewsStore>();
 builder.Services.AddScoped<ProjectWikiStore>();
 builder.Services.AddScoped<WorkflowStore>();
 builder.Services.AddScoped<UserStore>();
+builder.Services.AddSingleton<LdapDirectory>();
 builder.Services.AddScoped<ApiTokenStore>();
 builder.Services.AddScoped<RegistrationStore>();
 builder.Services.AddSingleton<ImapImportMonitor>();
@@ -90,6 +99,11 @@ var authentication = builder.Services.AddAuthentication(CookieAuthenticationDefa
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.Events.OnValidatePrincipal = async context => {
+        if (!context.HttpContext.RequestServices.GetRequiredService<LdapDirectory>().AcceptsSession(context.Principal))
+        {
+            context.RejectPrincipal();
+            return;
+        }
         var issuer = context.Principal?.FindFirstValue(SsoLogin.IssuerClaim);
         if (issuer is not null && !string.Equals(
             SsoLogin.LinkedEmployee(builder.Configuration, issuer, context.Principal?.FindFirstValue(SsoLogin.SubjectClaim)),

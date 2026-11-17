@@ -52,6 +52,30 @@ Klijentsku tajnu postavite kroz `Sso__ClientSecret` ili lokalni spremnik tajni. 
 
 Lokalna proba koristi Keycloak na HTTPS portu 7563 i Team Manager na [portu 7564](https://localhost:7564/Login) s povratnim URL-om `https://localhost:7564/signin-sso`. Za ponoviti test `node scripts/Test-Sso.cjs`, koristite izdvojenu SQL bazu s početnim računom `admin / admin`, Node.js i Edge priključen kao u QA-02 uputama. Testni realm `team-manager-qa` ima korisnike `sso-demo`, `sso-unlinked` i `sso-inactive` s lokalnom testnom lozinkom `LocalSsoDemo!7563`. Povežite subjekte za prvi i treći račun. Skripta priprema njihove lokalne račune i deaktivira treći račun prije provjere.
 
+## LDAP prijava
+
+LDAP je zadano isključen. Za uključivanje postavite DNS naziv LDAPS poslužitelja, port (zadano 636) i poveznice brojeva radnika s punim LDAP DN-ovima. Poslužitelj aplikacije treba vjerovati lancu certifikata direktorija, a certifikat mora sadržavati konfigurirani naziv u SAN-u. Primjer za izdvojenu lokalnu probu:
+
+```json
+{
+  "Ldap": {
+    "Enabled": true,
+    "Host": "localhost",
+    "Port": 7565,
+    "Accounts": [
+      {
+        "EmployeeNumber": "ldap-demo",
+        "DistinguishedName": "uid=ldap-demo,ou=people,dc=teammanager,dc=test"
+      }
+    ]
+  }
+}
+```
+
+Korisnik unosi broj radnika i lozinku direktorija. Team Manager provjerava vjerodajnice izravnim LDAPS bindom za konfigurirani DN. Ovlasti i status računa preuzima iz lokalne baze. Za promjene hosta ili poveznica u lokalnoj konfiguraciji ponovno pokrenite aplikaciju. Prijava je ograničena na deset pokušaja po IP adresi u pet minuta.
+
+Lokalna proba koristi OpenLDAP na portu 7565 i Team Manager na [portu 7566](https://localhost:7566/LdapLogin). Za ponavljanje testova pokrenite `node scripts/Test-Ldap.cjs` s Edgeom, Playwrightom i zasebnom testnom SQL bazom s početnim računom `admin / admin`. U direktoriju napravite testne račune `ldap-demo`, `ldap-unlinked` i `ldap-inactive` s testnom lozinkom `LocalLdapDemo!7565`. Povežite prvi i treći račun. Skripta priprema njihove lokalne račune i deaktivira treći. Uz opciju `--untrusted-certificate` provjerava i odvojenu testnu instancu na portu 7567 koja pokazuje na OpenLDAP s nepouzdanim certifikatom.
+
 ## Windows / IIS
 
 Službena referenca: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-10.0
