@@ -14,9 +14,9 @@ try{
     $env:ASPNETCORE_ENVIRONMENT='Production'
     & (Join-Path $PackagePath 'Install-Database.ps1') -CreateDatabase -Demo
     $connection.Open();$connection.ChangeDatabase($dbName)
-    if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 19){throw 'Demo issues missing'}
+    if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 80){throw 'Demo issues missing'}
     & (Join-Path $PackagePath 'Install-Database.ps1') -Demo
-    if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 19){throw 'Demo duplicated'}
+    if((Sql 'SELECT COUNT(*) FROM dbo.Issues') -ne 80){throw 'Demo duplicated'}
     if((Sql 'SELECT COUNT(*) FROM dbo.AppUsers') -ne 1){throw 'Bootstrap duplicated'}
     Write-Host 'PASS: Self-contained package installs a new database, schema, admin and demo data in Production mode.'
     Write-Host 'PASS: Repeated package installation preserves data.'

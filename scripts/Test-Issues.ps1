@@ -45,10 +45,10 @@ try {
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --create-database --seed-demo;if($LASTEXITCODE -ne 0){throw 'Installer failed'}}finally{Pop-Location}
     $connection.ChangeDatabase($dbName)
-    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 19) 'Fresh installation creates three standard and sixteen status demo issues'
+    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 80) 'Fresh installation creates the standard and catalog demo issues'
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Repeated installation failed'}}finally{Pop-Location}
-    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 19) 'Repeated migration/demo does not duplicate or reset data'
+    Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 80) 'Repeated migration/demo does not duplicate or reset data'
     $process=Start-Process -FilePath $dotnet -ArgumentList @('"'+$dll+'"','--urls',$base) -WorkingDirectory (Join-Path $root 'src\TeamManager.Web') -WindowStyle Hidden -PassThru
     $ready=$false
     for($i=0;$i -lt 30;$i++){try{Invoke-WebRequest -UseBasicParsing "$base/health/ready" | Out-Null;$ready=$true;break}catch{Start-Sleep -Milliseconds 500}}
@@ -70,6 +70,17 @@ try {
         Assert ($titles.Count -eq 1 -and $titles[0] -ceq "Demo · $demoStatus") "Demo status filters its own issue: $demoStatus"
     }
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues i JOIN dbo.IssueStatuses s ON s.Name=i.Status WHERE i.ProjectId=$statusProject AND s.IsClosed=1") -eq 4) 'Demo distinguishes closed statuses from active statuses'
+    $priorityProject=Sql "SELECT Id FROM dbo.Projects WHERE Name=N'Demo • Prioriteti zadataka'"
+    $typeProject=Sql "SELECT Id FROM dbo.Projects WHERE Name=N'Demo • Tipovi zadataka'"
+    Assert ((Sql "SELECT COUNT(DISTINCT Priority) FROM dbo.Issues WHERE ProjectId=$priorityProject") -eq 8) 'All eight demo priorities have an issue'
+    Assert ((Sql "SELECT COUNT(DISTINCT Type) FROM dbo.Issues WHERE ProjectId=$typeProject") -eq 53) 'All fifty-three demo types have an issue'
+    $catalog=Invoke-WebRequest "$base/Issue?projectId=$typeProject" -WebSession $admin
+    $html=[Net.WebUtility]::HtmlDecode($catalog.Content)
+    Assert ($html.Contains('🔴++ Kritično') -and $html.Contains('🧯 Rješavanje produkcijskih problema')) 'Priority and long issue type appear in the form'
+    $longType='🧯 Rješavanje produkcijskih problema'
+    $newPriority='🔴++ Kritično'
+    $page=Post "/Issue?projectId=$typeProject&handler=Save" $admin @{'Input.Title'='QA long catalog type';'Input.Type'=$longType;'Input.Priority'=$newPriority;'Input.Status'='Novo';'Input.Revision'='0'}
+    Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE ProjectId=$typeProject AND Title=N'QA long catalog type' AND Type=N'$longType' AND Priority=N'$newPriority'") -eq 1) 'Issue form saves a long type and new priority unchanged'
     $input=@{'Input.Title'='QA issue';'Input.Description'='QA description';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.DueDate'='2026-12-01';'Input.Revision'='0'}
     $page=Post "/Issue?projectId=$project&handler=Save" $admin $input
     $id=Sql "SELECT Id FROM dbo.Issues WHERE Title='QA issue'"

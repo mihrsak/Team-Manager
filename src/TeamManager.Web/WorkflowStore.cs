@@ -13,7 +13,8 @@ public sealed class WorkflowStore(IConfiguration configuration)
     public async Task AddValue(int actor,string kind,string name,bool closed)
     {
         var table=kind switch{"type"=>"IssueTypes","status"=>"IssueStatuses","priority"=>"IssuePriorities",_=>throw new ArgumentException()};
-        if(string.IsNullOrWhiteSpace(name)||name.Length>(kind=="priority"?20:30))throw new ArgumentException("Neispravan naziv.");
+        var maxLength = kind switch { "priority" => 20, "type" => 50, _ => 30 };
+        if(string.IsNullOrWhiteSpace(name)||name.Length>maxLength)throw new ArgumentException("Neispravan naziv.");
         await using var c=Connect();
         await AdministrationAuditStore.Execute(c,new(actor,"workflow.value.create",name.Trim(),kind),
             kind=="status"?"INSERT dbo.IssueStatuses(Name,IsClosed) VALUES(@name,@closed)":$"INSERT dbo.{table}(Name) VALUES(@name)",

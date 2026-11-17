@@ -63,6 +63,8 @@ IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju
 
 Opcionalno učitavanje demo podataka (`--seed-demo` odnosno `Install-Database.ps1 -Demo`) dodaje projekt **Demo • Statusi zadataka** s jednim primjerom za svaki od 16 statusa. **Završen**, **Arhivirano**, **Otkazano** i **Odbijen** označeni su kao zatvoreni, a **UAT** je aktivan do završne odluke. Ponovno učitavanje čuva postojeće demo zadatke i statuse.
 
+Demo učitavanje dodaje i projekte **Demo • Prioriteti zadataka** i **Demo • Tipovi zadataka** s primjerima za svih 8 prioriteta i 53 tipa. Broj prioriteta naveden je u naslovu primjera, a kategorija tipa u opisu. Ažuriranje sheme na verziju 42 podržava nazive tipova do 50 znakova. Demo vrijednosti učitavaju se samo pri izričitom pokretanju demo učitavanja.
+
 Iz korijena repozitorija pokrenite `pwsh -NoProfile -File scripts/Test-Integration.ps1`. Potrebni su PowerShell 7, .NET SDK, Git, SQL Express (`localhost\SQLEXPRESS`), `sqlcmd` i pouzdan razvojni HTTPS certifikat (`dotnet dev-certs https --trust`).
 
 Skripta objavljuje aktualni Release build i pokreće provjere bootstrapa, ovlasti, modula, Git povijesti, API-ja te ulazne i izlazne pošte u zasebnim privremenim SQL bazama. Koristi portove 7343, 7543, 7544 i 7643. Za test modula po potrebi odaberite drugi port parametrom `-IssuePort`. SMTP i IMAP provjere koriste lokalne simulatore. IIS testni site na portu 7443 može ostati pokrenut.
