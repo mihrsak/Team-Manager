@@ -67,7 +67,9 @@ Pokrenite aplikaciju na `https://localhost:7560` s pouzdanim razvojnim certifika
 
 Za isti preglednički test na lokalnom IIS testnom siteu postavite `$env:TEAM_MANAGER_QA_URL='https://localhost:7443'`. Lokalni test opterećenja pokrenite naredbom `node scripts/Test-IisLoad.cjs`. Ako Node ne prepoznaje lokalni certifikat, postavite `NODE_EXTRA_CA_CERTS` na putanju javnog PEM certifikata tog sitea. Skripta provjerava zdravstvene endpointove, zaštitu prijave i CSRF prije mjerenja te mjeri šest ruta za čitanje tijekom 10 sekundi po razini (1, 10 i 25 paralelnih zahtjeva). Rezultat ispisuje broj odgovora, zahtjeve u sekundi, medijan, p95 i greške.
 
-Ručni HR/EN pregled obuhvaća redoslijed fokusa od prečaca do prijave, lokalizirane oznake i pogreške te čitljivost glavnih stranica na širini od 320 px. Pristupačna imena provjeravaju se i u stablu pristupačnosti preglednika. Potpuni pregled uz čitač zaslona i provjera kapaciteta u ciljnom produkcijskom okruženju zasebne su provjere.
+Ručni HR/EN pregled obuhvaća redoslijed fokusa od prečaca do prijave, lokalizirane oznake i pogreške te čitljivost glavnih stranica na širini od 320 px. Pristupačna imena provjeravaju se i u stablu pristupačnosti preglednika.
+
+Na lokalnom IIS-u provjeren je govorni izlaz NVDA 2026.3.1 s eSpeak NG u Microsoft Edgeu na oba jezika. Pokriveni su prečac na glavni sadržaj, polja prijave i poruka neuspjele prijave, navigacija do projekata, polja za izradu zadatka, komentar i vrijeme, pretraga i rezultat te odjava. Sam NVDA bio je postavljen na hrvatski pa su nazivi uloga kontrola poput „gumb” ostali na hrvatskom i uz engleske oznake aplikacije. Provjera kapaciteta na ciljnom produkcijskom IIS-u ostaje zasebna.
 
 ## OpenShift
 
