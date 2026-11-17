@@ -8,6 +8,12 @@
     <div id="sign-in-errors" asp-validation-summary="All" role="alert" tabindex="-1" autofocus></div>
 }
 <form method="post" asp-page="/Login"><label>@Text["Broj radnika"]<input asp-for="EmployeeNumber" autocomplete="username" required maxlength="30"></label><label>@Text["Lozinka"]<input asp-for="Password" type="password" autocomplete="current-password" required maxlength="200"></label><button>@Text["Prijavi se"]</button></form>
+@if (Model.SsoEnabled)
+{
+    <form method="post" asp-page="/Login" asp-page-handler="Sso">
+        <button>@Text["Prijavi se putem SSO-a"]</button>
+    </form>
+}
 @if (Configuration.GetValue<bool>("Registration:Enabled"))
 {
     <p><a asp-page="/Register">@Text["Zahtjev za registraciju"]</a></p>

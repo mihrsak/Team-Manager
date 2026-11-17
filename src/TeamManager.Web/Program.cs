@@ -7,6 +7,7 @@ using System.Threading.RateLimiting;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
@@ -80,7 +81,7 @@ builder.Services.AddScoped<Permissions>();
 builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => {
+var authentication = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options => {
     options.LoginPath = "/Login";
     options.AccessDeniedPath = "/Denied";
     options.Cookie.Name = "TeamManager.Session";
@@ -89,6 +90,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.Events.OnValidatePrincipal = async context => {
+        var issuer = context.Principal?.FindFirstValue(SsoLogin.IssuerClaim);
+        if (issuer is not null && !string.Equals(
+            SsoLogin.LinkedEmployee(builder.Configuration, issuer, context.Principal?.FindFirstValue(SsoLogin.SubjectClaim)),
+            context.Principal?.Identity?.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            context.RejectPrincipal();
+            return;
+        }
         var id = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if(!int.TryParse(id,out var userId)){context.RejectPrincipal();return;}
         var version = context.Principal?.FindFirst("session_version")?.Value;
@@ -110,6 +119,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             identity.AddClaim(new(System.Security.Claims.ClaimTypes.Role,right));
     };
 });
+SsoLogin.AddProvider(authentication, builder.Configuration);
 builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();

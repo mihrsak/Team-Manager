@@ -29,6 +29,29 @@ Ako DBA unaprijed kreira praznu bazu, izostavite `-CreateDatabase`. Nadogradnja 
 
 Za neobavezne probne podatke dodajte `-Demo`. Demo se ne učitava pri običnom pokretanju aplikacije. Prva prazna instalacija dobiva admin/admin; prijava nudi neobveznu promjenu lozinke. Postojeći korisnici nisu izmijenjeni. Ne koristite demo podatke kao stvarne bankarske podatke.
 
+## OpenID Connect SSO
+
+SSO je zadano isključen. Za uključivanje registrirajte povjerljiv OIDC klijent s authorization code tokom i PKCE S256. U pružatelju identiteta konfigurirajte točan HTTPS povratni URL aplikacije sa završetkom `/signin-sso`.
+
+Primjer dijela lokalne konfiguracije:
+
+```json
+{
+  "Sso": {
+    "Enabled": true,
+    "Authority": "https://localhost:7563/realms/team-manager-qa",
+    "ClientId": "team-manager",
+    "Accounts": [
+      { "Subject": "OIDC-sub-iz-pouzdanog-izdavatelja", "EmployeeNumber": "sso-demo" }
+    ]
+  }
+}
+```
+
+Klijentsku tajnu postavite kroz `Sso__ClientSecret` ili lokalni spremnik tajni. `Authority` mora odgovarati izdavatelju (`issuer`) iz OIDC metapodataka. Za svaki postojeći račun koji koristi SSO povežite točnu vrijednost `sub` s brojem radnika. Ime, e-pošta i role iz tokena ne određuju aplikacijske ovlasti. Promjene lokalne konfiguracije primijenite ponovnim pokretanjem aplikacije. Gumb za odjavu zatvara Team Manager sesiju, a sesiju kod pružatelja identiteta uređuje njegova politika.
+
+Lokalna proba koristi Keycloak na HTTPS portu 7563 i Team Manager na [portu 7564](https://localhost:7564/Login) s povratnim URL-om `https://localhost:7564/signin-sso`. Za ponoviti test `node scripts/Test-Sso.cjs`, koristite izdvojenu SQL bazu s početnim računom `admin / admin`, Node.js i Edge priključen kao u QA-02 uputama. Testni realm `team-manager-qa` ima korisnike `sso-demo`, `sso-unlinked` i `sso-inactive` s lokalnom testnom lozinkom `LocalSsoDemo!7563`. Povežite subjekte za prvi i treći račun. Skripta priprema njihove lokalne račune i deaktivira treći račun prije provjere.
+
 ## Windows / IIS
 
 Službena referenca: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-10.0

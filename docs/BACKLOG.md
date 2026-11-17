@@ -17,7 +17,7 @@ Ovo je vlastita .NET implementacija funkcionalnog uzora, ne kopija izvornog koda
 | AUTH-03 | Profil, funkcija, organizacijska jedinica, promjena lozinke | Gotovo |
 | AUTH-04 | Deaktivacija, reset lozinke, opoziv aktivnih sesija | Gotovo |
 | AUTH-05 | Registracija s odobrenjem / potvrdom e-pošte | Gotovo: opcionalna registracija s administratorskim odobrenjem, HR/EN; potvrda e-pošte izvan ovog opsega |
-| AUTH-06 | AD/LDAP i autentikacija kroz bankarski SSO | Backlog |
+| AUTH-06 | AD/LDAP i autentikacija kroz bankarski SSO | Opcionalni OIDC SSO, HR/EN i lokalna provjera s Keycloakom. SSO koristi postojeće Team Manager račune i ovlasti. Preostaju bankarski pružatelj identiteta i provjera AD/LDAP integracije |
 | ROLE-01 | Prilagodljive role, zbroj globalnih ovlasti, serverske provjere | Gotovo |
 | ROLE-02 | Članstva po timu/projektu, izolacija ovlasti između projekata | Gotovo |
 | ROLE-03 | Više rola po članstvu, grupe korisnika i nasljeđivanje | Gotovo: više rola po članstvu, grupe s globalnim rolama i opcionalno nasljeđivanje projektnih rola |

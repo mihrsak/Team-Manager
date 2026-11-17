@@ -1318,4 +1318,6 @@
   <data name="Provjera sandučića ili uvoz nisu uspjeli." xml:space="preserve"><value>The mailbox check or import failed.</value></data>
   <data name="Posljednji uvezeni zadatak" xml:space="preserve"><value>Last imported issue</value></data>
   <data name="Preskoči na glavni sadržaj" xml:space="preserve"><value>Skip to main content</value></data>
+  <data name="Prijavi se putem SSO-a" xml:space="preserve"><value>Sign in with SSO</value></data>
+  <data name="SSO prijava nije uspjela ili identitet nije povezan s aktivnim računom." xml:space="preserve"><value>SSO sign-in failed or the identity is not linked to an active account.</value></data>
 </root>
