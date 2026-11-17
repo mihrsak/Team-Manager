@@ -1,7 +1,12 @@
+#Requires -Version 7.0
+param([string]$DotnetPath, [string]$ApplicationDll)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $dbName='TeamManager_BootstrapTest_'+[guid]::NewGuid().ToString('N')
 $base='https://localhost:7343'
+if(Get-NetTCPConnection -LocalPort 7343 -State Listen -ErrorAction SilentlyContinue){throw 'Bootstrap test port 7343 is already in use.'}
+$exe=if($DotnetPath){$DotnetPath}else{Join-Path $root '.tools\dotnet\dotnet.exe'}
+$dll=if($ApplicationDll){$ApplicationDll}else{Join-Path $root 'artifacts\release-build\TeamManager.Web.dll'}
 $connection=New-Object System.Data.SqlClient.SqlConnection 'Server=localhost\SQLEXPRESS;Database=master;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
 $process=$null
 $oldConnection=$env:ConnectionStrings__TeamManager
@@ -9,8 +14,6 @@ $oldEnvironment=$env:ASPNETCORE_ENVIRONMENT
 function Sql($sql){$cmd=$connection.CreateCommand();$cmd.CommandText=$sql;try{$cmd.ExecuteScalar()}finally{$cmd.Dispose()}}
 function Assert($ok,$message){if(-not $ok){throw $message};Write-Host "PASS: $message"}
 function Start-App {
-    $exe=Join-Path $root '.tools\dotnet\dotnet.exe'
-    $dll=Join-Path $root 'artifacts\release-build\TeamManager.Web.dll'
     $script:process=Start-Process -FilePath $exe -ArgumentList @('"'+$dll+'"','--urls',$base) -WorkingDirectory (Join-Path $root 'src\TeamManager.Web') -WindowStyle Hidden -PassThru
     for($i=0;$i -lt 30;$i++){try{Invoke-WebRequest -UseBasicParsing "$base/Login" | Out-Null;return}catch{Start-Sleep -Milliseconds 500}}
     throw 'Test server failed to start'
@@ -34,22 +37,22 @@ try {
     Assert ((Sql "SELECT COUNT(*) FROM dbo.AppUsers WHERE EmployeeNumber='admin' AND PasswordHash<>'admin'") -eq 1) 'Empty database creates one hashed admin account'
     $session=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post '/Login' $session @{EmployeeNumber='admin';Password='admin'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/InitialPassword') 'Initial login offers password change'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/InitialPassword') 'Initial login offers password change'
     $page=Invoke-WebRequest -UseBasicParsing "$base/Users" -WebSession $session
     Assert ($page.Content.Contains('Novi korisnik')) 'Skipping reminder allows full administration'
     $page=Post '/Logout' $session @{}
     $page=Post '/Login' $session @{EmployeeNumber='admin';Password='admin'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/InitialPassword') 'Reminder returns at next default-password login'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/InitialPassword') 'Reminder returns at next default-password login'
     $id=Sql "SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber='admin'"
     $password=[guid]::NewGuid().ToString('N')
     $page=Post "/Profile?id=$id&handler=Password" $session @{currentPassword='admin';newPassword=$password;confirmPassword=$password}
     Stop-App;Start-App
     $session=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post '/Login' $session @{EmployeeNumber='admin';Password=$password}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Users') 'Changed password survives restart and reminder stops'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Users') 'Changed password survives restart and reminder stops'
     $session=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post '/Login' $session @{EmployeeNumber='admin';Password='admin'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Old default password no longer works'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Login') 'Old default password no longer works'
     Stop-App
     Sql "UPDATE dbo.AppUsers SET EmployeeNumber='existing-worker' WHERE EmployeeNumber='admin'" | Out-Null
     Start-App

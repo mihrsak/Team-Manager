@@ -59,6 +59,12 @@ Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data 
 
 IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju.
 
+## Integracijske provjere QA-01
+
+Iz korijena repozitorija pokrenite `pwsh -NoProfile -File scripts/Test-Integration.ps1`. Potrebni su PowerShell 7, .NET SDK, Git, SQL Express (`localhost\SQLEXPRESS`), `sqlcmd` i pouzdan razvojni HTTPS certifikat (`dotnet dev-certs https --trust`).
+
+Skripta objavljuje aktualni Release build i pokreće provjere bootstrapa, ovlasti, modula, Git povijesti, API-ja te ulazne i izlazne pošte u zasebnim privremenim SQL bazama. Koristi portove 7343, 7543, 7544 i 7643. Za test modula po potrebi odaberite drugi port parametrom `-IssuePort`. SMTP i IMAP provjere koriste lokalne simulatore. IIS testni site na portu 7443 može ostati pokrenut.
+
 ## Pregledničke provjere QA-02
 
 `node scripts/Test-Browser.cjs` pokreće automatsku provjeru u Microsoft Edgeu. Potrebni su Node.js, Edge te paketi `playwright-core` 1.56.1 raspakiran u `artifacts/qa-browser/playwright` i `axe-core` 4.11.1 raspakiran u `artifacts/qa-browser/axe`. Raspakirajte sadržaj korijenske mape paketa (`package/`) izravno u odgovarajuću ciljnu mapu.

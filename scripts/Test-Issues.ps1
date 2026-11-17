@@ -1,8 +1,10 @@
-param([string]$DotnetPath, [string]$ApplicationDll)
+#Requires -Version 7.0
+param([string]$DotnetPath, [string]$ApplicationDll, [ValidateRange(1024,65535)][int]$Port=7443)
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $dbName='TeamManager_IssueTest_'+[guid]::NewGuid().ToString('N')
-$base='https://localhost:7443'
+$base="https://localhost:$Port"
+if(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue){throw "Test port $Port is already in use."}
 $dotnet=if($DotnetPath){$DotnetPath}else{Join-Path $root '.tools\dotnet\dotnet.exe'}
 $dll=if($ApplicationDll){$ApplicationDll}else{Join-Path $root 'artifacts\release-build\TeamManager.Web.dll'}
 $connection=New-Object System.Data.SqlClient.SqlConnection 'Server=localhost\SQLEXPRESS;Database=master;Integrated Security=True;Encrypt=True;TrustServerCertificate=True'
@@ -23,6 +25,19 @@ function Post($path,$session,$data){
     Invoke-WebRequest -UseBasicParsing "$base$path" -Method Post -WebSession $session -Body ($body -join '&') -ContentType 'application/x-www-form-urlencoded'
 }
 function Stop-App{if($process -and -not $process.HasExited){Stop-Process -Id $process.Id;$process.WaitForExit()}}
+function PostWithoutRedirect($path,$session,$body,$contentType){
+    $handler=[Net.Http.HttpClientHandler]::new()
+    $handler.AllowAutoRedirect=$false
+    $handler.CookieContainer=$session.Cookies
+    $client=[Net.Http.HttpClient]::new($handler)
+    try{
+        $content=[Net.Http.StringContent]::new($body,[Text.Encoding]::UTF8)
+        $content.Headers.ContentType=[Net.Http.Headers.MediaTypeHeaderValue]::Parse($contentType)
+        $response=$client.PostAsync("$base$path",$content).GetAwaiter().GetResult()
+        try{[pscustomobject]@{StatusCode=[int]$response.StatusCode;Location=[string]$response.Headers.Location}}
+        finally{$response.Dispose();$content.Dispose()}
+    }finally{$client.Dispose()}
+}
 try {
     $connection.Open()
     $env:ConnectionStrings__TeamManager="Server=localhost\SQLEXPRESS;Database=$dbName;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
@@ -35,7 +50,9 @@ try {
     try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Repeated installation failed'}}finally{Pop-Location}
     Assert ((Sql 'SELECT COUNT(*) FROM dbo.Issues') -eq 3) 'Repeated migration/demo does not duplicate or reset data'
     $process=Start-Process -FilePath $dotnet -ArgumentList @('"'+$dll+'"','--urls',$base) -WorkingDirectory (Join-Path $root 'src\TeamManager.Web') -WindowStyle Hidden -PassThru
-    for($i=0;$i -lt 30;$i++){try{Invoke-WebRequest -UseBasicParsing "$base/Login" | Out-Null;break}catch{Start-Sleep -Milliseconds 500}}
+    $ready=$false
+    for($i=0;$i -lt 30;$i++){try{Invoke-WebRequest -UseBasicParsing "$base/health/ready" | Out-Null;$ready=$true;break}catch{Start-Sleep -Milliseconds 500}}
+    if(!$ready -or $process.HasExited){throw 'Issue test server failed to start.'}
     $admin=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Post '/Login' $admin @{EmployeeNumber='admin';Password='admin'}
     $project=Sql 'SELECT TOP(1) Id FROM dbo.Projects'
@@ -75,7 +92,7 @@ try {
     $page=Post "/Issue?id=$id&handler=Save" $regular $input
     Assert ((Sql "SELECT Status FROM dbo.Issues WHERE Id=$id") -eq 'QAReview') 'Configured workflow transition permits developer status change'
     $page=Invoke-WebRequest -UseBasicParsing "$base/Workflow" -WebSession $regular
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project developer cannot modify global workflow'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Project developer cannot modify global workflow'
     try{Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Comment" -WebSession $regular -Method Post -Body @{text='no token'}|Out-Null;throw 'CSRF accepted'}catch{Assert ($_.Exception.Response.StatusCode.value__ -eq 400) 'Missing antiforgery token rejected'}
     $report=Invoke-WebRequest -UseBasicParsing "$base/TimeReport?ProjectId=$project&Person=admin&Activity=QA%20analysis&From=2026-11-08&To=2026-11-08" -WebSession $admin
     Assert ($report.Content.Contains('QA analysis') -and $report.Content -match '1[.,]50 h') 'Time report filters and totals matching entries'
@@ -114,7 +131,7 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $regular
     Assert ($page.Content.Contains('QA changed')) 'Public project grants authenticated nonmember read access'
     $page=Post "/Project?id=$project" $regular $projectInput
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public visibility does not grant project administration'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Public visibility does not grant project administration'
     $before=Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id"
     $page=Post "/Issue?id=$id&handler=Comment" $regular @{text='forbidden public comment'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueEvents WHERE IssueId=$id") -eq $before) 'Public visibility does not grant commenting'
@@ -145,13 +162,13 @@ try {
     $page=Post "/Project?id=$child" $regular $childInput
     Assert ((Sql "SELECT ParentId FROM dbo.Projects WHERE Id=$child") -eq $parent) 'Scoped manager cannot move project under unauthorized parent'
     $page=Post "/Project?id=$project" $regular $projectInput
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project management permission does not leak to another project'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Project management permission does not leak to another project'
     Push-Location (Join-Path $root 'src\TeamManager.Web')
     try{& $dotnet $dll --apply-schema --seed-demo;if($LASTEXITCODE -ne 0){throw 'Post-edit migration failed'}}finally{Pop-Location}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Projects WHERE Id=$project AND IsPublic=1 AND Description='Public demo' AND Revision=5") -eq 1) 'Repeated installation preserves edited project settings'
     # PROJ-03: module settings, route protection and preservation of existing data.
     $page=Post "/Project?id=$project&handler=Modules" $regular @{issuesEnabled='false';timeEnabled='false';revision='5'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Nonmanager cannot change project modules'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Nonmanager cannot change project modules'
     $page=Post "/Project?id=$project&handler=Modules" $admin @{issuesEnabled='true';timeEnabled='false';revision='5'}
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
     Assert (-not $page.Content.Contains('QA time') -and -not $page.Content.Contains('name="hours"')) 'Disabled time module hides entries history and input form'
@@ -191,7 +208,7 @@ try {
     $childInput['Input.Revision']='3'
     $childInput['Input.InheritParentRoles']='true'
     $page=Post "/Project?id=$child" $regular $childInput
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Child manager cannot enable inheritance without parent authority'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Child manager cannot enable inheritance without parent authority'
     $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
     $inheritedInput=@{'Input.Name'='QA inherited';'Input.ParentId'=$parent;'Input.State'='Active';'Input.Revision'='0'}
     $page=Post '/Project' $admin $inheritedInput
@@ -217,10 +234,10 @@ try {
     $csv=[Text.Encoding]::UTF8.GetString($export.RawContentStream.ToArray())
     $expected='"'+[char]39+'=QA,""CSV"""'
     Assert ($csv.Contains($expected)) 'CSV quotes delimiters and prevents spreadsheet formulas'
-    Assert ($export.Headers['Content-Disposition'].Contains('zadaci.csv')) 'CSV is an attachment'
+    Assert ($export.Headers['Content-Disposition'] -match 'zadaci\.csv') 'CSV is an attachment'
     $rev=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
     $page=Post "/Issue?id=$id&handler=Transfer" $regular @{revision=$rev;destination=$parent;move='true'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Move requires management of both projects'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Move requires management of both projects'
     $page=Post "/Issue?id=$id&handler=Transfer" $admin @{revision=$rev;destination=$parent}
     $copy=Sql "SELECT MAX(Id) FROM dbo.Issues WHERE ProjectId=$parent"
     Assert ((Sql "SELECT COUNT(*) FROM dbo.Issues WHERE Id=$copy AND Status=N'Novo' AND AssigneeId IS NULL") -eq 1) 'Copy creates an unassigned issue in the initial status'
@@ -244,7 +261,7 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $regular
     Assert (-not $page.Content.Contains("href=`"/Issue?id=$copy`"")) 'Related issue in private project is hidden from nonmembers'
     $page=Post "/Issue?id=$publicIssue&handler=Link" $regular @{otherId=$copy;relation='related';remove='true'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Link changes require edit permission on both issues'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Link changes require edit permission on both issues'
     $page=Post "/Issue?id=$copy&handler=Link" $admin @{otherId=$publicIssue;relation='related';remove='true'}
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueLinks WHERE Kind='related'") -eq 0) 'Symmetric link can be removed from either end'
     $page=Post "/Issue?id=$id&handler=Link" $admin @{otherId=$copy;relation='duplicate'}
@@ -263,8 +280,8 @@ try {
     Assert ($page.Content.Contains('QA saved filter')) 'Saved issue filter is listed for its owner'
     $savedId=Sql "SELECT Id FROM dbo.SavedIssueQueries WHERE Name=N'QA saved filter'"
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Saved&id=$savedId" -WebSession $admin
-    Assert ($page.BaseResponse.ResponseUri.Query -match "ProjectId=$parent" -and [uri]::UnescapeDataString($page.BaseResponse.ResponseUri.Query) -match 'Query=QA,') 'Saved issue filter reapplies project and search'
-    Assert ($page.BaseResponse.ResponseUri.Query -match 'SortOrder=oldest' -and $page.BaseResponse.ResponseUri.Query -match 'GroupBy=priority') 'Saved query restores sort and grouping'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.Query -match "ProjectId=$parent" -and [uri]::UnescapeDataString($page.BaseResponse.RequestMessage.RequestUri.Query) -match 'Query=QA,') 'Saved issue filter reapplies project and search'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.Query -match 'SortOrder=oldest' -and $page.BaseResponse.RequestMessage.RequestUri.Query -match 'GroupBy=priority') 'Saved query restores sort and grouping'
     Assert ($page.Content.Contains('<th>Prioritet</th>') -and -not $page.Content.Contains('<th>Rok</th>')) 'Saved query restores selected columns'
     Assert ($page.Content -match '<caption>Hitno\s*.\s*2 zadataka</caption>') 'Grouped list shows the count for matching issues'
     $firstLink=$page.Content.IndexOf("href=`"/Issue?id=$id`"")
@@ -275,13 +292,13 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Issues?handler=Saved&id=$savedId" -WebSession $regular | Out-Null
         throw 'Other user could open saved query'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Other user cannot open saved query by ID'
     }
     try {
         Post "/Issues?handler=DeleteQuery&id=$savedId" $regular @{} | Out-Null
         throw 'Other user could delete saved query'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Other user cannot delete saved query by ID'
     }
     $page=Post "/Issues?handler=DeleteQuery&id=$savedId" $admin @{}
@@ -325,11 +342,11 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Roadmap?projectId=$parent" -WebSession $regular | Out-Null
         throw 'Private roadmap was visible'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private roadmap is hidden from nonmembers'
     }
     $page=Post "/Roadmap?handler=Save&projectId=$project" $regular @{kind='milestone';name='Unauthorized'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public roadmap still requires management permission to edit'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Public roadmap still requires management permission to edit'
     $schedule['Input.RoadmapItemId']=$itemId
     $schedule['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
     $page=Post "/Issue?id=$id&handler=Save" $admin $schedule
@@ -366,7 +383,7 @@ try {
     Assert ($rss.Headers['Cache-Control'] -match 'no-store') 'Personalized feed disables caching'
     $anon=New-Object Microsoft.PowerShell.Commands.WebRequestSession
     $page=Invoke-WebRequest -UseBasicParsing "$base/Activity?handler=Atom" -WebSession $anon
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Login') 'Anonymous clients cannot access activity feeds'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Login') 'Anonymous clients cannot access activity feeds'
     Sql "UPDATE dbo.Issues SET AssigneeId=$uid WHERE Id IN ($id,$copy,$publicIssue); UPDATE dbo.Issues SET Status=N'Novo',DueDate='2000-01-01' WHERE Id=$publicIssue" | Out-Null
     $dashboard=Invoke-WebRequest -UseBasicParsing "$base/Dashboard" -WebSession $regular
     Assert ($dashboard.Content.Contains('Rok je pro') -and $dashboard.Content.Contains("href=`"/Issue?id=$publicIssue`"")) 'Dashboard includes an overdue assigned issue'
@@ -414,7 +431,7 @@ try {
     try {
         Post "/Notifications?handler=Read&eventId=$eventId" $admin @{} | Out-Null
         throw 'Other user changed notification state'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Another user cannot mark a notification as read'
     }
     $page=Post "/Notifications?handler=Read&eventId=$eventId" $regular @{}
@@ -432,9 +449,9 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/ProjectNews?projectId=$project&newsId=$newsId" -WebSession $regular
     Assert ($page.Content.Contains('QA public news')) 'Authenticated user can read public project news'
     $page=Post "/ProjectNews?handler=Publish&projectId=$project" $regular @{title='Unauthorized';body='Forbidden'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant publishing permission'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant publishing permission'
     $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $regular @{body='Forbidden'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Comment submission requires the news permission'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Comment submission requires the news permission'
     $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$project;role='Developer'}
     $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $regular @{body='QA <comment>'}
     Assert ($page.Content.Contains('QA &lt;comment&gt;')) 'Member with news permission can comment'
@@ -443,12 +460,12 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/ProjectNews?projectId=$project&newsId=$privateNews" -WebSession $regular | Out-Null
         throw 'Private news was visible through the public project'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private news cannot be read using a public project ID'
     }
     Sql "UPDATE dbo.Projects SET State='Closed' WHERE Id=$project" | Out-Null
     $page=Post "/ProjectNews?handler=Comment&projectId=$project&newsId=$newsId" $admin @{body='Forbidden on closed project'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks new comments even for administrator'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Closed project blocks new comments even for administrator'
     $page=Post "/Wiki?handler=Save&projectId=$parent" $admin @{title='QA wiki first';body='QA <first> revision'}
     $wikiId=Sql "SELECT Id FROM dbo.ProjectWikiPages WHERE ProjectId=$parent AND Title=N'QA wiki first'"
     Assert ($page.Content.Contains('QA &lt;first&gt; revision')) 'Wiki creation stores plain text and displays it escaped'
@@ -463,14 +480,14 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Wiki?projectId=$parent&wikiId=$wikiId&revision=1&compare=2" -WebSession $regular | Out-Null
         throw 'Private wiki comparison was visible'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Wiki hides private page history after project access is revoked'
     }
     $page=Post "/Wiki?handler=Save&projectId=$project" $admin @{title='Forbidden';body='Closed project'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks wiki edits'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Closed project blocks wiki edits'
     Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$project; DELETE dbo.ProjectMembers WHERE ProjectId=$project AND UserId=$uid" | Out-Null
     $page=Post "/Wiki?handler=Save&projectId=$project" $regular @{title='Forbidden';body='Missing wiki permission'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant wiki editing'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Public project visibility does not grant wiki editing'
     $detail=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
     $token=[regex]::Match($detail.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
     $boundary='TeamManagerQABoundary'
@@ -487,8 +504,8 @@ try {
         "--$boundary--",
         ''
     ) -join "`r`n"
-    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Upload" -Method Post -WebSession $admin -Body $upload -ContentType "multipart/form-data; boundary=$boundary" -MaximumRedirection 0 -ErrorAction SilentlyContinue
-    Assert ($page.StatusCode -eq 303 -and $page.Headers.Location -match "/Issue\?id=$id$") 'Upload redirects to the issue detail'
+    $page=PostWithoutRedirect "/Issue?id=$id&handler=Upload" $admin $upload "multipart/form-data; boundary=$boundary"
+    Assert ($page.StatusCode -eq 303 -and $page.Location -match "/Issue\?id=$id$") "Upload redirects to the issue detail (HTTP $($page.StatusCode))"
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id" -WebSession $admin
     Assert ($page.Content.Contains('qa-attachment.txt')) 'Issue editor can upload an attachment'
     $attachmentId=Sql "SELECT Id FROM dbo.IssueAttachments WHERE IssueId=$id"
@@ -498,17 +515,18 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=Attachment&attachmentId=$attachmentId" -WebSession $regular | Out-Null
         throw 'Nonmember downloaded private attachment'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private attachment is hidden from nonmembers'
     }
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue&handler=Attachment&attachmentId=$attachmentId" -WebSession $admin | Out-Null
         throw 'Attachment was served under another issue'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Attachment ID must belong to the requested issue'
     }
-    $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$id&handler=RemoveAttachment&attachmentId=$attachmentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
-    Assert ($page.StatusCode -eq 303) 'Removal redirects to the issue detail'
+    $formToken='__RequestVerificationToken='+[uri]::EscapeDataString([Net.WebUtility]::HtmlDecode($token))
+    $page=PostWithoutRedirect "/Issue?id=$id&handler=RemoveAttachment&attachmentId=$attachmentId" $admin $formToken 'application/x-www-form-urlencoded'
+    Assert ($page.StatusCode -eq 303) "Removal redirects to the issue detail (HTTP $($page.StatusCode))"
     Assert ((Sql "SELECT COUNT(*) FROM dbo.IssueAttachments WHERE Id=$attachmentId") -eq 0) 'Issue editor can remove attachment'
     $library=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent" -WebSession $admin
     $token=[regex]::Match($library.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"').Groups[1].Value
@@ -533,7 +551,7 @@ try {
         "--$boundary--",
         ''
     ) -join "`r`n"
-    $response=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent&handler=Add" -Method Post -WebSession $admin -Body $documentUpload -ContentType "multipart/form-data; boundary=$boundary" -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    $response=PostWithoutRedirect "/ProjectDocuments?projectId=$parent&handler=Add" $admin $documentUpload "multipart/form-data; boundary=$boundary"
     Assert ($response.StatusCode -eq 303) 'Project manager can upload a document with a title and description'
     $library=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent" -WebSession $admin
     Assert ($library.Content.Contains('QA project document') -and $library.Content.Contains('QA &lt;document description&gt;')) 'Project library displays document metadata safely'
@@ -544,27 +562,26 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing $documentUrl -WebSession $regular | Out-Null
         throw 'Nonmember downloaded private project document'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Private project document is hidden from nonmembers'
     }
     try {
         Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$project&handler=Download&documentId=$documentId" -WebSession $admin | Out-Null
         throw 'Document was served under another project'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Project document ID cannot be used under another project'
     }
     Sql "UPDATE dbo.Projects SET State='Closed' WHERE Id=$parent" | Out-Null
     $response=Invoke-WebRequest -UseBasicParsing $documentUrl -WebSession $admin
     Assert ($response.StatusCode -eq 200) 'Closed project documents remain downloadable'
-    $admin.MaximumRedirection=5
     $response=Post "/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" $admin @{}
-    Assert ($response.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Closed project blocks document removal'
+    Assert ($response.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Closed project blocks document removal'
     Sql "UPDATE dbo.Projects SET State='Active' WHERE Id=$parent" | Out-Null
-    $response=Invoke-WebRequest -UseBasicParsing "$base/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" -Method Post -WebSession $admin -Body @{__RequestVerificationToken=[System.Net.WebUtility]::HtmlDecode($token)} -MaximumRedirection 0 -ErrorAction SilentlyContinue
+    $formToken='__RequestVerificationToken='+[uri]::EscapeDataString([Net.WebUtility]::HtmlDecode($token))
+    $response=PostWithoutRedirect "/ProjectDocuments?projectId=$parent&handler=Remove&documentId=$documentId" $admin $formToken 'application/x-www-form-urlencoded'
     Assert ($response.StatusCode -eq 303 -and (Sql "SELECT COUNT(*) FROM dbo.ProjectDocuments WHERE Id=$documentId") -eq 0) 'Project manager can remove an active project document'
-    $admin.MaximumRedirection=5
     $page=Post "/Forum?handler=Create&projectId=$project" $regular @{title='Forbidden';body='No posting permission'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Public forum access does not grant posting'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Public forum access does not grant posting'
     $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$project;role='Developer'}
     $page=Post "/Forum?handler=Create&projectId=$project" $regular @{title='QA forum topic';body='QA <forum topic>'}
     $topicId=Sql "SELECT Id FROM dbo.ForumTopics WHERE ProjectId=$project AND Title=N'QA forum topic'"
@@ -572,11 +589,11 @@ try {
     $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $regular @{body='QA forum reply'}
     Assert ($page.Content.Contains('QA forum reply')) 'Forum member can reply'
     $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $regular @{locked='true'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Posting role cannot lock topics'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Posting role cannot lock topics'
     $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $admin @{locked='true'}
     Assert ((Sql "SELECT CAST(IsLocked AS int) FROM dbo.ForumTopics WHERE Id=$topicId") -eq 1) 'Moderator can lock a topic'
     $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $admin @{body='Forbidden while locked'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Locked topics reject new replies even from administrators'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Locked topics reject new replies even from administrators'
     $page=Post "/Forum?handler=Lock&projectId=$project&topicId=$topicId" $admin @{locked='false'}
     $page=Post "/Forum?handler=Reply&projectId=$project&topicId=$topicId" $regular @{body='QA reopened reply'}
     Assert ($page.Content.Contains('QA reopened reply')) 'Unlocking restores posting'
@@ -585,14 +602,14 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Forum?projectId=$project&topicId=$privateTopic" -WebSession $regular | Out-Null
         throw 'Private forum topic was visible through public project'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Forum topic cannot be accessed under a different project'
     }
     $page=Post "/IssueFields?projectId=$parent&handler=Create" $admin @{name='QA reference field'}
     Assert ($page.Content.Contains('QA reference field')) 'Manager can define a text field for the project'
     $field=Sql "SELECT Id FROM dbo.ProjectIssueFields WHERE ProjectId=$parent AND Name=N'QA reference field'"
     $page=Post "/IssueFields?projectId=$project&handler=Create" $regular @{name='Unauthorized field'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Issue editor cannot define project fields without project management'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Issue editor cannot define project fields without project management'
     $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$id"
     $page=Post "/Issue?id=$id&handler=SetField" $admin @{fieldId=$field;revision=$revision;fieldValue='QA <reference>'}
     Assert ($page.Content.Contains('QA &lt;reference&gt;')) 'Issue editor can set and read a safely encoded field value'
@@ -625,7 +642,7 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=user&entityId=$administratorId" -WebSession $regular | Out-Null
         throw 'Other profile fields were visible'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Profile field values are private to the owner and user managers'
     }
     $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $admin @{fieldId=$projectField;revision=0;fieldValue='QA project value'}
@@ -633,7 +650,7 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=project&entityId=$project" -WebSession $regular
     Assert ($page.Content.Contains('QA project value') -and -not $page.Content.Contains('name="fieldValue"')) 'Ordinary project members can read project fields'
     $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $regular @{fieldId=$projectField;revision=1;fieldValue='QA unauthorized'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project field edits require project management permission'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Project field edits require project management permission'
     $page=Post "/CustomFields?handler=Value&scope=project&entityId=$project" $admin @{fieldId=$userField;revision=0;fieldValue='QA wrong scope'}
     Assert ($page.Content.Contains('Select a field of this type.')) 'Field from one scope cannot be saved in another'
     $timeId=Sql "SELECT TOP (1) Id FROM dbo.TimeEntries WHERE IssueId=$id ORDER BY Id"
@@ -641,12 +658,12 @@ try {
     Assert ($page.Content.Contains('<h1>Time entry fields</h1>') -and $page.Content.Contains('QA time value')) 'Time entry author can set a custom field'
     $page=Post "/Profile?id=$uid&handler=Membership" $admin @{kind='project';scopeId=$parent;role='Developer'}
     $page=Post "/CustomFields?handler=Value&scope=time&entityId=$timeId" $regular @{fieldId=$timeField;revision=1;fieldValue='QA wrong author'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Project member cannot edit a time entry field owned by another user'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Project member cannot edit a time entry field owned by another user'
     Sql "UPDATE dbo.Projects SET TimeEnabled=0 WHERE Id=$parent" | Out-Null
     try {
         Invoke-WebRequest -UseBasicParsing "$base/CustomFields?scope=time&entityId=$timeId" -WebSession $regular | Out-Null
         throw 'Time fields were visible while time module disabled'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Time fields respect the disabled time module'
     }
     $page=Post "/IssueFields?projectId=$project&handler=Create" $admin @{name='QA visibility field'}
@@ -661,9 +678,9 @@ try {
     Assert (-not $page.Content.Contains('QA visibility field') -and -not $page.Content.Contains('QA restricted value')) 'Restricted field name and value are hidden from ordinary issue editors'
     $revision=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$publicIssue"
     $page=Post "/Issue?id=$publicIssue&handler=SetField" $regular @{fieldId=$visibilityField;revision=$revision;fieldValue='QA forbidden write'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Server rejects direct edits to a restricted field'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Server rejects direct edits to a restricted field'
     $page=Post "/Issue?id=$publicIssue&handler=SetField" $regular @{fieldId=2147483647;revision=$revision;fieldValue='QA unknown field'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Ordinary editor cannot distinguish a restricted field from an unknown field'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Ordinary editor cannot distinguish a restricted field from an unknown field'
     $page=Invoke-WebRequest -UseBasicParsing "$base/Issue?id=$publicIssue" -WebSession $admin
     Assert ($page.Content.Contains('QA restricted value')) 'Project manager can still read the restricted field'
     $page=Post "/IssueFields?projectId=$project&handler=Visibility&fieldId=$visibilityField" $admin @{managersOnly='false'}
@@ -687,7 +704,7 @@ try {
         try {
             Invoke-WebRequest -UseBasicParsing "$base$path" -WebSession $regular | Out-Null
             throw "Unauthorized read: $path"
-        } catch [System.Net.WebException] {
+        } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
             Assert ([int]$_.Exception.Response.StatusCode -eq 404) "$path hides private issue data"
         }
     }
@@ -709,7 +726,7 @@ try {
     $privacyInput['Input.IsPrivate']='false'
     $privacyInput['Input.Revision']=Sql "SELECT Revision FROM dbo.Issues WHERE Id=$secretIssue"
     $page=Post "/Issue?id=$secretIssue&handler=Save" $regular $privacyInput
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Assignee cannot make another author private issue public'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Assignee cannot make another author private issue public'
     $page=Post "/Issue?handler=Save&projectId=$project" $regular @{'Input.Title'='QA private by author';'Input.Description'='Author test';'Input.Type'='Zadatak';'Input.Priority'='Normalan';'Input.Status'='Novo';'Input.IsPrivate'='true'}
     Assert ($page.Content.Contains('QA private by author') -and $page.Content.Contains('Privatni zadatak')) 'Issue creator can read their private unassigned issue'
     $page=Post "/Repositories?projectId=$project&handler=Add" $admin @{name='QA repository';url='https://example.com/engineering/team-manager'}
@@ -718,7 +735,7 @@ try {
     $page=Invoke-WebRequest -UseBasicParsing "$base/Repositories?projectId=$project" -WebSession $regular
     Assert ($page.Content.Contains('<h1>Git repozitoriji</h1>') -and $page.Content.Contains('QA repository')) 'Project viewer can see linked repositories in Croatian'
     $page=Post "/Repositories?projectId=$project&handler=Add" $regular @{name='QA forbidden repository';url='https://example.com/other'}
-    Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Repository management requires project management permission'
+    Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Repository management requires project management permission'
     $page=Post "/Repositories?projectId=$project&handler=Add" $admin @{name='QA invalid repository';url='https://example.com/repo?token=example'}
     Assert ($page.Content.Contains('without credentials, query parameters, or a fragment') -and (Sql "SELECT COUNT(*) FROM dbo.ProjectRepositories WHERE Name=N'QA invalid repository'") -eq 0) 'Repository rejects URLs containing query parameters'
     $page=Post "/Repositories?projectId=$parent&handler=Add" $admin @{name='QA private repository';url='https://example.com/private/repo'}
@@ -726,13 +743,13 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/Repositories?projectId=$parent" -WebSession $regular | Out-Null
         throw 'Private project repositories were visible'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Repository list respects private project access'
     }
     try {
         Post "/Repositories?projectId=$parent&handler=Remove&repositoryId=$repositoryId" $admin @{} | Out-Null
         throw 'Repository could be removed from another project'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Repository removal checks project ownership'
     }
     $historyPath=[Environment]::GetEnvironmentVariable("RepositoryHistory__Paths__$repositoryId")
@@ -743,17 +760,17 @@ try {
         $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId&commit=$head" -WebSession $admin
         Assert ($page.Content.Contains('Commit diff') -and $page.Content.Contains('diff --git')) 'Selected commit shows a real Git diff'
         $page=Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId" -WebSession $regular
-        Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Git source requires explicit repository permission'
+        Assert ($page.BaseResponse.RequestMessage.RequestUri.AbsolutePath -eq '/Denied') 'Git source requires explicit repository permission'
         try {
             Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$parent&repositoryId=$repositoryId" -WebSession $admin | Out-Null
             throw 'History was accessible with wrong project'
-        } catch [System.Net.WebException] {
+        } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
             Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Git history checks repository ownership'
         }
         try {
             Invoke-WebRequest -UseBasicParsing "$base/RepositoryHistory?projectId=$project&repositoryId=$repositoryId&commit=HEAD" -WebSession $admin | Out-Null
             throw 'Git accepted an arbitrary ref'
-        } catch [System.Net.WebException] {
+        } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
             Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Only listed commit IDs are accepted'
         }
         $page=Post '/Profile?handler=Language' $admin @{language='hr'}
@@ -774,7 +791,7 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -WebSession $regular | Out-Null
         throw 'API accepted a session cookie'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'API requires a bearer token even with a signed-in web session'
     }
     $bearer=@{Authorization="Bearer $apiToken"}
@@ -786,7 +803,7 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/api/v1/issues/$secretIssue" -Headers $bearer | Out-Null
         throw 'API disclosed a private issue'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Issue detail API enforces privacy'
     }
     $tokenId=Sql "SELECT Id FROM dbo.ApiTokens WHERE UserId=$uid AND Name=N'QA read token'"
@@ -794,7 +811,7 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -Headers $bearer | Out-Null
         throw 'API accepted a revoked token'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Revoked token is rejected'
     }
     $page=Post '/ApiTokens?handler=Create' $regular @{name='QA session token'}
@@ -804,7 +821,7 @@ try {
     try {
         Invoke-WebRequest -UseBasicParsing "$base/api/v1/projects" -Headers @{Authorization="Bearer $sessionToken"} | Out-Null
         throw 'API accepted an invalidated session version'
-    } catch [System.Net.WebException] {
+    } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
         Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Revoking account sessions also invalidates existing tokens'
     }
     $regular=New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -840,7 +857,7 @@ try {
         try {
             Invoke-WebRequest -UseBasicParsing $endpoint -Method Post -ContentType 'application/json' -Body $payload | Out-Null
             throw 'Unauthenticated intake accepted the message'
-        } catch [System.Net.WebException] {
+        } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
             Assert ([int]$_.Exception.Response.StatusCode -eq 401) 'Email intake requires a separate gateway secret'
         }
         $gatewayHeader=@{Authorization="Bearer $intakeSecret"}
@@ -854,7 +871,7 @@ try {
         try {
             Invoke-WebRequest -UseBasicParsing "$base/mail/intake/$parent" -Method Post -ContentType 'application/json' -Body $payload -Headers $gatewayHeader | Out-Null
             throw 'Gateway credential could be reused for another project'
-        } catch [System.Net.WebException] {
+        } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
             Assert ([int]$_.Exception.Response.StatusCode -eq 404) 'Unconfigured project route is unavailable'
         }
     }
