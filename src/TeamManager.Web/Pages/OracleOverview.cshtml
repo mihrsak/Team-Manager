@@ -1,0 +1,42 @@
+@page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@model TeamManager.Web.Pages.OracleOverviewModel
+
+<h1>@Text["Oracle pregled zadataka"]</h1>
+<div asp-validation-summary="All" role="alert"></div>
+@if (Model.Tasks.Count == 0 && ViewData.ModelState.IsValid)
+{
+    <p>@Text["Oracle pregled nema zadataka."]</p>
+}
+@if (Model.Tasks.Count > 0)
+{
+    <div class="table">
+        <table>
+            <thead><tr><th scope="col">@Text["Naslov"]</th><th scope="col">@Text["Status"]</th></tr></thead>
+            <tbody>
+            @foreach (var task in Model.Tasks)
+            {
+                <tr>
+                    <th scope="row">@task.Title</th>
+                    <td>
+                        <form method="post" asp-page-handler="Status">
+                            <input type="hidden" name="id" value="@task.Id">
+                            <input type="hidden" name="revision" value="@task.Revision">
+                            <label>
+                                @Text["Status zadatka {0}", task.Title]
+                                <select name="status">
+                                    @foreach (var status in Model.Statuses)
+                                    {
+                                        <option value="@status.Key" selected="@(task.Status == status.Key)">@Text[status.Value]</option>
+                                    }
+                                </select>
+                            </label>
+                            <button>@Text["Spremi status"]</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

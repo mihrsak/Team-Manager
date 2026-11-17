@@ -135,8 +135,19 @@ var authentication = builder.Services.AddAuthentication(CookieAuthenticationDefa
 });
 SsoLogin.AddProvider(authentication, builder.Configuration);
 builder.Services.AddAuthorization();
-builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+var healthChecks = builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+builder.Services.AddScoped<OracleOverviewStore>();
+if (OracleOverviewStore.Enabled(builder.Configuration))
+    healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
+
+if (args.Contains("--apply-oracle-overview") || args.Contains("--seed-oracle-demo"))
+{
+    var oracle = new OracleOverviewStore(builder.Configuration);
+    await oracle.Install(args.Contains("--apply-oracle-overview"), args.Contains("--seed-oracle-demo"));
+    Console.WriteLine("Oracle overview installation complete.");
+    return;
+}
 
 if (args.Contains("--bootstrap-local-user"))
 {

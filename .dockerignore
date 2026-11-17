@@ -4,6 +4,8 @@
 !src/TeamManager.Web/**
 !database/
 !database/*.sql
+!database/oracle/
+!database/oracle/*.sql
 **/bin/
 **/obj/
 **/appsettings.Local.json

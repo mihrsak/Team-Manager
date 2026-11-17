@@ -1324,4 +1324,13 @@
   <data name="Lozinka direktorija" xml:space="preserve"><value>Directory password</value></data>
   <data name="Prijavi se putem LDAP-a" xml:space="preserve"><value>Sign in with LDAP</value></data>
   <data name="LDAP prijava nije uspjela. Provjeri podatke ili se obrati administratoru." xml:space="preserve"><value>LDAP sign-in failed. Check your credentials or contact your administrator.</value></data>
+  <data name="Oracle pregled zadataka" xml:space="preserve"><value>Oracle task overview</value></data>
+  <data name="Oracle pregled nema zadataka." xml:space="preserve"><value>The Oracle overview has no tasks.</value></data>
+  <data name="Oracle pregled trenutačno nije dostupan." xml:space="preserve"><value>The Oracle overview is temporarily unavailable.</value></data>
+  <data name="Zadatak je promijenjen ili više nije dostupan." xml:space="preserve"><value>The task changed or is no longer available.</value></data>
+  <data name="Status zadatka {0}" xml:space="preserve"><value>Status for task {0}</value></data>
+  <data name="Spremi status" xml:space="preserve"><value>Save status</value></data>
+  <data name="Novo" xml:space="preserve"><value>New</value></data>
+  <data name="U tijeku" xml:space="preserve"><value>In progress</value></data>
+  <data name="Završeno" xml:space="preserve"><value>Done</value></data>
 </root>

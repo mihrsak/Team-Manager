@@ -106,6 +106,22 @@ Baza je izvan mape aplikacije. Sačuvajte appsettings.Local.json i ASP.NET Data 
 
 IIS instalacija u banci, vanjski certifikati, AD/LDAP i opterećenje zahtijevaju provjeru u ciljnom okruženju.
 
+## Oracle pregled zadataka
+
+Oracle podrška trenutačno pokriva **Oracle pregled zadataka** za korisnike s ovlasti `roles.manage`. Pregled čita zadatke i sprema njihov status u zasebnoj Oracle shemi. Korisnički računi, ovlasti i postojeći projektni moduli koriste SQL Server.
+
+Za lokalnu probu pokrenite Oracle Database Free (23ai ili noviji) s PDB servisom `FREEPDB1`. Pripremite namjensku shemu koja može stvarati tablice i sekvence te ima kvotu za pohranu. Postavite `ConnectionStrings__TeamManagerOracle` u okruženju ili lokalnom spremniku tajni. Primijenite shemu:
+
+```powershell
+dotnet TeamManager.Web.dll --apply-oracle-overview
+# Opcionalni probni podaci
+dotnet TeamManager.Web.dll --seed-oracle-demo
+```
+
+Obje naredbe mogu se pokrenuti zajedno i ponoviti bez dodavanja duplikata. Za prikaz postavite `OracleOverview__Enabled=true` i pokrenite aplikaciju s postavljenom SQL Server vezom. Readiness tada provjerava obje baze. Lokalni [Oracle pregled](https://localhost:7570/OracleOverview) koristi Oracle na loopback portu 7569 i izdvojenu SQL Server bazu za prijavu.
+
+Uz QA-02 preduvjete, `node scripts/Test-OracleOverview.cjs` provjerava oba jezika, trajno spremanje, odbijanje zastarjele promjene i ovlasti u lokalnom pregledu s učitanim demo podacima. Skripta koristi početni administratorski račun izdvojene testne baze i u njoj stvara običnog testnog korisnika.
+
 ## Integracijske provjere QA-01
 
 Opcionalno učitavanje demo podataka (`--seed-demo` odnosno `Install-Database.ps1 -Demo`) dodaje projekt **Demo • Statusi zadataka** s jednim primjerom za svaki od 16 statusa. **Završen**, **Arhivirano**, **Otkazano** i **Odbijen** označeni su kao zatvoreni, a **UAT** je aktivan do završne odluke. Ponovno učitavanje čuva postojeće demo zadatke i statuse.
