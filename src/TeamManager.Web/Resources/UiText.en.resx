@@ -1333,4 +1333,7 @@
   <data name="Novo" xml:space="preserve"><value>New</value></data>
   <data name="U tijeku" xml:space="preserve"><value>In progress</value></data>
   <data name="Završeno" xml:space="preserve"><value>Done</value></data>
+  <data name="Uvezeni projekti u Oracleu" xml:space="preserve"><value>Imported Oracle projects</value></data>
+  <data name="Pregled kopije podataka iz zadnjeg uvoza." xml:space="preserve"><value>View data from the latest import.</value></data>
+  <data name="Prikaži zadatke" xml:space="preserve"><value>Show issues</value></data>
 </root>

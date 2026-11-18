@@ -122,6 +122,12 @@ Obje naredbe mogu se pokrenuti zajedno i ponoviti bez dodavanja duplikata. Za pr
 
 Uz QA-02 preduvjete, `node scripts/Test-OracleOverview.cjs` provjerava oba jezika, trajno spremanje, odbijanje zastarjele promjene i ovlasti u lokalnom pregledu s učitanim demo podacima. Skripta koristi početni administratorski račun izdvojene testne baze i u njoj stvara običnog testnog korisnika.
 
+### Uvoz postojećih projekata i zadataka u Oracle
+
+Postavite `ConnectionStrings__TeamManager` na SQL Server izvor i `ConnectionStrings__TeamManagerOracle` na namjensku Oracle shemu, zatim pokrenite `dotnet TeamManager.Web.dll --import-oracle-projects`. Naredba čita izvor u konzistentnoj SQL transakciji i transakcijski zamjenjuje prethodnu kopiju u tablicama `TM_IMPORTED_PROJECTS` i `TM_IMPORTED_ISSUES`. Isti uvoz može se ponoviti bez duplikata. Oracle prazne tekstualne vrijednosti predstavljaju se kao NULL.
+
+Uz `OracleProjects__Enabled=true`, globalni administrator može otvoriti [uvezeni katalog](https://localhost:7571/OracleProjects). Uvlače se osnovni zapisi s izvornim ID-jevima, hijerarhijom projekata, vezom zadatka s projektom i oznakom privatnosti. ID-jevi autora, nositelja i stavke plana ostaju reference za budući prijenos povezanih podataka. Aktivni moduli nastavljaju koristiti SQL Server za rad sa zadacima i projektima.
+
 ## Integracijske provjere QA-01
 
 Opcionalno učitavanje demo podataka (`--seed-demo` odnosno `Install-Database.ps1 -Demo`) dodaje projekt **Demo • Statusi zadataka** s jednim primjerom za svaki od 16 statusa. **Završen**, **Arhivirano**, **Otkazano** i **Odbijen** označeni su kao zatvoreni, a **UAT** je aktivan do završne odluke. Ponovno učitavanje čuva postojeće demo zadatke i statuse.

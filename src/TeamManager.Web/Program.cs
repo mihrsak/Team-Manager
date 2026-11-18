@@ -137,9 +137,17 @@ SsoLogin.AddProvider(authentication, builder.Configuration);
 builder.Services.AddAuthorization();
 var healthChecks = builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddScoped<OracleOverviewStore>();
+builder.Services.AddScoped<OracleProjectImport>();
 if (OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
+
+if (args.Contains("--import-oracle-projects"))
+{
+    var result = await new OracleProjectImport(builder.Configuration).Import();
+    Console.WriteLine($"Oracle: imported {result.Projects} projects and {result.Issues} issues.");
+    return;
+}
 
 if (args.Contains("--apply-oracle-overview") || args.Contains("--seed-oracle-demo"))
 {

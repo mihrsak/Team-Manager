@@ -1,0 +1,40 @@
+@page
+@model TeamManager.Web.Pages.OracleProjectsModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+
+<h1>@Text["Uvezeni projekti u Oracleu"]</h1>
+@if (Model.Unavailable)
+{
+    <p class="error" role="alert">@Text["Oracle pregled trenutačno nije dostupan."]</p>
+}
+else
+{
+    <p>@Text["Pregled kopije podataka iz zadnjeg uvoza."]</p>
+    <form method="get">
+        <label>@Text["Projekt"]
+            <select asp-for="ProjectId" required>
+                <option value="">@Text["Odaberi"]</option>
+                @foreach (var project in Model.Projects)
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </select>
+        </label>
+        <button>@Text["Prikaži zadatke"]</button>
+    </form>
+    @if (Model.ProjectId is not null)
+    {
+        <div class="table">
+            <table>
+                <thead><tr><th scope="col">#</th><th scope="col">@Text["Naslov"]</th><th scope="col">@Text["Tip"]</th><th scope="col">@Text["Status"]</th><th scope="col">@Text["Prioritet"]</th></tr></thead>
+                <tbody>
+                @foreach (var issue in Model.Issues)
+                {
+                    <tr><td>@issue.Id</td><th scope="row">@issue.Title @if (issue.IsPrivate) { <span class="badge">@Text["Privatni zadatak"]</span> }</th>
+                        <td>@issue.Type</td><td>@issue.Status</td><td>@issue.Priority</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+}
