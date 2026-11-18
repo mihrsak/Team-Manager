@@ -20,11 +20,14 @@ public sealed class OracleProjectImport(IConfiguration configuration)
             ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManager first.");
         await using var target = Connect();
         await target.OpenAsync();
-        foreach (var migration in new[] { "002-imported-projects.sql", "003-imported-issues.sql" })
+        foreach (var migration in new[] { "002-imported-projects.sql", "003-imported-issues.sql", "004-imported-project-details.sql" })
         {
-            await using var command = new OracleCommand(await File.ReadAllTextAsync(
-                Path.Combine(AppContext.BaseDirectory, "database", "oracle", migration)), target);
-            await command.ExecuteNonQueryAsync();
+            var script = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "database", "oracle", migration));
+            foreach (var sql in script.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                await using var command = new OracleCommand(sql, target);
+                await command.ExecuteNonQueryAsync();
+            }
         }
 
         await using var source = new SqlConnection(sourceString);
@@ -33,6 +36,9 @@ public sealed class OracleProjectImport(IConfiguration configuration)
         await using var targetTransaction = target.BeginTransaction();
         foreach (var sql in new[] {
             "LOCK TABLE TM_IMPORTED_PROJECTS IN EXCLUSIVE MODE",
+            "DELETE FROM TM_IMPORTED_TIME_ENTRIES", "DELETE FROM TM_IMPORTED_ISSUE_EVENTS",
+            "DELETE FROM TM_IMPORTED_ISSUE_LINKS", "DELETE FROM TM_IMPORTED_MILESTONES",
+            "DELETE FROM TM_IMPORTED_PROJECT_ROLES", "DELETE FROM TM_IMPORTED_PROJECT_MEMBERS",
             "DELETE FROM TM_IMPORTED_ISSUES", "DELETE FROM TM_IMPORTED_PROJECTS" })
         {
             await using var command = new OracleCommand(sql, target) { Transaction = targetTransaction };
@@ -62,6 +68,36 @@ public sealed class OracleProjectImport(IConfiguration configuration)
             [OracleDbType.Int32, OracleDbType.Int32, OracleDbType.NVarchar2, OracleDbType.NClob, OracleDbType.NVarchar2,
              OracleDbType.NVarchar2, OracleDbType.NVarchar2, OracleDbType.Int32, OracleDbType.Date, OracleDbType.Int32,
              OracleDbType.TimeStamp, OracleDbType.Int32, OracleDbType.Date, OracleDbType.Int32, OracleDbType.Int32]);
+
+        // Copy dependants after their projects and issues, in the same source and destination transactions.
+        async Task CopyDetails(string query, string table, string columns, params OracleDbType[] types)
+        {
+            var parameters = string.Join(",", Enumerable.Range(0, types.Length).Select(i => $":p{i}"));
+            await Copy(source, sourceTransaction, target, targetTransaction,
+                query, $"INSERT INTO {table} ({columns}) VALUES ({parameters})", types);
+        }
+
+        await CopyDetails("SELECT ProjectId,UserId,Role FROM dbo.ProjectMembers",
+            "TM_IMPORTED_PROJECT_MEMBERS", "PROJECT_ID,USER_ID,ROLE_NAME",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.NVarchar2);
+        await CopyDetails("SELECT ProjectId,UserId,RoleName FROM dbo.ProjectMemberRoles",
+            "TM_IMPORTED_PROJECT_ROLES", "PROJECT_ID,USER_ID,ROLE_NAME",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.NVarchar2);
+        await CopyDetails("SELECT Id,ProjectId,Kind,Name,Description,TargetDate,IsComplete,Revision FROM dbo.ProjectMilestones",
+            "TM_IMPORTED_MILESTONES", "ID,PROJECT_ID,KIND,NAME,DESCRIPTION,TARGET_DATE,IS_COMPLETE,REVISION",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Varchar2, OracleDbType.NVarchar2,
+            OracleDbType.NClob, OracleDbType.Date, OracleDbType.Int32, OracleDbType.Int32);
+        await CopyDetails("SELECT SourceId,TargetId,Kind FROM dbo.IssueLinks",
+            "TM_IMPORTED_ISSUE_LINKS", "SOURCE_ID,TARGET_ID,KIND",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Varchar2);
+        await CopyDetails("SELECT Id,IssueId,UserId,Kind,Body,CreatedAt FROM dbo.IssueEvents",
+            "TM_IMPORTED_ISSUE_EVENTS", "ID,ISSUE_ID,USER_ID,KIND,BODY,CREATED_AT",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Varchar2,
+            OracleDbType.NClob, OracleDbType.TimeStamp);
+        await CopyDetails("SELECT Id,IssueId,UserId,WorkDate,Hours,Note,CreatedAt,Activity FROM dbo.TimeEntries",
+            "TM_IMPORTED_TIME_ENTRIES", "ID,ISSUE_ID,USER_ID,WORK_DATE,HOURS,NOTE,CREATED_AT,ACTIVITY",
+            OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Int32, OracleDbType.Date, OracleDbType.Decimal,
+            OracleDbType.NVarchar2, OracleDbType.TimeStamp, OracleDbType.NVarchar2);
         await sourceTransaction.CommitAsync();
         await targetTransaction.CommitAsync();
         return (projects, issues);

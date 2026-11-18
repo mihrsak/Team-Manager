@@ -128,6 +128,8 @@ Postavite `ConnectionStrings__TeamManager` na SQL Server izvor i `ConnectionStri
 
 Uz `OracleProjects__Enabled=true`, globalni administrator može otvoriti [uvezeni katalog](https://localhost:7571/OracleProjects). Uvlače se osnovni zapisi s izvornim ID-jevima, hijerarhijom projekata, vezom zadatka s projektom i oznakom privatnosti. ID-jevi autora, nositelja i stavke plana ostaju reference za budući prijenos povezanih podataka. Aktivni moduli nastavljaju koristiti SQL Server za rad sa zadacima i projektima.
 
+U istoj transakciji uvoze se projektna članstva i dodatne uloge, verzije i prekretnice, veze zadataka, povijest s komentarima i unosi vremena. Ponovni uvoz zamjenjuje i te povezane tablice. Članstva i uloge u Oracle kopiji služe kao podaci za migraciju, dok aplikacija ovlasti i dalje izvršava kroz SQL Server.
+
 ## Integracijske provjere QA-01
 
 Opcionalno učitavanje demo podataka (`--seed-demo` odnosno `Install-Database.ps1 -Demo`) dodaje projekt **Demo • Statusi zadataka** s jednim primjerom za svaki od 16 statusa. **Završen**, **Arhivirano**, **Otkazano** i **Odbijen** označeni su kao zatvoreni, a **UAT** je aktivan do završne odluke. Ponovno učitavanje čuva postojeće demo zadatke i statuse.
