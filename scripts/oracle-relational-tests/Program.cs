@@ -957,3 +957,49 @@ await projects.Save(admin, docProject, docInput);
 Check(await documents.Remove(admin, docProject, doc.Id) && !await documents.Remove(admin, docProject, doc.Id) && await documents.Download(admin, docProject, doc.Id) is null, "Document deletion was not scoped/idempotent.");
 Check(snapshots == 0, "Documents loaded a whole workspace.");
 Console.WriteLine("PASS: Oracle documents preserve metadata, author, sanitized filename and 256 KiB BLOB; private access, project boundaries, upload validation, queued revocation, independent writes and closed-project rules hold.");
+
+var wiki = new ProjectWikiStore(configuration, workspace);
+var wikiProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle wiki " + suffix });
+var wikiOther = await projects.Save(admin, null, new ProjectInput { Name = "Other wiki " + suffix });
+var wikiBody = string.Concat(Enumerable.Repeat("Ž č ć š đ 🚀 HR/EN\n", 900));
+var wikiId = (await wiki.Save(admin, wikiProject, null, 0, "Prva stranica", wikiBody))!.Value;
+Check((await wiki.Revision(admin, wikiProject, wikiId, null))!.Body == wikiBody, "Wiki NCLOB changed.");
+Check((await wiki.History(admin, wikiProject, wikiId)).Single().Author == (await users.Find("admin"))!.DisplayName, "Wiki author relation changed.");
+counts.Clear();
+Check((await wiki.Pages(admin, wikiProject)).Single().Revision == 1 && (await wiki.History(admin, wikiProject, wikiId)).Count == 1, "Wiki metadata missing.");
+Check(!counts.ContainsKey("ProjectWikiRevisions") && !counts.ContainsKey("WikiRevision"), "Wiki metadata loaded revision bodies.");
+var wikiResults = await Task.WhenAll(wiki.Save(admin, wikiProject, wikiId, 1, "Druga stranica", "Second A"), wiki.Save(admin, wikiProject, wikiId, 1, "Druga stranica", "Second B"));
+Check(wikiResults.Count(r => r is not null) == 1 && (await wiki.History(admin, wikiProject, wikiId)).Select(r => r.Number).SequenceEqual([2, 1]), "Concurrent wiki edits lost update or added partial revision.");
+Check((await wiki.Revision(admin, wikiProject, wikiId, 1))!.Body == wikiBody, "Wiki history overwritten.");
+Check(await wiki.Revision(admin, wikiOther, wikiId, 1) is null && (await wiki.History(admin, wikiOther, wikiId)).Count == 0 && await wiki.Save(admin, wikiOther, wikiId, 2, "Wrong project", "No") is null, "Wiki crossed project boundary.");
+try { await wiki.Save(admin, wikiProject, null, 0, "DRUGA STRANICA", "Duplicate"); throw new Exception("Duplicate wiki title accepted."); } catch (InvalidOperationException error) when (error.Message == "Stranica s tim naslovom već postoji u projektu.") { }
+var wikiRole = "wiki" + suffix;
+await permissions.Save(admin, wikiRole, "Wiki editor", ["issues.view", "wiki.edit"], true);
+var wikiName = "wiki" + suffix;
+await users.Create(wikiName, "Wiki editor", "", null, "SQL-test-password-2026", actorId: admin);
+var wikiUser = (await users.Find(wikiName))!.Id;
+Check((await wiki.Pages(wikiUser, wikiProject)).Count == 0 && await wiki.Revision(wikiUser, wikiProject, wikiId, 1) is null, "Private wiki leaked.");
+await permissions.Assign(admin, wikiUser, wikiRole, false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + wikiUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = wikiUser;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = wikiRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = wiki.Save(wikiUser, wikiProject, wikiId, 2, "Revoked", "Must not persist");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Wiki ignored identity lock.");
+    await wiki.Save(admin, wikiOther, null, 0, "Independent", "Other project").WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked wiki editor saved."); } catch (UnauthorizedAccessException) { }
+}
+Check((await wiki.History(admin, wikiProject, wikiId)).Count == 2 && (await wiki.Pages(admin, wikiProject)).Count == 1, "Rejected save left revision/page.");
+var wikiInput = (await projects.List(admin)).Single(p => p.Id == wikiProject).Input;
+wikiInput.State = "Closed";
+await projects.Save(admin, wikiProject, wikiInput);
+try { await wiki.Save(admin, wikiProject, wikiId, 2, "Closed", "Forbidden"); throw new Exception("Closed wiki accepted edit."); } catch (UnauthorizedAccessException) { }
+Check((await wiki.Revision(admin, wikiProject, wikiId, 1))!.Body == wikiBody, "Closed project lost history.");
+Check(snapshots == 0, "Wiki loaded whole workspace.");
+Console.WriteLine("PASS: Oracle wiki retains long Unicode bodies, authors and immutable history; concurrent stale edits, duplicate titles, project boundaries, queued revocation and closed-project rules are enforced.");

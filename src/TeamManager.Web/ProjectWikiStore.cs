@@ -7,12 +7,13 @@ public sealed record WikiPage(int Id, string Title, int Revision);
 public sealed record WikiRevision(int Number, string Title, string Body, string Author, DateTime At);
 public sealed record WikiRevisionInfo(int Number, string Author, DateTime At);
 
-public sealed class ProjectWikiStore(IConfiguration config)
+public sealed class ProjectWikiStore(IConfiguration config, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
-    public async Task<List<WikiPage>> Pages(int project)
+    public async Task<List<WikiPage>> Pages(int user, int project)
     {
+        if (oracle.Enabled) return await oracle.WikiPages(user, project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
@@ -24,8 +25,9 @@ public sealed class ProjectWikiStore(IConfiguration config)
         return pages;
     }
 
-    public async Task<List<WikiRevisionInfo>> History(int project, int page)
+    public async Task<List<WikiRevisionInfo>> History(int user, int project, int page)
     {
+        if (oracle.Enabled) return await oracle.WikiHistory(user, project, page);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -40,8 +42,9 @@ public sealed class ProjectWikiStore(IConfiguration config)
         return revisions;
     }
 
-    public async Task<WikiRevision?> Revision(int project, int page, int? revision)
+    public async Task<WikiRevision?> Revision(int user, int project, int page, int? revision)
     {
+        if (oracle.Enabled) return await oracle.WikiRevisionRead(user, project, page, revision);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -53,12 +56,13 @@ public sealed class ProjectWikiStore(IConfiguration config)
             new SqlParameter("@revision",System.Data.SqlDbType.Int){Value=(object?)revision??DBNull.Value}]);
         await using var reader = await command.ExecuteReaderAsync();
         return await reader.ReadAsync()
-            ? new(reader.GetInt32(0),reader.GetString(1),reader.GetString(2),reader.GetString(3),reader.GetDateTime(4))
+            ? new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDateTime(4))
             : null;
     }
 
     public async Task<int?> Save(int user, int project, int? page, int revision, string title, string body)
     {
+        if (oracle.Enabled) return await oracle.SaveWiki(user, project, page, revision, title, body);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();

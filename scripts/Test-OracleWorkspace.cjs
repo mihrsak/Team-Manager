@@ -4,6 +4,7 @@ const { chromium } = require('../artifacts/qa-browser/playwright');
 const baseURL = process.env.TEAM_MANAGER_ORACLE_URL || 'https://localhost:7572';
 const suffix = Date.now();
 const password = 'Oracle-QA-password-2026';
+const decodeNumericEntities = text => text.replace(/&#x([0-9a-f]+);/gi, (_, value) => String.fromCodePoint(parseInt(value, 16))).replace(/&#([0-9]+);/g, (_, value) => String.fromCodePoint(Number(value)));
 
 async function post(page, path, fields, expected = 200) {
     const get = await page.request.get(path);
@@ -122,6 +123,28 @@ async function run() {
                 ? 'Select a file' : 'Odaberi datoteku'));
         }
         console.log('PASS: Oracle documents upload/download, inherited visibility, byte-identical BLOB, project boundary and HR/EN validation.');
+        const wikiPath = '/Wiki?projectId=' + child;
+        const wikiCreated = await post(admin, wikiPath + '&handler=Save', { revision: '0', title: 'Oracle wiki ' + suffix, body: 'Prva <b>verzija</b> čćž 🚀' });
+        const wikiId = new URL(wikiCreated.url()).searchParams.get('wikiId');
+        assert.ok(Number(wikiId) > 0);
+        const wikiArticle = wikiPath + '&wikiId=' + wikiId;
+        await post(reader, wikiArticle + '&handler=Save', { revision: '1', title: 'Oracle wiki edited ' + suffix, body: 'Second revision čćž 🚀' });
+        const firstWiki = await reader.request.get(wikiArticle + '&revision=1');
+        assert.equal(firstWiki.status(), 200);
+        assert.ok((await firstWiki.text()).includes('Prva &lt;b&gt;verzija&lt;/b&gt;'));
+        const comparedWiki = await reader.request.get(wikiArticle + '&revision=2&compare=1');
+        assert.ok((await comparedWiki.text()).includes('Second revision'));
+        await checkStatus(admin, '/Wiki?projectId=' + wrongProject + '&wikiId=' + wikiId + '&revision=1', 404);
+        for (const language of ['en', 'hr']) {
+            await post(admin, '/Profile?handler=Language', { language });
+            await admin.goto(wikiArticle);
+            assert.ok(await admin.getByRole('heading', { name: language === 'en' ? 'Project wiki' : 'Projektni wiki', exact: true }).isVisible());
+            const stale = await post(admin, wikiArticle + '&handler=Save', { revision: '1', title: 'Stale', body: 'Must not replace current/history' });
+            assert.ok(decodeNumericEntities(await stale.text()).includes(language === 'en' ? 'The page has changed.' : 'Stranica je u međuvremenu izmijenjena.'));
+            const duplicate = await post(admin, wikiPath + '&handler=Save', { revision: '0', title: 'Oracle wiki edited ' + suffix, body: 'Duplicate' });
+            assert.ok(decodeNumericEntities(await duplicate.text()).includes(language === 'en' ? 'A page with that title already exists in the project.' : 'Stranica s tim naslovom već postoji u projektu.'));
+        }
+        console.log('PASS: Oracle wiki create/edit, inherited authority, immutable history/compare, project isolation and HR/EN stale/duplicate messages.');
 
         // Both writes carry the same revision. Oracle must commit one edit and reject the other.
         const fields = {
@@ -179,6 +202,7 @@ async function run() {
         assert.equal(new URL(reader.url()).pathname, '/Denied');
         await checkStatus(reader, articlePath, 404);
         await checkStatus(reader, documentDownload, 404);
+        await checkStatus(reader, wikiArticle + "&revision=1", 404);
         console.log('PASS: membership revocation protects direct issue and attachment URLs immediately.');
 
         const guard = await post(admin, '/Roles', {
@@ -247,7 +271,8 @@ async function run() {
 
         await checkStatus(admin, '/AdministrationAudit', 200);
         await checkStatus(admin, '/ProjectDocuments?projectId=' + parent, 200);
-        await checkStatus(admin, '/Wiki?projectId=' + parent, 503);
+        await checkStatus(admin, '/Wiki?projectId=' + parent, 200);
+        await checkStatus(admin, '/Forum?projectId=' + parent, 503);
         console.log('READY: ' + baseURL + '/Projects');
     } finally {
         await browser.close();

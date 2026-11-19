@@ -156,3 +156,12 @@ Oracle relacijski testovi provjeravaju metapodatke i autora, čišćenje naziva,
 
 
 Lokalno provjereno 19. 11. 2026.: Release build bez grešaka i upozorenja, obje Oracle testne sheme, opoziv ovlasti tijekom dodavanja i brisanja, binarni sadržaj od 256 KiB, Oracle preglednički tokovi, 24 HR/EN WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-documents-final radi na https://localhost:7572; readiness vraća 200.
+
+## DB-02: projektni wiki na Oracleu
+
+Relacijski testovi provjeravaju dugačak Unicode NCLOB, autore i stare revizije, metapodatke bez tijela, paralelno spremanje iste početne revizije (jedan uspjeh i jedan odbijeni zastarjeli upis), duplikate naslova te granice projekta. Opoziv prava tijekom čekanja mora spriječiti spremanje bez djelomične promjene stranice ili povijesti; drugi projekt mora nastaviti raditi. Zatvaranje projekta sprječava upis i čuva čitanje starih verzija. Migracijska provjera obuhvaća obje wiki tablice među 51 relacijskom tablicom.
+
+`Test-OracleWorkspace.cjs` provjerava stvaranje i uređivanje, naslijeđene ovlasti, stare revizije, usporedbu, escaping i izolaciju projekata, HR/EN poruke za zastarjelu reviziju i duplikat te gubitak pristupa povijesti nakon opoziva članstva. `Test-Browser.cjs` sada obuhvaća i wiki popis, aktualnu stranicu s poviješću i usporedbu revizija: ukupno 30 HR/EN WCAG A/AA skeniranja. Testove iste Oracle sheme pokretati slijedno.
+
+
+Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, dugačak Unicode sadržaj i očuvanje povijesti, konkurentne izmjene i opoziv ovlasti, Oracle preglednički tokovi, HR/EN poruke i 30 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-wiki-final radi na https://localhost:7572; readiness vraća 200.

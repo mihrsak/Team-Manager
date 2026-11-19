@@ -25,7 +25,7 @@ public sealed partial class OracleWorkspace
             """, c => { Viewer(c, user, project); AddQueryParameter(c, "news", news); },
             r => new ProjectNewsComment(r.GetString(0), r.GetString(1), r.GetDateTime(2)));
 
-    private static async Task<bool> NewsVisible(Workspace w, int user, int project)
+    private static async Task<bool> ProjectContentVisible(Workspace w, int user, int project)
         => (await w.Find("Projects", project)) is { } p &&
             (Flag(p, "IsPublic") || await Right(w, user, "issues.view", project) || await Manage(w, user, project));
 
@@ -45,7 +45,7 @@ public sealed partial class OracleWorkspace
     internal Task<bool> CommentNews(int actor, int project, int news, string body)
         => WriteProjectData(actor, project, "news:" + news, async w =>
         {
-            if (!await NewsVisible(w, actor, project) || !await Right(w, actor, "news.comment", project))
+            if (!await ProjectContentVisible(w, actor, project) || !await Right(w, actor, "news.comment", project))
                 throw new UnauthorizedAccessException();
             var p = await w.Find("Projects", project);
             var item = await w.Find("ProjectNews", news);

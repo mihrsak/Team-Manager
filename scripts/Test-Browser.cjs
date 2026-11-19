@@ -138,12 +138,21 @@ async function run() {
         await documentForm.locator('[name=attachment]').setInputFiles({ name: 'browser-document.bin', mimeType: 'application/octet-stream', buffer: Buffer.from([0, 1, 255]) });
         await documentForm.locator('button').click();
         assert.ok(await page.getByRole('heading', { name: 'Browser document ' + suffix, exact: true }).isVisible());
+        await page.goto('/Wiki?projectId=1');
+        const wikiForm = page.locator('form[action*="handler=Save"]');
+        await wikiForm.locator('[name=title]').fill('Browser wiki ' + suffix);
+        await wikiForm.locator('[name=body]').fill('Wiki first čćž');
+        await wikiForm.locator('button').click();
+        const wikiArticle = new URL(page.url()).pathname + new URL(page.url()).search;
+        assert.ok(new URL(page.url()).searchParams.get('wikiId'));
+        await page.locator('form[action*="handler=Save"] [name=body]').fill('Wiki second čćž');
+        await page.locator('form[action*="handler=Save"] button').click();
         for (const language of ['hr', 'en']) {
             await page.goto('/Profile');
             const form = page.locator('form[action*="handler=Language"]');
             await form.locator('[name=language]').selectOption(language);
             await form.locator('button').click();
-            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1']) {
+            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1', '/Wiki?projectId=1', wikiArticle, wikiArticle + '&revision=2&compare=1']) {
                 await audit(page, route, language);
             }
             await page.goto('/Search');
@@ -167,7 +176,7 @@ async function run() {
         await page.goto('/Issues');
         assert.equal(new URL(page.url()).pathname, '/Login');
         assert.deepEqual(violations, []);
-        console.log('PASS: 24 WCAG A/AA scans, keyboard skip link, locale switching and logout.');
+        console.log('PASS: 30 WCAG A/AA scans, keyboard skip link, locale switching and logout.');
     } finally {
         if (violations.length) console.error(JSON.stringify(violations, null, 2));
         await browser.close();

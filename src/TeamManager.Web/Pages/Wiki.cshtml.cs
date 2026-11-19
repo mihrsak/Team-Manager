@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Permissions permissions) : PageModel
+public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Permissions permissions, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<WikiPage> Pages { get; private set; } = [];
@@ -24,7 +24,7 @@ public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Perm
         var project = (await projects.List(UserId)).Find(item => item.Id == projectId);
         if (project is null) return NotFound();
         Project = project;
-        Pages = await wiki.Pages(projectId);
+        Pages = await wiki.Pages(UserId, projectId);
 
         var rights = await permissions.Effective(UserId, "project", projectId);
         CanEdit = project.Input.State == "Active" && (rights.Contains("*") || rights.Contains("wiki.edit"));
@@ -32,14 +32,14 @@ public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Perm
 
         Selected = Pages.Find(page => page.Id == selectedId);
         if (Selected is null) return NotFound();
-        Displayed = await wiki.Revision(projectId, selectedId, revision ?? Selected.Revision);
+        Displayed = await wiki.Revision(UserId, projectId, selectedId, revision ?? Selected.Revision);
         if (Displayed is null) return NotFound();
         if (compare is int other)
         {
-            Compared = await wiki.Revision(projectId, selectedId, other);
+            Compared = await wiki.Revision(UserId, projectId, selectedId, other);
             if (Compared is null) return NotFound();
         }
-        History = await wiki.History(projectId, selectedId);
+        History = await wiki.History(UserId, projectId, selectedId);
         return Page();
     }
 
@@ -67,6 +67,7 @@ public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Perm
             return RedirectToPage(new { projectId, wikiId = saved });
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (WikiTitleConflictException ex) { return Invalid(ex.Message); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {
             return Invalid("Stranica s tim naslovom već postoji u projektu.");
@@ -75,7 +76,7 @@ public sealed class WikiModel(ProjectStore projects, ProjectWikiStore wiki, Perm
 
     private IActionResult Invalid(string message)
     {
-        ModelState.AddModelError("", message);
+        ModelState.AddModelError("", text[message]);
         return Page();
     }
 }
