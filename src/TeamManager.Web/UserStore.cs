@@ -113,7 +113,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     {
         if(oracle.Enabled)
         {
-            await oracle.Write(w=>{
+            await oracle.WriteNamedAdministration(actorId ?? throw new UnauthorizedAccessException(),"account-name:"+employee.Trim().ToUpperInvariant(),w=>{
                 if(actorId is not int actor || !OracleWorkspace.Right(w,actor,"users.manage"))throw new UnauthorizedAccessException();
                 if(w.Where("AppUsers", "UPPER(t.\"EmployeeNumber\")=UPPER(:employee)", ("employee",employee)).Any())throw new ArgumentException("Broj radnika već postoji.");
                 if(unit is not null&&w.Find("OrganizationUnits",unit.Value)is null)throw new ArgumentException("Organizacijska jedinica nije valjana.");
@@ -156,7 +156,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     }
     public async Task<bool> ChangePassword(AppUser user, string password)
     {
-        if(oracle.Enabled)return await oracle.Write(w=>{
+        if(oracle.Enabled)return await oracle.WriteAccount(user.Id,user.Id,w=>{
             var r=w.Find("AppUsers",user.Id);
             if(r is null||!Flag(r,"IsActive")||Int(r,"SessionVersion")!=user.SessionVersion)return false;
             Set(r,"PasswordHash",hasher.HashPassword(user,password));Set(r,"SessionVersion",Int(r,"SessionVersion")+1);return true;

@@ -82,7 +82,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     {
         if (oracle.Enabled)
         {
-            await oracle.WriteIssues([id], w =>
+            await oracle.WriteIssues(user,[id], w =>
             {
                 OracleWorkspace.RequireIssue(w,user,id);
                 w.RemoveBy("IssueWatchers","IssueId",id,r => OracleWorkspace.Workspace.Int(r,"UserId")==user);

@@ -13,7 +13,7 @@ public sealed partial class OracleWorkspace
         await using (var state = new OracleCommand("SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1", connection))
         {
             var version = Convert.ToInt32(await state.ExecuteScalarAsync());
-            if (version is not (6 or 7)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
+            if (version is not (6 or 7 or 8)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
         }
         var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "database/oracle/007-concurrency-and-reports.sql"));
         foreach (var statement in Regex.Split(sql, @"(?m)^/\s*$").Where(s => !string.IsNullOrWhiteSpace(s)))
@@ -37,9 +37,9 @@ public sealed partial class OracleWorkspace
         await using var transaction = connection.BeginTransaction();
         // Validate the package grant before publishing the new runtime version.
         await AcquireWriteLock(connection, transaction, "policy", 6);
-        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=1 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,1)"))
+        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=2 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,2)"))
             await feature.ExecuteNonQueryAsync();
-        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=7 WHERE ID=1"))
+        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=8 WHERE ID=1"))
             await state.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
         Console.WriteLine("PASS: Oracle sequences, scoped write locks and report indexes installed; existing sequences were not reset.");
@@ -64,10 +64,52 @@ public sealed partial class OracleWorkspace
             throw new OracleWriteBusyException();
     }
 
-    internal Task<T> WriteIssues<T>(IEnumerable<int> ids, Func<Workspace, T> action)
-        => Run(action, true, ids.Distinct().Order().Select(id => "issue:" + id).ToArray());
+    private sealed record WriteScope(int? Actor, int[] Issues, int[] Readers, int[] Writers, string[] Entities, string? Employee = null);
+    internal Task<T> WriteIssues<T>(int actor, IEnumerable<int> ids, Func<Workspace, T> action, params int[] relatedUsers)
+        => Run(action, true, new(actor, ids.Distinct().Order().ToArray(), [actor, .. relatedUsers], [], []));
     internal Task<T> WriteUser<T>(int user, Func<Workspace, T> action)
-        => Run(action, true, ["user:" + user]);
+        => Run(action, true, new(user, [], [], [user], []));
+    internal Task<T> WriteAccount<T>(int actor, int target, Func<Workspace, T> action)
+        => Run(action, true, new(actor, [], [actor], [target], []));
+    private Task<T> WriteLogin<T>(string employee, Func<Workspace, T> action)
+        => Run(action, true, new(null, [], [], [], [], employee));
+    internal Task<T> WriteProjectData<T>(int actor, int project, string area, Func<Workspace, T> action)
+        => Run(action, true, new(actor, [], [actor], [], [$"project-data:{project}:{area}"]));
+
+    internal Task<T> WriteNamedAdministration<T>(int actor, string entity, Func<Workspace, T> action)
+        => Run(action, true, new(actor, [], [actor], [], [entity]));
+
+    private static async Task AcquireScope(OracleConnection connection, OracleTransaction transaction, WriteScope? scope)
+    {
+        await AcquireWriteLock(connection, transaction, "policy", scope is null ? 6 : 4);
+        if (scope is null) return;
+        // All writers follow the same phases: policy, issue IDs, identity IDs,
+        // then administrative entities. All actor, assignee and watcher dependencies are known before identity locking.
+        foreach (var id in scope.Issues.Order()) await AcquireWriteLock(connection, transaction, "issue:" + id, 6);
+        var readers = scope.Readers.ToHashSet();
+        var writers = scope.Writers.ToHashSet();
+        foreach (var id in scope.Issues)
+        {
+            await using var assigned = RelationalCommand(connection, transaction, "SELECT \"AssigneeId\" FROM \"TMR_Issues\" WHERE \"Id\"=:id");
+            assigned.Parameters.Add("id", OracleDbType.Int32).Value = id;
+            var value = await assigned.ExecuteScalarAsync();
+            if (value is not null and not DBNull) readers.Add(Convert.ToInt32(value));
+            await using var watched = RelationalCommand(connection, transaction, "SELECT \"UserId\" FROM \"TMR_IssueWatchers\" WHERE \"IssueId\"=:id");
+            watched.Parameters.Add("id", OracleDbType.Int32).Value = id;
+            await using var watchers = await watched.ExecuteReaderAsync();
+            while (await watchers.ReadAsync()) readers.Add(watchers.GetInt32(0));
+        }
+        if (scope.Employee is { } employee)
+        {
+            await using var account = RelationalCommand(connection, transaction, "SELECT \"Id\" FROM \"TMR_AppUsers\" WHERE UPPER(\"EmployeeNumber\")=UPPER(:employee)");
+            account.Parameters.Add("employee", OracleDbType.NVarchar2).Value = employee;
+            var value = await account.ExecuteScalarAsync();
+            if (value is not null and not DBNull) writers.Add(Convert.ToInt32(value));
+        }
+        foreach (var user in readers.Union(writers).Order())
+            await AcquireWriteLock(connection, transaction, "identity:" + user, writers.Contains(user) ? 6 : 4);
+        foreach (var entity in scope.Entities.Order(StringComparer.Ordinal)) await AcquireWriteLock(connection, transaction, entity, 6);
+    }
 }
 
 internal sealed class OracleWriteBusyException() : InvalidOperationException("Spremanje je trenutačno zauzeto. Pokušaj ponovno.");

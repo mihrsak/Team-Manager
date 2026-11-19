@@ -84,7 +84,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task Save(int user, int project, RoadmapItem item)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{
+        if(oracle.Enabled){await oracle.WriteProjectData(user,project,"roadmap",w=>{
             if(!OracleWorkspace.Manage(w,user,project))throw new UnauthorizedAccessException();
             if(w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")
                 throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");

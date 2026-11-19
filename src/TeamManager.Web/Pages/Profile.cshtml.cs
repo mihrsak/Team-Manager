@@ -41,10 +41,11 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         if(!User.IsInRole("users.manage"))unit=Person.OrganizationUnitId;
         if(oracle.Enabled)
         {
-            await oracle.Write(w=>{
+            await oracle.WriteAccount(UserId,id,w=>{
                 if(UserId!=id&&!OracleWorkspace.Right(w,UserId,"users.manage"))throw new UnauthorizedAccessException();
                 if(unit is not null&&w.Find("OrganizationUnits",unit.Value)is null)throw new ArgumentException("Organizacijska jedinica nije valjana.");
                 var row=w.Find("AppUsers",id)??throw new UnauthorizedAccessException();
+                if(unit!=OracleWorkspace.Workspace.OptionalInt(row,"OrganizationUnitId")&&!OracleWorkspace.Right(w,UserId,"users.manage"))throw new UnauthorizedAccessException();
                 OracleWorkspace.Workspace.Set(row,"DisplayName",name);
                 OracleWorkspace.Workspace.Set(row,"JobTitle",job);
                 OracleWorkspace.Workspace.Set(row,"OrganizationUnitId",unit);

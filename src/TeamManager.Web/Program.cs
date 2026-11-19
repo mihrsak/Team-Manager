@@ -249,6 +249,13 @@ if (oracleMode)
             var text = context.RequestServices.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<UiText>>();
             await context.Response.WriteAsync(text[error.Message]);
         }
+        catch (UnauthorizedAccessException) when (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            var text = context.RequestServices.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<UiText>>();
+            await context.Response.WriteAsync(text["Nemaš ovlasti za ovu radnju."]);
+        }
     });
     app.Use(OracleWorkspaceRoutes.Guard);
 }

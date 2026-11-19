@@ -287,12 +287,12 @@ await using (var held = holder.BeginTransaction())
     await issues.Comment(admin, fineB, "Independent issue").WaitAsync(TimeSpan.FromSeconds(5));
     Check(!waiting.IsCompleted, "Same-issue write ignored its lock.");
     var policyChange = permissions.Assign(admin, viewer, readRole, true);
-    Check(await Task.WhenAny(policyChange, Task.Delay(200)) != policyChange, "Policy mutation ignored in-flight shared writes.");
+    await policyChange.WaitAsync(TimeSpan.FromSeconds(5));
     await held.RollbackAsync();
     await waiting.WaitAsync(TimeSpan.FromSeconds(5));
     await policyChange.WaitAsync(TimeSpan.FromSeconds(5));
 }
-Console.WriteLine("PASS: unrelated issue completes while another issue, legacy workspace row and legacy counter are locked; policy changes wait for in-flight writes.");
+Console.WriteLine("PASS: unrelated issue completes while another issue, legacy workspace row and legacy counter are locked; unrelated account-role changes also complete.");
 
 var concurrentIds = await Task.WhenAll(Enumerable.Range(0, 12).Select(n => issues.Save(admin, fineProject, null, new IssueInput { Title = $"Concurrent {suffix} {n}", IsPrivate = false })));
 Check(concurrentIds.Distinct().Count() == 12, "Parallel inserts reused an Oracle sequence ID.");
@@ -387,37 +387,237 @@ Check((await personal.Notifications(writer)).Count == 0 && (await issues.RecentA
 Check(snapshots == 0, "Concurrency/report flow loaded the workspace.");
 Console.WriteLine("PASS: SQL reports enforce aggregation, filters, private visibility, time-module flags, inactive accounts and 50/100-row limits without fetching raw workspaces or unrelated LOBs.");
 
-var busyMessage="Spremanje je trenutačno zauzeto. Pokušaj ponovno.";
-var resources=new System.Resources.ResourceManager("TeamManager.Web.Resources.UiText",typeof(UiText).Assembly);
-Check(resources.GetString(busyMessage,CultureInfo.GetCultureInfo("en"))=="Saving is temporarily busy. Please try again.","English lock-timeout message missing.");
-await using(var held=holder.BeginTransaction())
+var busyMessage = "Spremanje je trenutačno zauzeto. Pokušaj ponovno.";
+var resources = new System.Resources.ResourceManager("TeamManager.Web.Resources.UiText", typeof(UiText).Assembly);
+Check(resources.GetString(busyMessage, CultureInfo.GetCultureInfo("en")) == "Saving is temporarily busy. Please try again.", "English lock-timeout message missing.");
+await using (var held = holder.BeginTransaction())
 {
-    await Hold(held,"issue:"+fineA,6);
-    try{await issues.Comment(admin,fineA,"Must time out");throw new Exception("Expected lock timeout.");}
-    catch(InvalidOperationException error) when(error.Message==busyMessage){}
+    await Hold(held, "issue:" + fineA, 6);
+    try { await issues.Comment(admin, fineA, "Must time out"); throw new Exception("Expected lock timeout."); }
+    catch (InvalidOperationException error) when (error.Message == busyMessage) { }
     await held.RollbackAsync();
 }
-await issues.Comment(admin,fineA,"Lock released after timeout").WaitAsync(TimeSpan.FromSeconds(5));
+await issues.Comment(admin, fineA, "Lock released after timeout").WaitAsync(TimeSpan.FromSeconds(5));
 Console.WriteLine("PASS: lock timeout reports a localized retry message and releases transactional locks for a successful retry.");
-if(Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is {Length:>0} httpAddress)
+if (Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is { Length: > 0 } httpAddress)
 {
-    var address=new Uri(httpAddress);
-    Check(address.IsLoopback && address.Scheme=="https","HTTP verification requires loopback HTTPS.");
-    using var http=new HttpClient(new HttpClientHandler{CookieContainer=new System.Net.CookieContainer()}){BaseAddress=address};
-    string Token(string html)=>System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html,"name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
-    var login=await http.GetStringAsync("/Login");
-    using(var response=await http.PostAsync("/Login",new FormUrlEncodedContent(new Dictionary<string,string>{{"EmployeeNumber","admin"},{"Password",Environment.GetEnvironmentVariable("TEAM_MANAGER_QA_PASSWORD")??"admin"},{"__RequestVerificationToken",Token(login)}}))) response.EnsureSuccessStatusCode();
-    foreach(var language in new[]{"hr","en"})
+    var address = new Uri(httpAddress);
+    Check(address.IsLoopback && address.Scheme == "https", "HTTP verification requires loopback HTTPS.");
+    using var http = new HttpClient(new HttpClientHandler { CookieContainer = new System.Net.CookieContainer() }) { BaseAddress = address };
+    string Token(string html) => System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+    var login = await http.GetStringAsync("/Login");
+    using (var response = await http.PostAsync("/Login", new FormUrlEncodedContent(new Dictionary<string, string> { { "EmployeeNumber", "admin" }, { "Password", Environment.GetEnvironmentVariable("TEAM_MANAGER_QA_PASSWORD") ?? "admin" }, { "__RequestVerificationToken", Token(login) } }))) response.EnsureSuccessStatusCode();
+    foreach (var language in new[] { "hr", "en" })
     {
-        var form=await http.GetStringAsync("/Issue?id="+fineA);
-        using(var response=await http.PostAsync("/Profile?handler=Language",new FormUrlEncodedContent(new Dictionary<string,string>{{"language",language},{"__RequestVerificationToken",Token(form)}}))) response.EnsureSuccessStatusCode();
-        form=await http.GetStringAsync("/Issue?id="+fineA);
-        await using var held=holder.BeginTransaction();
-        await Hold(held,"issue:"+fineA,6);
-        using var responseBusy=await http.PostAsync("/Issue?id="+fineA+"&handler=Comment",new FormUrlEncodedContent(new Dictionary<string,string>{{"text","HTTP timeout"},{"__RequestVerificationToken",Token(form)}}));
-        Check(responseBusy.StatusCode==System.Net.HttpStatusCode.ServiceUnavailable && responseBusy.Headers.RetryAfter is not null,"Busy handler did not return a retryable 503.");
-        Check(await responseBusy.Content.ReadAsStringAsync()==(language=="hr"?busyMessage:"Saving is temporarily busy. Please try again."),"HTTP retry message locale changed.");
+        var form = await http.GetStringAsync("/Issue?id=" + fineA);
+        using (var response = await http.PostAsync("/Profile?handler=Language", new FormUrlEncodedContent(new Dictionary<string, string> { { "language", language }, { "__RequestVerificationToken", Token(form) } }))) response.EnsureSuccessStatusCode();
+        form = await http.GetStringAsync("/Issue?id=" + fineA);
+        await using var held = holder.BeginTransaction();
+        await Hold(held, "issue:" + fineA, 6);
+        using var responseBusy = await http.PostAsync("/Issue?id=" + fineA + "&handler=Comment", new FormUrlEncodedContent(new Dictionary<string, string> { { "text", "HTTP timeout" }, { "__RequestVerificationToken", Token(form) } }));
+        Check(responseBusy.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable && responseBusy.Headers.RetryAfter is not null, "Busy handler did not return a retryable 503.");
+        Check(await responseBusy.Content.ReadAsStringAsync() == (language == "hr" ? busyMessage : "Saving is temporarily busy. Please try again."), "HTTP retry message locale changed.");
         await held.RollbackAsync();
     }
     Console.WriteLine("PASS: unhandled HTTP lock timeouts return localized HR/EN 503 responses with Retry-After rather than server errors.");
 }
+
+
+// Administrative scopes: unrelated targets must progress, while edits affecting
+// the actor of a queued write must remain mutually exclusive.
+var targetNameA = "sqlAdminA" + suffix;
+var targetNameB = "sqlAdminB" + suffix;
+await users.Create(targetNameA, "Scoped A " + suffix, "", null, "SQL-test-password-2026", actorId: admin);
+await users.Create(targetNameB, "Scoped B " + suffix, "", null, "SQL-test-password-2026", actorId: admin);
+var targetA = (await users.Find(targetNameA))!.Id;
+var targetB = (await users.Find(targetNameB))!.Id;
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + targetA, 6);
+    var blocked = permissions.Assign(admin, targetA, readRole, false);
+    await permissions.Assign(admin, targetB, readRole, false).WaitAsync(TimeSpan.FromSeconds(5));
+    await users.SetTheme(targetB, "dark").WaitAsync(TimeSpan.FromSeconds(5));
+    Check((await users.Authenticate(targetNameB, "SQL-test-password-2026"))?.Id == targetB, "Unrelated account login stalled or failed.");
+    Check(!blocked.IsCompleted, "Target-specific administration ignored its identity lock.");
+    await held.RollbackAsync();
+    await blocked.WaitAsync(TimeSpan.FromSeconds(5));
+}
+var parallelProject = await projects.Save(admin, null, new ProjectInput { Name = "Scoped roadmap " + suffix });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, $"project-data:{fineProject}:roadmap", 6);
+    var blocked = roadmap.Save(admin, fineProject, new RoadmapItem(0, "milestone", "Blocked " + suffix, "", null, false, 0));
+    await roadmap.Save(admin, parallelProject, new RoadmapItem(0, "milestone", "Independent " + suffix, "", null, false, 0)).WaitAsync(TimeSpan.FromSeconds(5));
+    await permissions.Assign(admin, targetB, readRole, true).WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!blocked.IsCompleted, "Project administration ignored its entity lock.");
+    await held.RollbackAsync();
+    await blocked.WaitAsync(TimeSpan.FromSeconds(5));
+}
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "administrators", 6);
+    var guarded = permissions.Assign(admin, targetA, readRole, true);
+    await users.SetTheme(targetB, "light").WaitAsync(TimeSpan.FromSeconds(5));
+    await roadmap.Save(admin, parallelProject, new RoadmapItem(0, "milestone", "Guard independent " + suffix, "", null, false, 0)).WaitAsync(TimeSpan.FromSeconds(5));
+    Check(await Task.WhenAny(guarded, Task.Delay(200)) != guarded, "Last-administrator guard was bypassed.");
+    await held.RollbackAsync();
+    await guarded.WaitAsync(TimeSpan.FromSeconds(5));
+}
+Console.WriteLine("PASS: independent account administration/login and project roadmaps run in parallel; same-target edits and the last-administrator check remain serialized without blocking unrelated work.");
+
+await permissions.Assign(admin, targetA, writerRole, false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + targetA, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("target", OracleDbType.Int32).Value = targetA;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = writerRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = issues.Comment(targetA, fineB, "Must fail after scoped revoke");
+    await users.SetTheme(targetB, "dark").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Issue write bypassed identity-policy lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Scoped role revocation was ignored."); } catch (UnauthorizedAccessException) { }
+}
+await FixtureSql("INSERT INTO \"TMR_ProjectMembers\" (\"ProjectId\",\"UserId\",\"Role\") VALUES(:project,:target,:role)", ("project", fineProject), ("target", targetA), ("role", writerRole));
+var inheritedProject = await projects.Save(admin, null, new ProjectInput { Name = "Scoped inherited " + suffix, ParentId = fineProject, InheritParentRoles = true });
+var inheritedIssue = await issues.Save(admin, inheritedProject, null, new IssueInput { Title = "Scoped inherited write", IsPrivate = false });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + targetA, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_ProjectMembers\" WHERE \"ProjectId\"=:project AND \"UserId\"=:target", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("project", OracleDbType.Int32).Value = fineProject;
+        revoke.Parameters.Add("target", OracleDbType.Int32).Value = targetA;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = issues.Comment(targetA, inheritedIssue, "Must fail after inherited membership revoke");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Inherited membership reader ignored identity lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Inherited revocation was ignored."); } catch (UnauthorizedAccessException) { }
+}
+Console.WriteLine("PASS: queued writes recheck global and inherited membership rights after target-user revocation, while unrelated users continue working.");
+
+// Explicit assignee dependencies must be frozen even when the actor differs.
+await FixtureSql("INSERT INTO \"TMR_ProjectMembers\" (\"ProjectId\",\"UserId\",\"Role\") VALUES(:project,:target,:role)", ("project", inheritedProject), ("target", targetA), ("role", readRole));
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + targetA, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_ProjectMembers\" WHERE \"ProjectId\"=:project AND \"UserId\"=:target", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("project", OracleDbType.Int32).Value = inheritedProject;
+        revoke.Parameters.Add("target", OracleDbType.Int32).Value = targetA;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var changed = (await issues.Get(admin, inheritedIssue))!.Input;
+    changed.AssigneeId = targetA;
+    var queued = issues.Save(admin, inheritedProject, inheritedIssue, changed);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Assignee membership dependency was not locked.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Removed assignee membership was accepted."); } catch (ArgumentException) { }
+}
+Check((await issues.Get(admin, inheritedIssue))!.Input.AssigneeId is null, "Failed assignee edit partially committed.");
+Console.WriteLine("PASS: assignee membership is rechecked under its own identity lock and invalid assignment changes roll back.");
+
+if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase))
+{
+    var fullRole = (string)(await Scalar("SELECT r.\"RoleName\" FROM \"TMR_UserRoles\" r JOIN \"TMR_RolePermissions\" p ON p.\"RoleName\"=r.\"RoleName\" WHERE r.\"UserId\"=" + admin + " AND p.\"Permission\"='*' FETCH FIRST 1 ROW ONLY"))!;
+    await permissions.Assign(admin, targetA, fullRole, false);
+    await permissions.Assign(admin, targetB, fullRole, false);
+    try
+    {
+        await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=0 WHERE \"Id\"=:id", ("id", admin));
+        async Task<bool> RevokeSelf(int target)
+        {
+            try { await permissions.Assign(target, target, fullRole, true); return true; }
+            catch (InvalidOperationException error) when (error.Message.StartsWith("Mora ostati")) { return false; }
+        }
+        var result = await Task.WhenAll(RevokeSelf(targetA), RevokeSelf(targetB));
+        Check(result.Count(x => x) == 1, "Concurrent administrator revocations did not preserve one full administrator.");
+    }
+    finally { await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", admin)); }
+    Console.WriteLine("PASS: concurrent self-revocations in the isolated schema cannot remove the last active full administrator.");
+}
+var managerName = "sqlManager" + suffix;
+await users.Create(managerName, "Scoped manager " + suffix, "", null, "SQL-test-password-2026", actorId: admin);
+var manager = (await users.Find(managerName))!.Id;
+var managerRole = "sqlManager" + suffix;
+await permissions.Save(admin, managerRole, "Scoped authority", ["roles.manage"], true);
+await permissions.Assign(admin, manager, managerRole, false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + manager, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("target", OracleDbType.Int32).Value = manager;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = managerRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = permissions.Assign(manager, targetB, readRole, false);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Administrative actor bypassed identity lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked administrator changed another account."); } catch (UnauthorizedAccessException) { }
+}
+var duplicateName = "sqlDup" + suffix;
+async Task<bool> CreateDuplicate(string employee)
+{
+    try { await users.Create(employee, "Duplicate fixture", "", null, "SQL-test-password-2026", actorId: admin); return true; }
+    catch (ArgumentException) { return false; }
+}
+Check((await Task.WhenAll(CreateDuplicate(duplicateName), CreateDuplicate(duplicateName.ToUpperInvariant()))).Count(x => x) == 1, "Parallel case-insensitive account creation bypassed uniqueness.");
+await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => users.Authenticate(targetNameB, "incorrect-password")));
+Check(await Scalar($"SELECT \"LockoutUntil\" FROM \"TMR_AppUsers\" WHERE \"Id\"={targetB}") is not DBNull, "Concurrent login attempts bypassed account lockout.");
+Console.WriteLine("PASS: queued administrators recheck their own authority; parallel account creation preserves case-insensitive uniqueness and failed logins preserve lockout counters.");
+if(Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is {Length:>0} scopedHttpAddress)
+{
+    foreach(var language in new[]{"hr","en"})
+    {
+        await permissions.Assign(admin,manager,managerRole,false);
+        await users.SetLanguage(manager,language);
+        using var http=new HttpClient(new HttpClientHandler{CookieContainer=new System.Net.CookieContainer()}){BaseAddress=new Uri(scopedHttpAddress)};
+        string Token403(string html)=>System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html,"name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+        var login=await http.GetStringAsync("/Login");
+        using(var response=await http.PostAsync("/Login",new FormUrlEncodedContent(new Dictionary<string,string>{{"EmployeeNumber",managerName},{"Password","SQL-test-password-2026"},{"__RequestVerificationToken",Token403(login)}}))) response.EnsureSuccessStatusCode();
+        var form=await http.GetStringAsync("/Profile?id="+targetB);
+        await using var held=holder.BeginTransaction();
+        await Hold(held,"identity:"+manager,6);
+        await using(var revoke=new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role",holder){Transaction=held,BindByName=true})
+        {
+            revoke.Parameters.Add("target",OracleDbType.Int32).Value=manager;
+            revoke.Parameters.Add("role",OracleDbType.NVarchar2).Value=managerRole;
+            await revoke.ExecuteNonQueryAsync();
+        }
+        var queued=http.PostAsync("/Profile?id="+targetB+"&handler=GlobalRole",new FormUrlEncodedContent(new Dictionary<string,string>{{"role",readRole},{"remove","false"},{"__RequestVerificationToken",Token403(form)}}));
+        Check(await Task.WhenAny(queued,Task.Delay(1000))!=queued,"HTTP administrative write did not wait for actor lock.");
+        await held.CommitAsync();
+        using var denied=await queued;
+        Check(denied.StatusCode==System.Net.HttpStatusCode.Forbidden,"Revoked HTTP administrative write did not return 403.");
+        Check(await denied.Content.ReadAsStringAsync()==(language=="hr"?"Nemaš ovlasti za ovu radnju.":"You do not have permission for this action."),"Revoked HTTP write lost its HR/EN response.");
+    }
+    Console.WriteLine("PASS: administrative authority revoked during HTTP waits returns HR/EN 403 without committing the change.");
+}
+var watcherName="sqlWatcher"+suffix;
+await users.Create(watcherName,"Scoped watcher "+suffix,"",null,"SQL-test-password-2026",actorId:admin);
+var watcher=(await users.Find(watcherName))!.Id;
+await permissions.Assign(admin,watcher,readRole,false);
+await issues.SetWatching(watcher,fineA,true);
+await FixtureSql("INSERT INTO \"TMR_EmailNotificationPreferences\" (\"UserId\",\"Address\",\"SendWatchedIssues\",\"SendDueReminders\") VALUES(:id,:address,1,0)",("id",watcher),("address","watcher@example.test"));
+await using(var held=holder.BeginTransaction())
+{
+    await Hold(held,"identity:"+watcher,6);
+    await using(var revoke=new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role",holder){Transaction=held,BindByName=true})
+    {
+        revoke.Parameters.Add("target",OracleDbType.Int32).Value=watcher;
+        revoke.Parameters.Add("role",OracleDbType.NVarchar2).Value=readRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued=issues.Comment(admin,fineA,"Recheck watched recipient");
+    await issues.Comment(admin,fineB,"Unrelated watcher scope").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!queued.IsCompleted,"Watched-recipient rights were not locked.");
+    await held.CommitAsync();
+    await queued;
+}
+Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueEmailQueue\" WHERE \"UserId\"={watcher}"))==0,"A revoked watcher was queued an email.");
+Console.WriteLine("PASS: watcher access changes serialize with event creation; revoked recipients are not queued email while unrelated issues remain writable.");

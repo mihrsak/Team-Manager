@@ -35,7 +35,7 @@ public class UsersModel(UserStore store,OracleWorkspace oracle):PageModel
             if(kind=="project")
                 await oracle.SaveProject(UserId,null,new ProjectInput{Name=name});
             else
-                await oracle.Write(w=>
+                await oracle.WriteNamedAdministration(UserId,$"organization-name:{kind}:{name.ToUpperInvariant()}",w=>
                 {
                     if(!OracleWorkspace.Right(w,UserId,"organization.manage"))throw new UnauthorizedAccessException();
                     if(w.Rows(table).Any(r=>OracleWorkspace.Workspace.Text(r,"Name").Equals(name,StringComparison.OrdinalIgnoreCase)))

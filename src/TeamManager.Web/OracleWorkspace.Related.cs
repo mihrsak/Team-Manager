@@ -60,7 +60,7 @@ public sealed partial class OracleWorkspace
             throw new UnauthorizedAccessException();
         return w.By("IssuePrivateNotes", "IssueId", issue).Where(n => Int(n, "UserId") == user).OrderByDescending(Id).Select(n => new PrivateIssueNote(Text(n, "Body"), Date(n, "CreatedAt")!.Value)).ToList();
     });
-    internal Task AddNote(int user, int issue, string? text) => WriteIssues([issue], w =>
+    internal Task AddNote(int user, int issue, string? text) => WriteIssues(user,[issue], w =>
     {
         var row = RequireIssue(w, user, issue);
         var p = w.Find("Projects", Int(row, "ProjectId"))!;
@@ -84,7 +84,7 @@ public sealed partial class OracleWorkspace
     internal async Task Upload(int user, int issue, IFormFile? file, CancellationToken token)
     {
         var upload = await UploadedFile.Read(file, token);
-        await WriteIssues([issue], w =>
+        await WriteIssues(user,[issue], w =>
         {
             RequireIssue(w, user, issue, "issues.edit");
             w.Add("IssueAttachments", ("Id", w.Next("IssueAttachments")), ("IssueId", issue), ("AuthorId", user), ("FileName", upload.Name), ("Content", Convert.ToBase64String(upload.Content)), ("CreatedAt", DateTime.UtcNow));
@@ -92,7 +92,7 @@ public sealed partial class OracleWorkspace
         });
     }
 
-    internal Task<bool> RemoveAttachment(int user, int issue, int attachment) => WriteIssues([issue], w =>
+    internal Task<bool> RemoveAttachment(int user, int issue, int attachment) => WriteIssues(user,[issue], w =>
     {
         RequireIssue(w, user, issue, "issues.edit");
         var row = w.Find("IssueAttachments", attachment);
@@ -114,7 +114,7 @@ public sealed partial class OracleWorkspace
 
         return w.By("ProjectIssueFields", "ProjectId", project).Where(f => !Flag(f, "ManagersOnly") || managers).OrderBy(f => Text(f, "Name")).Select(f => new IssueField(Id(f), Text(f, "Name"), w.By("IssueFieldValues", "IssueId", issue).Where(v => Int(v, "FieldId") == Id(f)).Select(v => Text(v, "Value")).FirstOrDefault(), Flag(f, "ManagersOnly"))).ToList();
     });
-    internal Task SetIssueField(int user, int issue, int field, int revision, string? value) => WriteIssues([issue], w =>
+    internal Task SetIssueField(int user, int issue, int field, int revision, string? value) => WriteIssues(user,[issue], w =>
     {
         var row = RequireIssue(w, user, issue, "issues.edit");
         var project = Int(row, "ProjectId");

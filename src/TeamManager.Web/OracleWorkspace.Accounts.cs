@@ -4,7 +4,7 @@ using static TeamManager.Web.OracleWorkspace.Workspace;
 namespace TeamManager.Web;
 public sealed partial class OracleWorkspace
 {
-    internal Task<AppUser?> Authenticate(string employee, string password, IPasswordHasher<AppUser> hasher) => Write(w =>
+    internal Task<AppUser?> Authenticate(string employee, string password, IPasswordHasher<AppUser> hasher) => WriteLogin(employee,w =>
     {
         var row = w.Where("AppUsers", "UPPER(t.\"EmployeeNumber\")=UPPER(:employee)", ("employee", employee)).FirstOrDefault();
         if (row is null || !Flag(row, "IsActive") || Date(row, "LockoutUntil") > DateTime.UtcNow)
@@ -36,7 +36,7 @@ public sealed partial class OracleWorkspace
 
         return result.OrderBy(r => r.Scope).ThenBy(r => r.IsAdditional).ToList();
     });
-    internal Task Membership(int actor, int user, string kind, int scope, string? role, bool removeRole, bool replace, bool removeMember) => Write(w =>
+    internal Task Membership(int actor, int user, string kind, int scope, string? role, bool removeRole, bool replace, bool removeMember) => WriteAccount(actor,user,w =>
     {
         var rights = Rights(w, actor, kind, scope);
         if (!rights.Contains("*") && !rights.Contains("members.manage"))
@@ -105,7 +105,7 @@ public sealed partial class OracleWorkspace
         Audit(w, actor, create ? "role.create" : "role.update", name);
         return true;
     });
-    internal Task AssignRole(int actor, int user, string role, bool remove) => Write(w =>
+    internal Task AssignRole(int actor, int user, string role, bool remove) => WriteAccount(actor,user,w =>
     {
         if (!Right(w, actor, "roles.manage"))
             throw new UnauthorizedAccessException();
@@ -118,7 +118,7 @@ public sealed partial class OracleWorkspace
         Audit(w, actor, remove ? "role.revoke" : "role.assign", $"#{user}", role);
         return true;
     });
-    internal Task ManageAccount(int actor, int user, bool? active, string? hash) => Write(w =>
+    internal Task ManageAccount(int actor, int user, bool? active, string? hash) => WriteAccount(actor,user,w =>
     {
         if (actor == user || !Rights(w, actor).Contains("*"))
             throw new UnauthorizedAccessException();

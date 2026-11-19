@@ -69,21 +69,17 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
 
     internal async Task<T> Read<T>(Func<Workspace, T> action) => await Run(action, false);
     internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
-    private async Task<T> Run<T>(Func<Workspace, T> action, bool write, string[]? resources = null)
+    private async Task<T> Run<T>(Func<Workspace, T> action, bool write, WriteScope? scope = null)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
-            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=1)");
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=2)");
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
-        if (write)
-        {
-            await AcquireWriteLock(connection, transaction, "policy", resources is null ? 6 : 4);
-            foreach (var resource in (resources ?? []).Order(StringComparer.Ordinal)) await AcquireWriteLock(connection, transaction, resource, 6);
-        }
+        if (write) await AcquireScope(connection, transaction, scope);
         var before = new JsonObject { ["_Sequences"] = new JsonObject() };
         var document = new JsonObject { ["_Sequences"] = new JsonObject() };
         JsonArray Fetch(string table, string predicate, (string Name, object? Value)[] parameters)
@@ -104,10 +100,13 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             return Convert.ToInt64(command.ExecuteScalar());
         }
         var workspace = new Workspace(document, Fetch, Counter);
+        if (scope?.Actor is int actor && (workspace.Find("AppUsers", actor) is not { } active || !Workspace.Flag(active, "IsActive")))
+            throw new UnauthorizedAccessException();
         var result = action(workspace);
         if (write)
         {
             var after = NormalizeDocument(document, partial: true);
+            if (workspace.PreserveAdministrator) await AcquireWriteLock(connection, transaction, "administrators", 6);
             await PersistChanges(connection, transaction, before, after, persistCounters: false);
             if (workspace.PreserveAdministrator) await RequireAdministrator(connection, transaction);
             await using var constraints = RelationalCommand(connection, transaction, "SET CONSTRAINTS ALL IMMEDIATE");
