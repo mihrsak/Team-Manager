@@ -9,7 +9,7 @@ public sealed partial class OracleWorkspace
         var current = RequireIssue(w, user, id);
         if (Int(current, "ProjectId") != project)
             throw new UnauthorizedAccessException();
-        return w.Rows("IssueLinks").Where(l => Int(l, "SourceId") == id || Int(l, "TargetId") == id).Select(l => (Link: l, Other: w.Find("Issues", Int(l, "SourceId") == id ? Int(l, "TargetId") : Int(l, "SourceId")))).Where(x => x.Other is not null && Visible(w, user, x.Other)).Select(x => new IssueLink(Id(x.Other!), Text(x.Other!, "Title"), Text(x.Link, "Kind"), Int(x.Link, "SourceId") == id, Can(w, user, Int(x.Other!, "ProjectId"), "issues.edit"))).ToList();
+        return w.Where("IssueLinks", "t.\"SourceId\"=:id OR t.\"TargetId\"=:id", ("id",id)).Select(l => (Link: l, Other: w.Find("Issues", Int(l, "SourceId") == id ? Int(l, "TargetId") : Int(l, "SourceId")))).Where(x => x.Other is not null && Visible(w, user, x.Other)).Select(x => new IssueLink(Id(x.Other!), Text(x.Other!, "Title"), Text(x.Link, "Kind"), Int(x.Link, "SourceId") == id, Can(w, user, Int(x.Other!, "ProjectId"), "issues.edit"))).ToList();
     });
     internal Task SetLink(int user, int id, int other, string kind, bool outgoing, bool remove) => Write(w =>
     {
@@ -58,7 +58,7 @@ public sealed partial class OracleWorkspace
         var row = RequireIssue(w, user, issue);
         if (Int(row, "ProjectId") != project)
             throw new UnauthorizedAccessException();
-        return w.Rows("IssuePrivateNotes").Where(n => Int(n, "UserId") == user && Int(n, "IssueId") == issue).OrderByDescending(Id).Select(n => new PrivateIssueNote(Text(n, "Body"), Date(n, "CreatedAt")!.Value)).ToList();
+        return w.By("IssuePrivateNotes", "IssueId", issue).Where(n => Int(n, "UserId") == user).OrderByDescending(Id).Select(n => new PrivateIssueNote(Text(n, "Body"), Date(n, "CreatedAt")!.Value)).ToList();
     });
     internal Task AddNote(int user, int issue, string? text) => Write(w =>
     {
@@ -72,13 +72,7 @@ public sealed partial class OracleWorkspace
         w.Add("IssuePrivateNotes", ("Id", w.Next("IssuePrivateNotes")), ("IssueId", issue), ("UserId", user), ("Body", text), ("CreatedAt", DateTime.UtcNow));
         return true;
     });
-    internal Task<List<AttachmentInfo>> Attachments(int user, int issue, int project) => Read(w =>
-    {
-        var row = RequireIssue(w, user, issue);
-        if (Int(row, "ProjectId") != project)
-            throw new UnauthorizedAccessException();
-        return w.Rows("IssueAttachments").Where(a => Int(a, "IssueId") == issue).OrderByDescending(Id).Select(a => new AttachmentInfo(Id(a), Text(a, "FileName"), Convert.FromBase64String(Text(a, "Content")).LongLength)).ToList();
-    });
+    internal Task<List<AttachmentInfo>> Attachments(int user, int issue, int project) => AttachmentsSql(user,issue,project);
     internal Task<AttachmentDownload?> Download(int user, int issue, int attachment) => Read(w =>
     {
         var visible = w.Find("Issues", issue);
@@ -118,7 +112,7 @@ public sealed partial class OracleWorkspace
                 throw new UnauthorizedAccessException();
         }
 
-        return w.Rows("ProjectIssueFields").Where(f => Int(f, "ProjectId") == project && (!Flag(f, "ManagersOnly") || managers)).OrderBy(f => Text(f, "Name")).Select(f => new IssueField(Id(f), Text(f, "Name"), w.Rows("IssueFieldValues").Where(v => Int(v, "IssueId") == issue && Int(v, "FieldId") == Id(f)).Select(v => Text(v, "Value")).FirstOrDefault(), Flag(f, "ManagersOnly"))).ToList();
+        return w.By("ProjectIssueFields", "ProjectId", project).Where(f => !Flag(f, "ManagersOnly") || managers).OrderBy(f => Text(f, "Name")).Select(f => new IssueField(Id(f), Text(f, "Name"), w.By("IssueFieldValues", "IssueId", issue).Where(v => Int(v, "FieldId") == Id(f)).Select(v => Text(v, "Value")).FirstOrDefault(), Flag(f, "ManagersOnly"))).ToList();
     });
     internal Task SetIssueField(int user, int issue, int field, int revision, string? value) => Write(w =>
     {
@@ -131,11 +125,11 @@ public sealed partial class OracleWorkspace
         if (value?.Length > 500)
             throw new ArgumentException("Vrijednost polja može imati najviše 500 znakova.");
         Revision(row, revision, "Zadatak je u međuvremenu izmijenjen. Osvježi stranicu.");
-        w.Remove("IssueFieldValues", v => Int(v, "IssueId") == issue && Int(v, "FieldId") == field);
+        w.RemoveBy("IssueFieldValues", "IssueId", issue, v => Int(v, "FieldId") == field);
         if (!string.IsNullOrEmpty(value))
             w.Add("IssueFieldValues", ("IssueId", issue), ("FieldId", field), ("Value", value));
         Revise(row);
         return true;
     });
-    internal Task<List<RoadmapItem>> Roadmap(int project) => Read(w => w.Rows("ProjectMilestones").Where(m => Int(m, "ProjectId") == project).OrderBy(m => Flag(m, "IsComplete")).ThenBy(m => Date(m, "TargetDate") ?? DateTime.MaxValue).Select(m => new RoadmapItem(Id(m), Text(m, "Kind"), Text(m, "Name"), Text(m, "Description"), Date(m, "TargetDate"), Flag(m, "IsComplete"), Int(m, "Revision"))).ToList());
+    internal Task<List<RoadmapItem>> Roadmap(int project) => Read(w => w.By("ProjectMilestones", "ProjectId", project).OrderBy(m => Flag(m, "IsComplete")).ThenBy(m => Date(m, "TargetDate") ?? DateTime.MaxValue).Select(m => new RoadmapItem(Id(m), Text(m, "Kind"), Text(m, "Name"), Text(m, "Description"), Date(m, "TargetDate"), Flag(m, "IsComplete"), Int(m, "Revision"))).ToList());
 }

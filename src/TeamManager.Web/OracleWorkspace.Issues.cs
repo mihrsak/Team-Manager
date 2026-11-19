@@ -6,21 +6,17 @@ namespace TeamManager.Web;
 public sealed partial class OracleWorkspace
 {
     internal static IssueDetail Detail(JsonObject r) => new(Id(r), Int(r, "ProjectId"), new() { Title = Text(r, "Title"), Description = Text(r, "Description"), Type = Text(r, "Type"), Priority = Text(r, "Priority"), Status = Text(r, "Status"), AssigneeId = OptionalInt(r, "AssigneeId"), DueDate = Date(r, "DueDate"), StartDate = Date(r, "StartDate"), RoadmapItemId = OptionalInt(r, "RoadmapItemId"), Revision = Int(r, "Revision"), IsPrivate = Flag(r, "IsPrivate") }, Int(r, "CreatedBy"));
-    internal Task<IssueDetail?> Issue(int user, int id) => Read(w => w.Find("Issues", id)is { } row && Visible(w, user, row) ? Detail(row) : null);
-    internal Task<List<IssueRow>> IssueList(int user, int? project, string? status, string? query, DateTime? from, DateTime? to, bool schedule, int? assignee, bool open, bool watched) => Read(w => w.Rows("Issues").Where(i => Visible(w, user, i) && (project is null || Int(i, "ProjectId") == project) && (string.IsNullOrEmpty(status) || Text(i, "Status") == status) && (string.IsNullOrEmpty(query) || (Text(i, "Title") + " " + Text(i, "Description")).Contains(query, StringComparison.OrdinalIgnoreCase)) && (assignee is null || OptionalInt(i, "AssigneeId") == assignee) && (!open || !w.Rows("IssueStatuses").Any(s => Text(s, "Name") == Text(i, "Status") && Flag(s, "IsClosed"))) && (!watched || w.Rows("IssueWatchers").Any(r => Int(r, "IssueId") == Id(i) && Int(r, "UserId") == user)) && (from is null || (schedule ? Date(i, "DueDate") ?? Date(i, "StartDate") : Date(i, "DueDate")) >= from) && (to is null || (schedule ? Date(i, "StartDate") ?? Date(i, "DueDate") : Date(i, "DueDate")) <= to)).OrderByDescending(Id).Select(i =>
-    {
-        var person = w.Find("AppUsers", OptionalInt(i, "AssigneeId") ?? 0);
-        return new IssueRow(Id(i), Int(i, "ProjectId"), Text(w.Find("Projects", Int(i, "ProjectId"))!, "Name"), Text(i, "Title"), Text(i, "Status"), Text(i, "Priority"), person is null ? null : Text(person, "DisplayName"), Date(i, "DueDate"), Int(i, "Revision"), person is null ? null : Text(person, "EmployeeNumber"), Date(i, "StartDate"));
-    }).ToList());
+    internal Task<IssueDetail?> Issue(int user, int id) => IssueSql(user,id);
+    internal Task<List<IssueRow>> IssueList(int user,int? project,string? status,string? query,DateTime? from,DateTime? to,bool schedule,int? assignee,bool open,bool watched) => IssueListSql(user,project,status,query,from,to,schedule,assignee,open,watched);
     internal static int Event(Workspace w, int issue, int user, string kind, string body)
     {
         var id = w.Next("IssueEvents");
         w.Add("IssueEvents", ("Id", id), ("IssueId", issue), ("UserId", user), ("Kind", kind), ("Body", body), ("CreatedAt", DateTime.UtcNow));
-        foreach (var watcher in w.Rows("IssueWatchers").Where(r => Int(r, "IssueId") == issue && Int(r, "UserId") != user).ToArray())
+        foreach (var watcher in w.By("IssueWatchers", "IssueId", issue).Where(r => Int(r, "UserId") != user).ToArray())
         {
             var recipient = Int(watcher, "UserId");
             w.Add("IssueNotifications", ("EventId", id), ("IssueId", issue), ("UserId", recipient), ("IsRead", false));
-            if (w.Rows("EmailNotificationPreferences").Any(p => Int(p, "UserId") == recipient && Flag(p, "SendWatchedIssues")) && w.Find("Issues", issue)is { } row && Visible(w, recipient, row))
+            if (w.By("EmailNotificationPreferences", "UserId", recipient).Any(p => Flag(p, "SendWatchedIssues")) && w.Find("Issues", issue)is { } row && Visible(w, recipient, row))
                 w.Add("IssueEmailQueue", ("UserId", recipient), ("EventId", id), ("QueuedAt", DateTime.UtcNow), ("Attempts", 0), ("AvailableAt", DateTime.UtcNow), ("LeaseId", null), ("CompletedAt", null));
         }
 
@@ -35,7 +31,7 @@ public sealed partial class OracleWorkspace
             throw new ArgumentException("Provjeri polja zadatka.");
         if (input.StartDate?.Year < 1753 || input.StartDate?.Date > input.DueDate?.Date)
             throw new ArgumentException("Početak mora biti valjan datum i ne može biti poslije roka.");
-        if (input.AssigneeId is int assignee && !w.Rows("ProjectMembers").Any(r => Int(r, "ProjectId") == project && Int(r, "UserId") == assignee))
+        if (input.AssigneeId is int assignee && !w.By("ProjectMembers", "ProjectId", project).Any(r => Int(r, "UserId") == assignee))
             throw new ArgumentException("Nositelj mora biti član projekta.");
         if (input.RoadmapItemId is int milestone && (w.Find("ProjectMilestones", milestone)is not { } m || Int(m, "ProjectId") != project))
             throw new ArgumentException("Odaberi verziju ili prekretnicu ovog projekta.");
@@ -114,7 +110,7 @@ public sealed partial class OracleWorkspace
         Set(row, "ProjectId", destination);
         Set(row, "RoadmapItemId", null);
         Revise(row);
-        if (!w.Rows("ProjectMembers").Any(m => Int(m, "ProjectId") == destination && OptionalInt(row, "AssigneeId") == Int(m, "UserId")))
+        if (!w.By("ProjectMembers", "ProjectId", destination).Any(m => OptionalInt(row, "AssigneeId") == Int(m, "UserId")))
             Set(row, "AssigneeId", null);
         Event(w, id, user, "moved", JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination }));
         return id;
@@ -141,8 +137,8 @@ public sealed partial class OracleWorkspace
     {
         var issue = RequireIssue(w, user, id);
         var time = Can(w, user, Int(issue, "ProjectId"), "time.view");
-        var events = w.Rows("IssueEvents").Where(e => Int(e, "IssueId") == id && (time || Text(e, "Kind") != "time")).OrderByDescending(Id).Select(e => new IssueEvent(Text(w.Find("AppUsers", Int(e, "UserId"))!, "DisplayName"), Text(e, "Kind"), Text(e, "Body"), Date(e, "CreatedAt")!.Value)).ToList();
-        var entries = w.Rows("TimeEntries").Where(t => time && Int(t, "IssueId") == id).OrderByDescending(t => Date(t, "WorkDate")).Select(t => new TimeEntry(Text(w.Find("AppUsers", Int(t, "UserId"))!, "DisplayName"), Date(t, "WorkDate")!.Value, Number(t, "Hours"), Text(t, "Note"), Text(t, "Activity"), Id(t))).ToList();
+        var events = w.By("IssueEvents", "IssueId", id).Where(e => time || Text(e, "Kind") != "time").OrderByDescending(Id).Select(e => new IssueEvent(Text(w.Find("AppUsers", Int(e, "UserId"))!, "DisplayName"), Text(e, "Kind"), Text(e, "Body"), Date(e, "CreatedAt")!.Value)).ToList();
+        var entries = w.By("TimeEntries", "IssueId", id).Where(t => time).OrderByDescending(t => Date(t, "WorkDate")).Select(t => new TimeEntry(Text(w.Find("AppUsers", Int(t, "UserId"))!, "DisplayName"), Date(t, "WorkDate")!.Value, Number(t, "Hours"), Text(t, "Note"), Text(t, "Activity"), Id(t))).ToList();
         return (events, entries);
     });
 }

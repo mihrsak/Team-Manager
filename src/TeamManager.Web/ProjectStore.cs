@@ -21,7 +21,7 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions,O
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     public async Task<bool> CanManage(int user,int? id)
     {
-        if (oracle.Enabled) return await oracle.Read(w => OracleWorkspace.Manage(w,user,id));
+        if (oracle.Enabled) return await oracle.ManageSql(user,id);
         var rights=await permissions.Effective(user,id is null?null:"project",id);
         return rights.Contains("*")||rights.Contains(id is null?"organization.manage":"projects.manage");
     }

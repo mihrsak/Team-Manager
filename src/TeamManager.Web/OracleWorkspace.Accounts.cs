@@ -6,7 +6,7 @@ public sealed partial class OracleWorkspace
 {
     internal Task<AppUser?> Authenticate(string employee, string password, IPasswordHasher<AppUser> hasher) => Write(w =>
     {
-        var row = w.Rows("AppUsers").FirstOrDefault(r => Text(r, "EmployeeNumber").Equals(employee, StringComparison.OrdinalIgnoreCase));
+        var row = w.Where("AppUsers", "UPPER(t.\"EmployeeNumber\")=UPPER(:employee)", ("employee", employee)).FirstOrDefault();
         if (row is null || !Flag(row, "IsActive") || Date(row, "LockoutUntil") > DateTime.UtcNow)
             return null;
         var account = Account(row);
@@ -26,12 +26,12 @@ public sealed partial class OracleWorkspace
     internal Task<List<Membership>> Memberships(int user, bool team) => Read(w =>
     {
         var result = new List<Membership>();
-        foreach (var m in w.Rows(team ? "Members" : "ProjectMembers").Where(r => Int(r, "UserId") == user))
+        foreach (var m in w.By(team ? "Members" : "ProjectMembers", "UserId", user))
         {
             var scope = Int(m, team ? "TeamId" : "ProjectId");
             var name = Text(w.Find(team ? "Teams" : "Projects", scope)!, "Name");
             result.Add(new(scope, name, Text(m, "Role"), false));
-            result.AddRange(w.Rows(team ? "TeamMemberRoles" : "ProjectMemberRoles").Where(r => team ? Int(r, "MemberId") == Id(m) : Int(r, "ProjectId") == scope && Int(r, "UserId") == user).Select(r => new Membership(scope, name, Text(r, "RoleName"), true)));
+            result.AddRange(w.By(team ? "TeamMemberRoles" : "ProjectMemberRoles", team ? "MemberId" : "ProjectId", team ? Id(m) : scope).Where(r => team || Int(r, "UserId") == user).Select(r => new Membership(scope, name, Text(r, "RoleName"), true)));
         }
 
         return result.OrderBy(r => r.Scope).ThenBy(r => r.IsAdditional).ToList();
@@ -45,25 +45,25 @@ public sealed partial class OracleWorkspace
             throw new ArgumentException("Odaberi tim ili projekt i valjanu ulogu.");
         if (!removeMember)
         {
-            if (!w.Rows("Roles").Any(r => Text(r, "Name") == role))
+            if (!w.By("Roles", "Name", role).Any())
                 throw new ArgumentException("Nepostojeća rola.");
-            if (!rights.Contains("*") && w.Rows("RolePermissions").Any(r => Text(r, "RoleName") == role && !rights.Contains(Text(r, "Permission"))))
+            if (!rights.Contains("*") && w.By("RolePermissions", "RoleName", role).Any(r => !rights.Contains(Text(r, "Permission"))))
                 throw new UnauthorizedAccessException();
         }
 
         var team = kind == "team";
         var table = team ? "Members" : "ProjectMembers";
         var additional = team ? "TeamMemberRoles" : "ProjectMemberRoles";
-        var member = w.Rows(table).FirstOrDefault(r => Int(r, "UserId") == user && Int(r, team ? "TeamId" : "ProjectId") == scope);
+        var member = w.By(table, "UserId", user).FirstOrDefault(r => Int(r, team ? "TeamId" : "ProjectId") == scope);
         bool Match(System.Text.Json.Nodes.JsonObject r) => team ? Int(r, "MemberId") == (member is null ? 0 : Id(member)) : Int(r, "ProjectId") == scope && Int(r, "UserId") == user;
         if (removeMember)
         {
-            w.Remove(additional, Match);
+            w.RemoveBy(additional, team ? "MemberId" : "ProjectId", team ? (member is null ? 0 : Id(member)) : scope, Match);
             if (member is not null)
                 w.Table(table).Remove(member);
         }
         else if (removeRole)
-            w.Remove(additional, r => Match(r) && Text(r, "RoleName") == role);
+            w.RemoveBy(additional, team ? "MemberId" : "ProjectId", team ? (member is null ? 0 : Id(member)) : scope, r => Match(r) && Text(r, "RoleName") == role);
         else if (member is null)
         {
             if (team)
@@ -74,7 +74,7 @@ public sealed partial class OracleWorkspace
         else if (replace)
         {
             Set(member, "Role", role);
-            w.Remove(additional, r => Match(r) && Text(r, "RoleName") == role);
+            w.RemoveBy(additional, team ? "MemberId" : "ProjectId", team ? (member is null ? 0 : Id(member)) : scope, r => Match(r) && Text(r, "RoleName") == role);
         }
         else if (Text(member, "Role") != role && !w.Rows(additional).Any(r => Match(r) && Text(r, "RoleName") == role))
         {
@@ -87,22 +87,18 @@ public sealed partial class OracleWorkspace
         Audit(w, actor, removeMember ? "membership.remove" : removeRole ? "membership.role.remove" : replace ? "membership.role.replace" : "membership.role.add", $"#{user}", $"{kind} #{scope}: {role}");
         return true;
     });
-    private static void GuardAdmin(Workspace w)
-    {
-        if (!w.Rows("AppUsers").Any(u => Flag(u, "IsActive") && Rights(w, Id(u)).Contains("*")))
-            throw new InvalidOperationException("Mora ostati barem jedan aktivan puni administrator.");
-    }
+    private static void GuardAdmin(Workspace w) => w.PreserveAdministrator = true;
 
     internal Task SaveRole(int actor, string name, string description, string[] rights, bool create) => Write(w =>
     {
         if (!Right(w, actor, "roles.manage"))
             throw new UnauthorizedAccessException();
-        var role = w.Rows("Roles").FirstOrDefault(r => Text(r, "Name") == name);
+        var role = w.By("Roles", "Name", name).FirstOrDefault();
         if (create && role is not null)
             throw new ArgumentException("Naziv nije valjan ili već postoji.");
         role ??= w.Add("Roles", ("Name", name));
         Set(role, "Description", description);
-        w.Remove("RolePermissions", r => Text(r, "RoleName") == name);
+        w.RemoveBy("RolePermissions", "RoleName", name);
         foreach (var right in rights.Distinct())
             w.Add("RolePermissions", ("RoleName", name), ("Permission", right));
         GuardAdmin(w);
@@ -113,9 +109,9 @@ public sealed partial class OracleWorkspace
     {
         if (!Right(w, actor, "roles.manage"))
             throw new UnauthorizedAccessException();
-        if (w.Find("AppUsers", user)is null || !w.Rows("Roles").Any(r => Text(r, "Name") == role))
+        if (w.Find("AppUsers", user)is null || !w.By("Roles", "Name", role).Any())
             throw new ArgumentException("Nepostojeća rola.");
-        w.Remove("UserRoles", r => Int(r, "UserId") == user && Text(r, "RoleName") == role);
+        w.RemoveBy("UserRoles", "UserId", user, r => Text(r, "RoleName") == role);
         if (!remove)
             w.Add("UserRoles", ("UserId", user), ("RoleName", role));
         GuardAdmin(w);

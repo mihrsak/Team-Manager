@@ -87,7 +87,7 @@ public sealed partial class OracleWorkspace
         return column.Type == "bit" ? JsonValue.Create(sql == "1") : JsonValue.Create(int.Parse(sql, CultureInfo.InvariantCulture));
     }
 
-    private static JsonObject NormalizeDocument(JsonObject document)
+    private static JsonObject NormalizeDocument(JsonObject document, bool partial = false)
     {
         if (document.Any(p => p.Key != "_Sequences" && !Schema.Value.Tables.Any(t => t.Name == p.Key)))
             throw new InvalidOperationException("Unexpected source table; update the relational schema before migrating.");
@@ -95,6 +95,7 @@ public sealed partial class OracleWorkspace
         var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         foreach (var table in Schema.Value.Tables)
         {
+            if (partial && !document.ContainsKey(table.Name)) continue;
             if (document[table.Name] is not JsonArray rows)
                 throw new InvalidOperationException($"Missing source table {table.Name}.");
             if (rows.Any(r => r is not JsonObject))
@@ -103,12 +104,13 @@ public sealed partial class OracleWorkspace
         }
         var workspace = new Workspace(normalized);
         normalized["_Sequences"] = document["_Sequences"]?.DeepClone() ?? new JsonObject();
-        workspace.InitializeSequences();
+        if (!partial) workspace.InitializeSequences();
         return normalized;
     }
 
     private static async Task<JsonObject> LoadRelational(OracleConnection connection, OracleTransaction transaction)
     {
+        FullReads.Add(1);
         var document = new JsonObject();
         foreach (var table in Schema.Value.Tables)
         {
@@ -175,6 +177,7 @@ public sealed partial class OracleWorkspace
         // changed atomically. Never delete and reinsert unchanged records or binary LOBs.
         foreach (var table in Schema.Value.Tables)
         {
+            if (!after.ContainsKey(table.Name)) continue;
             var previous = (before?[table.Name] as JsonArray ?? []).OfType<JsonObject>().ToDictionary(r => RowKey(table, r));
             var current = after[table.Name]!.AsArray().OfType<JsonObject>().ToDictionary(r => RowKey(table, r));
             foreach (var (key, row) in previous.Where(p => !current.ContainsKey(p.Key)))

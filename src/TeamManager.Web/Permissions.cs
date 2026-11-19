@@ -32,7 +32,7 @@ public sealed class Permissions(IConfiguration config,OracleWorkspace oracle)
     }
     public async Task<List<string>> GlobalRoles(int userId)
     {
-        if (oracle.Enabled) return await oracle.Read(w => w.Rows("UserRoles").Where(r => OracleWorkspace.Workspace.Int(r,"UserId")==userId)
+        if (oracle.Enabled) return await oracle.Read(w => w.By("UserRoles","UserId",userId)
             .Select(r => OracleWorkspace.Workspace.Text(r,"RoleName")).ToList());
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT RoleName FROM dbo.UserRoles WHERE UserId=@id",c);cmd.Parameters.Add(P("@id",userId));await using var r=await cmd.ExecuteReaderAsync();var result=new List<string>();while(await r.ReadAsync())result.Add(r.GetString(0));return result;
     }

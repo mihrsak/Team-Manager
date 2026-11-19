@@ -10,7 +10,7 @@ public sealed class DatabaseHealthCheck(IConfiguration configuration,OracleWorks
     {
         if(oracle.Enabled)
         {
-            return await oracle.Read(w=>w.Rows("AppUsers").Any()?HealthCheckResult.Healthy():HealthCheckResult.Unhealthy("No imported users."));
+            return await oracle.ReadySql() ? HealthCheckResult.Healthy() : HealthCheckResult.Unhealthy("No imported users.");
         }
         var settings = new SqlConnectionStringBuilder(configuration.GetConnectionString("TeamManager"))
         {

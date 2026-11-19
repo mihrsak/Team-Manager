@@ -32,7 +32,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     public async Task<bool> Can(int user,int project,string right)
     {
-        if (oracle.Enabled) return await oracle.Read(w => OracleWorkspace.Can(w,user,project,right));
+        if (oracle.Enabled) return await oracle.CanSql(user,project,right);
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT IsPublic,State,IssuesEnabled,TimeEnabled FROM dbo.Projects WHERE Id=@p",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return false;
         if(!r.GetBoolean(2)||(right.StartsWith("time.")&&!r.GetBoolean(3)))return false;
         if(right=="time.view")right="issues.view";
@@ -48,10 +48,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task<List<Team>> Projects(int user,string right="issues.view")
     {
-        if (oracle.Enabled) return await oracle.Read(w => w.Rows("Projects")
-            .Where(p => OracleWorkspace.Can(w,user,OracleWorkspace.Workspace.Id(p),right))
-            .OrderBy(p => OracleWorkspace.Workspace.Text(p,"Name"))
-            .Select(p => new Team(OracleWorkspace.Workspace.Id(p),OracleWorkspace.Workspace.Text(p,"Name"))).ToList());
+        if (oracle.Enabled) return await oracle.ProjectChoicesSql(user,right);
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name FROM dbo.Projects ORDER BY Name",c);await using var r=await cmd.ExecuteReaderAsync();var all=new List<Team>();while(await r.ReadAsync())all.Add(new(r.GetInt32(0),r.GetString(1)));
         var result=new List<Team>();foreach(var project in all)if(await Can(user,project.Id,right))result.Add(project);return result;
     }
@@ -71,8 +68,8 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task<bool> IsWatching(int user, int issue)
     {
-        if (oracle.Enabled) return await oracle.Read(w => w.Rows("IssueWatchers").Any(r =>
-            OracleWorkspace.Workspace.Int(r,"IssueId")==issue && OracleWorkspace.Workspace.Int(r,"UserId")==user));
+        if (oracle.Enabled) return await oracle.Read(w => w.By("IssueWatchers","IssueId",issue).Any(r =>
+            OracleWorkspace.Workspace.Int(r,"UserId")==user));
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
@@ -88,11 +85,11 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
             await oracle.Write(w =>
             {
                 OracleWorkspace.RequireIssue(w,user,id);
-                w.Remove("IssueWatchers",r => OracleWorkspace.Workspace.Int(r,"IssueId")==id && OracleWorkspace.Workspace.Int(r,"UserId")==user);
+                w.RemoveBy("IssueWatchers","IssueId",id,r => OracleWorkspace.Workspace.Int(r,"UserId")==user);
                 if(watch) w.Add("IssueWatchers",("IssueId",id),("UserId",user));
-                else w.Remove("IssueNotifications",r => OracleWorkspace.Workspace.Int(r,"IssueId")==id && OracleWorkspace.Workspace.Int(r,"UserId")==user);
+                else w.RemoveBy("IssueNotifications","IssueId",id,r => OracleWorkspace.Workspace.Int(r,"UserId")==user);
                 if(!watch)
-                    w.Remove("IssueEmailQueue",q => OracleWorkspace.Workspace.Int(q,"UserId")==user &&
+                    w.RemoveBy("IssueEmailQueue","UserId",user,q =>
                         w.Find("IssueEvents",OracleWorkspace.Workspace.Int(q,"EventId")) is {} e && OracleWorkspace.Workspace.Int(e,"IssueId")==id);
                 return true;
             });
@@ -122,9 +119,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
 
     public async Task<List<Team>> Assignees(int project)
     {
-        if (oracle.Enabled) return await oracle.Read(w => w.Rows("AppUsers").Where(u => w.Rows("ProjectMembers").Any(m =>
-            OracleWorkspace.Workspace.Int(m,"ProjectId")==project && OracleWorkspace.Workspace.Int(m,"UserId")==OracleWorkspace.Workspace.Id(u)))
-            .Select(u=>new Team(OracleWorkspace.Workspace.Id(u),OracleWorkspace.Workspace.Text(u,"DisplayName"))).ToList());
+        if (oracle.Enabled) return await oracle.AssigneesSql(project);
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.Id,u.DisplayName FROM dbo.AppUsers u JOIN dbo.ProjectMembers m ON m.UserId=u.Id WHERE m.ProjectId=@p ORDER BY u.DisplayName",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();var list=new List<Team>();while(await r.ReadAsync())list.Add(new(r.GetInt32(0),r.GetString(1)));return list;
     }
     public async Task<int> Save(int user,int project,int? id,IssueInput input)

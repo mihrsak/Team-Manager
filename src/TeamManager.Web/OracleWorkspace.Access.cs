@@ -6,16 +6,16 @@ public sealed partial class OracleWorkspace
 {
     internal static HashSet<string> RolesFor(Workspace w, int user, string? kind = null, int? scope = null)
     {
-        var roles = w.Rows("UserRoles").Where(r => Int(r, "UserId") == user).Select(r => Text(r, "RoleName")).ToHashSet();
-        var groups = w.Rows("UserGroupMembers").Where(r => Int(r, "UserId") == user).Select(r => Int(r, "GroupId")).ToHashSet();
-        roles.UnionWith(w.Rows("UserGroupRoles").Where(r => groups.Contains(Int(r, "GroupId"))).Select(r => Text(r, "RoleName")));
+        var roles = w.By("UserRoles", "UserId", user).Select(r => Text(r, "RoleName")).ToHashSet();
+        var groups = w.By("UserGroupMembers", "UserId", user).Select(r => Int(r, "GroupId")).ToHashSet();
+        roles.UnionWith(groups.SelectMany(group => w.By("UserGroupRoles", "GroupId", group)).Select(r => Text(r, "RoleName")));
         if (kind == "project" && scope is int project)
         {
             var ancestors = new HashSet<int>();
             while (ancestors.Add(project) && w.Find("Projects", project)is { } current)
             {
-                roles.UnionWith(w.Rows("ProjectMembers").Where(r => Int(r, "ProjectId") == project && Int(r, "UserId") == user).Select(r => Text(r, "Role")));
-                roles.UnionWith(w.Rows("ProjectMemberRoles").Where(r => Int(r, "ProjectId") == project && Int(r, "UserId") == user).Select(r => Text(r, "RoleName")));
+                roles.UnionWith(w.By("ProjectMembers", "ProjectId", project).Where(r => Int(r, "UserId") == user).Select(r => Text(r, "Role")));
+                roles.UnionWith(w.By("ProjectMemberRoles", "ProjectId", project).Where(r => Int(r, "UserId") == user).Select(r => Text(r, "RoleName")));
                 if (!Flag(current, "InheritParentRoles") || OptionalInt(current, "ParentId")is not int parent)
                     break;
                 project = parent;
@@ -24,9 +24,9 @@ public sealed partial class OracleWorkspace
 
         if (kind == "team")
         {
-            var members = w.Rows("Members").Where(r => Int(r, "UserId") == user && Int(r, "TeamId") == scope).ToArray();
+            var members = w.By("Members", "UserId", user).Where(r => Int(r, "TeamId") == scope).ToArray();
             roles.UnionWith(members.Select(r => Text(r, "Role")));
-            roles.UnionWith(w.Rows("TeamMemberRoles").Where(r => members.Any(m => Id(m) == Int(r, "MemberId"))).Select(r => Text(r, "RoleName")));
+            roles.UnionWith(members.SelectMany(m => w.By("TeamMemberRoles", "MemberId", Id(m))).Select(r => Text(r, "RoleName")));
         }
 
         return roles;
@@ -37,7 +37,7 @@ public sealed partial class OracleWorkspace
         if (w.Find("AppUsers", user)is not { } account || !Flag(account, "IsActive"))
             return[];
         var roles = RolesFor(w, user, kind, scope);
-        return w.Rows("RolePermissions").Where(r => roles.Contains(Text(r, "RoleName"))).Select(r => Text(r, "Permission")).Distinct().ToList();
+        return roles.SelectMany(role => w.By("RolePermissions", "RoleName", role)).Select(r => Text(r, "Permission")).Distinct().ToList();
     }
 
     internal static bool Right(Workspace w, int user, string permission, int? project = null)
@@ -78,7 +78,7 @@ public sealed partial class OracleWorkspace
     }
 
     internal static AppUser Account(JsonObject r) => new(Id(r), Text(r, "EmployeeNumber"), Text(r, "DisplayName"), Text(r, "JobTitle"), OptionalInt(r, "OrganizationUnitId"), Text(r, "PasswordHash"), Flag(r, "IsAdministrator"), Flag(r, "IsActive"), Int(r, "SessionVersion"));
-    internal Task<List<string>> Effective(int user, string? kind, int? scope) => Read(w => Rights(w, user, kind, scope));
+    internal Task<List<string>> Effective(int user, string? kind, int? scope) => EffectiveSql(user, kind, scope);
     internal Task<List<AccessRole>> AccessRoles() => Read(w => w.Rows("Roles").OrderBy(r => Text(r, "Name")).Select(r => new AccessRole(Text(r, "Name"), Text(r, "Description"), w.Rows("RolePermissions").Where(p => Text(p, "RoleName") == Text(r, "Name")).Select(p => Text(p, "Permission")).ToList())).ToList());
     internal Task<int> SaveProject(int user, int? id, ProjectInput input) => Write(w =>
     {
@@ -106,7 +106,7 @@ public sealed partial class OracleWorkspace
             ancestor = OptionalInt(p, "ParentId");
         }
 
-        if (w.Rows("Projects").Any(p => Id(p) != id && Text(p, "Name").Equals(input.Name.Trim(), StringComparison.OrdinalIgnoreCase)))
+        if (w.Where("Projects", "UPPER(t.\"Name\")=UPPER(:name)", ("name", input.Name.Trim())).Any(p => Id(p) != id))
             throw new ArgumentException("Projekt s tim nazivom već postoji.");
         var row = existing ?? w.Add("Projects", ("Id", w.Next("Projects")), ("IssuesEnabled", true), ("TimeEnabled", true), ("Revision", 0));
         Set(row, "Name", input.Name.Trim());
@@ -121,5 +121,5 @@ public sealed partial class OracleWorkspace
         Audit(w, user, existing is null ? "project.create" : "project.update", input.Name.Trim());
         return Id(row);
     });
-    internal Task<List<ProjectDetail>> ProjectList(int user) => Read(w => w.Rows("Projects").Where(p => Flag(p, "IsPublic") || Manage(w, user, Id(p)) || Right(w, user, "issues.view", Id(p))).OrderBy(p => Text(p, "Name")).Select(p => new ProjectDetail(Id(p), new() { Name = Text(p, "Name"), Description = Text(p, "Description"), ParentId = OptionalInt(p, "ParentId"), IsPublic = Flag(p, "IsPublic"), State = Text(p, "State"), Revision = Int(p, "Revision"), IssuesEnabled = Flag(p, "IssuesEnabled"), TimeEnabled = Flag(p, "TimeEnabled"), InheritParentRoles = Flag(p, "InheritParentRoles") })).ToList());
+    internal Task<List<ProjectDetail>> ProjectList(int user) => ProjectListSql(user);
 }

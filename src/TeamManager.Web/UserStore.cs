@@ -17,7 +17,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     private static AppUser Read(SqlDataReader r) => new(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetString(3),r.IsDBNull(4)?null:r.GetInt32(4),r.GetString(5),r.GetBoolean(6),r.GetBoolean(7),r.GetInt32(8));
     public async Task<AppUser?> Find(string employee)
     {
-        if(oracle.Enabled)return await oracle.Read(w=>w.Rows("AppUsers").Where(r=>Text(r,"EmployeeNumber").Equals(employee,StringComparison.OrdinalIgnoreCase)).Select(OracleWorkspace.Account).FirstOrDefault());
+        if(oracle.Enabled)return await oracle.Read(w=>w.Where("AppUsers", "UPPER(t.\"EmployeeNumber\")=UPPER(:employee)", ("employee",employee)).Select(OracleWorkspace.Account).FirstOrDefault());
         await using var c=Connect(); await c.OpenAsync();
         await using var cmd=new SqlCommand("SELECT Id,EmployeeNumber,DisplayName,JobTitle,OrganizationUnitId,PasswordHash,IsAdministrator,IsActive,SessionVersion FROM dbo.AppUsers WHERE EmployeeNumber=@employee",c);
         cmd.Parameters.Add(P("@employee",employee));
@@ -115,7 +115,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         {
             await oracle.Write(w=>{
                 if(actorId is not int actor || !OracleWorkspace.Right(w,actor,"users.manage"))throw new UnauthorizedAccessException();
-                if(w.Rows("AppUsers").Any(r=>Text(r,"EmployeeNumber").Equals(employee,StringComparison.OrdinalIgnoreCase)))throw new ArgumentException("Broj radnika već postoji.");
+                if(w.Where("AppUsers", "UPPER(t.\"EmployeeNumber\")=UPPER(:employee)", ("employee",employee)).Any())throw new ArgumentException("Broj radnika već postoji.");
                 if(unit is not null&&w.Find("OrganizationUnits",unit.Value)is null)throw new ArgumentException("Organizacijska jedinica nije valjana.");
                 var newUser=new AppUser(w.Next("AppUsers"),employee,name,job,unit,"",admin);
                 w.Add("AppUsers",("Id",newUser.Id),("EmployeeNumber",employee),("DisplayName",name),("JobTitle",job),("OrganizationUnitId",unit),
@@ -130,7 +130,7 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
     }
     public async Task Bootstrap()
     {
-        if(oracle.Enabled){await oracle.Read(w=>w.Rows("AppUsers").Any());return;}
+        if(oracle.Enabled){await oracle.ReadySql();return;}
         await using var c=Connect();await c.OpenAsync();
         await using var tx=(SqlTransaction)await c.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
         await using var check=new SqlCommand("SELECT COUNT(*) FROM dbo.AppUsers WITH(TABLOCKX,HOLDLOCK)",c,tx);

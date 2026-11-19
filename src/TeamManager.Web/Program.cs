@@ -143,7 +143,6 @@ builder.Services.AddAuthorization();
 var healthChecks = builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddScoped<OracleOverviewStore>();
 builder.Services.AddScoped<OracleProjectImport>();
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<OracleWorkspace>();
 if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));

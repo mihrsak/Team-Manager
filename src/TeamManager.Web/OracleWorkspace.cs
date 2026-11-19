@@ -8,9 +8,8 @@ using Oracle.ManagedDataAccess.Client;
 namespace TeamManager.Web;
 // Relational Oracle tables persist typed rows, including binary attachments.
 // Oracle owns the write lock and commit boundary, including authorization and history.
-public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpContextAccessor? contextAccessor = null)
+public sealed partial class OracleWorkspace(IConfiguration configuration)
 {
-    private static readonly object RequestSnapshotKey = new();
     public bool Enabled => configuration["Database:Provider"]?.Equals("Oracle", StringComparison.OrdinalIgnoreCase) == true;
 
     private OracleConnection Connect() => new(configuration.GetConnectionString("TeamManagerOracle") ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManagerOracle."));
@@ -72,9 +71,6 @@ public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpC
     internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
     private async Task<T> Run<T>(Func<Workspace, T> action, bool write)
     {
-        var items = contextAccessor?.HttpContext?.Items;
-        if (!write && items?[RequestSnapshotKey] is JsonObject snapshot)
-            return action(new Workspace((JsonObject)snapshot.DeepClone()));
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
@@ -83,32 +79,104 @@ public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpC
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
-        var before = await LoadRelational(connection, transaction);
-        var workspace = new Workspace((JsonObject)before.DeepClone());
+        var before = new JsonObject { ["_Sequences"] = new JsonObject() };
+        var document = new JsonObject { ["_Sequences"] = new JsonObject() };
+        JsonArray Fetch(string table, string predicate, (string Name, object? Value)[] parameters)
+        {
+            var rows = SelectRows(connection, transaction, table, predicate, parameters);
+            var baseline = before[table] as JsonArray;
+            if (baseline is null) before[table] = baseline = new JsonArray();
+            var definition = Schema.Value.Tables.Single(t => t.Name == table);
+            var keys = baseline.OfType<JsonObject>().Select(r => RowKey(definition, r)).ToHashSet();
+            foreach (var row in rows.OfType<JsonObject>())
+                if (keys.Add(RowKey(definition, row))) baseline.Add(row.DeepClone());
+            return rows;
+        }
+        long Counter(string table)
+        {
+            using var command = RelationalCommand(connection, transaction, "SELECT LAST_VALUE FROM TMR_COUNTERS WHERE TABLE_NAME=:name");
+            command.Parameters.Add("name", OracleDbType.Varchar2).Value = table;
+            var value = command.ExecuteScalar();
+            if (value is null or DBNull) throw new InvalidOperationException("Missing Oracle counter for " + table);
+            var count = Convert.ToInt64(value);
+            before["_Sequences"]![table] = count;
+            return count;
+        }
+        var workspace = new Workspace(document, Fetch, Counter);
         var result = action(workspace);
         if (write)
         {
-            var after = NormalizeDocument(workspace.Document);
+            var after = NormalizeDocument(document, partial: true);
             await PersistChanges(connection, transaction, before, after);
-            await using var update = RelationalCommand(connection, transaction,
-                "UPDATE TMR_WORKSPACE SET REVISION=REVISION+1 WHERE ID=1");
+            if (workspace.PreserveAdministrator) await RequireAdministrator(connection, transaction);
+            await using var update = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET REVISION=REVISION+1 WHERE ID=1");
             await update.ExecuteNonQueryAsync();
             await using var constraints = RelationalCommand(connection, transaction, "SET CONSTRAINTS ALL IMMEDIATE");
             await constraints.ExecuteNonQueryAsync();
         }
         await transaction.CommitAsync();
-        if (write) items?.Remove(RequestSnapshotKey);
-        else if (items is not null) items[RequestSnapshotKey] = before;
         return result;
     }
 
-    internal sealed class Workspace(JsonObject document)
+    internal sealed class Workspace(JsonObject document,
+        Func<string, string, (string Name, object? Value)[], JsonArray>? fetch = null, Func<string, long>? counter = null)
     {
         internal JsonObject Document { get; } = document;
+        internal bool PreserveAdministrator { get; set; }
 
-        internal IEnumerable<JsonObject> Rows(string table) => Table(table).OfType<JsonObject>();
-        internal JsonArray Table(string table) => Document[table]?.AsArray() ?? throw new InvalidOperationException($"Missing Oracle workspace table {table}.");
-        internal JsonObject? Find(string table, int id) => Rows(table).FirstOrDefault(r => Id(r) == id);
+        private readonly HashSet<string> loadedAll = [];
+        private readonly Dictionary<string, HashSet<string>> queries = [];
+        private readonly Dictionary<string, HashSet<string>> seen = [];
+        internal JsonArray Table(string table)
+        {
+            if (Document[table] is JsonArray rows) return rows;
+            if (fetch is null) throw new InvalidOperationException($"Missing Oracle workspace table {table}.");
+            var created = new JsonArray();
+            Document[table] = created;
+            return created;
+        }
+        internal IEnumerable<JsonObject> Where(string table, string predicate, params (string Name, object? Value)[] parameters)
+        {
+            if (fetch is null) throw new InvalidOperationException("Targeted queries require an Oracle transaction.");
+            var definition = Schema.Value.Tables.Single(t => t.Name == table);
+            var current = Table(table);
+            if (!seen.TryGetValue(table, out var keys)) seen[table] = keys = [];
+            // Include newly added rows in the identity map; never overwrite pending edits,
+            // resurrect removed rows, or treat an unloaded row as a deletion.
+            foreach (var row in current.OfType<JsonObject>()) keys.Add(RowKey(definition, row));
+            var queryKey = table + predicate + JsonSerializer.Serialize(parameters.Select(p => new { p.Name, p.Value }));
+            if (queries.TryGetValue(queryKey, out var matched))
+                return current.OfType<JsonObject>().Where(r => matched.Contains(RowKey(definition, r)));
+            queries[queryKey] = matched = [];
+            var selected = new List<JsonObject>();
+            foreach (var row in fetch(table, predicate, parameters).OfType<JsonObject>())
+            {
+                var key = RowKey(definition, row);
+                matched.Add(key);
+                var existing = current.OfType<JsonObject>().FirstOrDefault(r => RowKey(definition, r) == key);
+                if (keys.Add(key)) { current.Add(row.DeepClone()); existing = (JsonObject)current.Last()!; }
+                if (existing is not null) selected.Add(existing);
+            }
+            return selected;
+        }
+        internal IEnumerable<JsonObject> By(string table, string column, object? value)
+        {
+            if (!Schema.Value.Tables.Single(t => t.Name == table).Columns.Any(c => c.Name == column)) throw new ArgumentException("Unknown column.");
+            _ = Where(table, $"t.{Quote(column)}=:value", ("value", value)).ToArray();
+            var expected = JsonSerializer.SerializeToNode(value);
+            return Table(table).OfType<JsonObject>().Where(r => JsonNode.DeepEquals(r[column], expected));
+        }
+        internal IEnumerable<JsonObject> Rows(string table)
+        {
+            if (fetch is not null && loadedAll.Add(table)) _ = Where(table, "1=1").ToArray();
+            return Table(table).OfType<JsonObject>();
+        }
+        internal JsonObject? Find(string table, int id)
+        {
+            var found = Table(table).OfType<JsonObject>().FirstOrDefault(r => Id(r) == id);
+            if (found is not null || fetch is null || loadedAll.Contains(table)) return found;
+            return By(table, "Id", id).FirstOrDefault();
+        }
         internal void InitializeSequences()
         {
             var sequences = Document["_Sequences"] as JsonObject ?? new JsonObject();
@@ -127,6 +195,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpC
         internal long NextLong(string table)
         {
             var sequences = Document["_Sequences"]!.AsObject();
+            if (sequences[table] is null && counter is not null) sequences[table] = counter(table);
             var next = checked((sequences[table] is { } value ? long.Parse(value.ToJsonString(), CultureInfo.InvariantCulture) : 0L) + 1);
             sequences[table] = next;
             return next;
@@ -141,6 +210,10 @@ public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpC
             return row;
         }
 
+        internal void RemoveBy(string table, string column, object? value, Func<JsonObject, bool>? filter = null)
+        {
+            foreach (var row in By(table, column, value).Where(r => filter is null || filter(r)).ToArray()) Table(table).Remove(row);
+        }
         internal void Remove(string table, Func<JsonObject, bool> filter)
         {
             foreach (var row in Rows(table).Where(filter).ToArray())
