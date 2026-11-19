@@ -203,3 +203,8 @@ Relacijski testovi provjeravaju istodobne duplikate i odluke, administratorski p
 ### Oracle grupe i ovisnosti ovlasti
 
 Relacijski testovi provjeravaju kreiranje, idempotentna članstva, dodjelu/uklanjanje uloga, administratorski pristup i opoziv grupnih ovlasti dok zadatak čeka. Drugi korisnik i zadatak moraju nastaviti upis. U izdvojenoj migracijskoj shemi provjerava se i rollback uklanjanja posljednjeg punog administratora čija prava dolaze samo iz grupe. `Test-OracleGroups.cjs` pokriva kreiranje, dodjelu/uklanjanje uloge i dva HR/EN axe skeniranja; `Test-AccountSql.ps1 -BrowserScript Test-OracleGroups.cjs` provjerava isti UI na privremenoj SQL bazi.
+### Oracle SMTP – provjerena lokalna isporuka
+
+U izdvojenoj `TMR_MIGRATION_QA` shemi test privremeno odgađa stare poslove i gasi stare reminder zastavice, a sve izvorne vrijednosti vraća u finally bloku. Zajednički loopback `TestSmtpReceiver` provjerava stvarnu HR/EN isporuku, privremeni odgovor 451 i ponovni pokušaj te jedan podsjetnik bez dupliciranja. Konkurentni Claim pozivi ne smiju preuzeti isti posao, a dovršavanje s pogrešnim leaseom ne smije promijeniti aktivni posao. SQL SMTP test koristi isti prijamnik.
+
+`Test-OracleEmail.cjs` koristi novi testni račun za osobne postavke i dva HR/EN axe skeniranja, bez izmjene administratorovih postavki. Oracle isporuka, lease provjere, UI i kompletne SQL integracijske regresije prošli su lokalno 19. 11. 2026. Paket artifacts/oracle-email-final vraća readiness 200 na https://localhost:7572.

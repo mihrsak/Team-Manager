@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class EmailNotificationsModel(EmailNotificationStore notifications, IConfiguration configuration) : PageModel
+public sealed class EmailNotificationsModel(EmailNotificationStore notifications, IConfiguration configuration, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
-    public EmailNotificationPreferences Settings { get; private set; } = new(null,false,false);
+    public EmailNotificationPreferences Settings { get; private set; } = new(null, false, false);
     public bool DeliveryEnabled => configuration.GetValue<bool>("Smtp:Enabled");
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -23,14 +23,14 @@ public sealed class EmailNotificationsModel(EmailNotificationStore notifications
         if (string.IsNullOrEmpty(address)) address = null;
         if (!ModelState.IsValid || (address is null && (sendWatchedIssues || sendDueReminders)) ||
             (address is not null && (address.Length > 254 || address.Any(char.IsControl) ||
-              !MailAddress.TryCreate(address,out var email) || !email.Address.Equals(address,StringComparison.Ordinal))))
+              !MailAddress.TryCreate(address, out var email) || !email.Address.Equals(address, StringComparison.Ordinal))))
         {
             await OnGetAsync();
-            ModelState.AddModelError("", "Unesi valjanu adresu e-pošte za obavijesti.");
+            ModelState.AddModelError("", text["Unesi valjanu adresu e-pošte za obavijesti."]);
             return Page();
         }
 
-        await notifications.Save(UserId,address,sendWatchedIssues,sendDueReminders);
+        await notifications.Save(UserId, address, sendWatchedIssues, sendDueReminders);
         TempData["Notice"] = "Postavke e-pošte su spremljene.";
         return RedirectToPage();
     }

@@ -39,6 +39,7 @@ internal static class OracleWorkspaceRoutes
         "/Register",
         "/RegistrationRequests",
         "/Groups",
+        "/EmailNotifications",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",

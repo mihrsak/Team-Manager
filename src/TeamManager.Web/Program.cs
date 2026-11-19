@@ -71,7 +71,7 @@ builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<IssuePersonalStore>();
 builder.Services.AddScoped<EmailNotificationStore>();
 builder.Services.AddScoped<EmailDispatchStore>();
-if (!oracleMode) builder.Services.AddHostedService<SmtpNotificationWorker>();
+builder.Services.AddHostedService<SmtpNotificationWorker>();
 builder.Services.AddScoped<IssueAttachmentStore>();
 builder.Services.AddScoped<IssueFieldStore>();
 builder.Services.AddScoped<CustomFieldStore>();

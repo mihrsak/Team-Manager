@@ -1285,3 +1285,75 @@ if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase
     finally { foreach (var id in activeGroupBefore) await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", id)); }
     Console.WriteLine("PASS: removing the only full administrator granted through a group rolls back membership/role and audit changes.");
 }
+
+if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase))
+{
+    var delayedQueues = new List<(string Table, string Key, int User, int Id, DateTime? Due, DateTime Available)>();
+    foreach (var definition in new[] { (Table: "IssueEmailQueue", Key: "EventId"), (Table: "IssueReminderQueue", Key: "IssueId") })
+    {
+        await using var cmd = new OracleCommand($"SELECT \"UserId\",{Q(definition.Key)},{(definition.Table == "IssueReminderQueue" ? "\"DueDate\"" : "CAST(NULL AS DATE)")},\"AvailableAt\" FROM {Q("TMR_" + definition.Table)} WHERE \"CompletedAt\" IS NULL", connection);
+        await using var rows = await cmd.ExecuteReaderAsync();
+        while (await rows.ReadAsync()) delayedQueues.Add((definition.Table, definition.Key, rows.GetInt32(0), rows.GetInt32(1), rows.IsDBNull(2) ? null : rows.GetDateTime(2), rows.GetDateTime(3)));
+    }
+    var oldReminderFlags = new List<(int User, bool Enabled)>();
+    await using (var cmd = new OracleCommand("SELECT \"UserId\",\"SendDueReminders\" FROM \"TMR_EmailNotificationPreferences\"", connection))
+    await using (var rows = await cmd.ExecuteReaderAsync()) while (await rows.ReadAsync()) oldReminderFlags.Add((rows.GetInt32(0), rows.GetInt32(1) != 0));
+    try
+    {
+        foreach (var table in new[] { "IssueEmailQueue", "IssueReminderQueue" }) await FixtureSql($"UPDATE {Q("TMR_" + table)} SET \"AvailableAt\"=TIMESTAMP '2100-01-01 00:00:00' WHERE \"CompletedAt\" IS NULL");
+        await FixtureSql("UPDATE \"TMR_EmailNotificationPreferences\" SET \"SendDueReminders\"=0");
+        var mailPrefs = new EmailNotificationStore(configuration, workspace);
+        var dispatch = new EmailDispatchStore(configuration, issues, workspace);
+        var smtpProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle SMTP " + suffix });
+        var smtpUsers = new List<int>();
+        foreach (var lang in new[] { "hr", "en" })
+        {
+            var employee = "smtp" + lang + suffix;
+            await users.Create(employee, "SMTP " + lang, "", null, "SQL-test-password-2026", actorId: admin);
+            var smtpUser = (await users.Find(employee))!.Id;
+            smtpUsers.Add(smtpUser);
+            await permissions.Assign(admin, smtpUser, readRole, false);
+            await FixtureSql("INSERT INTO \"TMR_ProjectMembers\" (\"ProjectId\",\"UserId\",\"Role\") VALUES(:project,:userId,:role)", ("project", smtpProject), ("userId", smtpUser), ("role", readRole));
+            await users.SetLanguage(smtpUser, lang);
+            await mailPrefs.Save(smtpUser, lang + "@example.test", true, true);
+        }
+        var smtpIssue = await issues.Save(admin, smtpProject, null, new IssueInput { Title = "SMTP watched Oracle" });
+        foreach (var smtpUser in smtpUsers) await issues.SetWatching(smtpUser, smtpIssue, true);
+        await issues.Comment(admin, smtpIssue, "SMTP delivery event");
+        await issues.Save(admin, smtpProject, null, new IssueInput { Title = "SMTP reminder Oracle", AssigneeId = smtpUsers[1], DueDate = DateTime.UtcNow.Date, IsPrivate = true });
+        var concurrentClaims = await Task.WhenAll(dispatch.Claim(false, CancellationToken.None), dispatch.Claim(false, CancellationToken.None));
+        var ownedClaims = concurrentClaims.OfType<EmailJob>().ToList();
+        Check(ownedClaims.Count > 0 && ownedClaims.Select(j => (j.UserId, j.Key, j.DueDate)).Distinct().Count() == ownedClaims.Count, "Two SMTP workers claimed the same job.");
+        foreach (var job in ownedClaims)
+        {
+            await dispatch.Complete(job with { Lease = Guid.NewGuid() }, false, 0, CancellationToken.None);
+            Check(await dispatch.Resolve(job, CancellationToken.None) is not null, "Stale lease completed an active job.");
+            await dispatch.Complete(job, true, 0, CancellationToken.None);
+        }
+        using var receiver = new TestSmtpReceiver();
+        var smtpConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Smtp:Enabled"] = "true", ["Smtp:Host"] = "127.0.0.1", ["Smtp:Port"] = receiver.Port.ToString(), ["Smtp:UseTls"] = "false",
+            ["Smtp:From"] = "sender@example.test", ["Smtp:BaseUrl"] = "https://localhost:7572", ["Smtp:PollSeconds"] = "1", ["Smtp:RetryBaseSeconds"] = "1", ["Smtp:ReminderTimeZone"] = "UTC"
+        }).Build();
+        await using var smtpProvider = new ServiceCollection().AddSingleton(dispatch).AddLogging().AddLocalization(options => options.ResourcesPath = "Resources").BuildServiceProvider();
+        using var smtpWorker = new SmtpNotificationWorker(smtpConfig, smtpProvider.GetRequiredService<IServiceScopeFactory>(), smtpProvider.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<UiText>>(), Microsoft.Extensions.Logging.Abstractions.NullLogger<SmtpNotificationWorker>.Instance);
+        await smtpWorker.StartAsync(CancellationToken.None);
+        for (var attempt = 0; attempt < 100 && receiver.Messages.Count < 3; attempt++) await Task.Delay(200);
+        await Task.Delay(1500);
+        await smtpWorker.StopAsync(CancellationToken.None);
+        Check(receiver.Messages.Count == 3 && receiver.Rejected == 1, "Oracle SMTP retry/reminder delivery failed or duplicated.");
+        var decodedMessages = receiver.Messages.Select(raw => MimeKit.MimeMessage.Load(new MemoryStream(Encoding.ASCII.GetBytes(raw)))).ToList();
+        Check(decodedMessages.Any(m => m.Subject?.Contains("Aktivnost") == true) && decodedMessages.Any(m => m.Subject?.Contains("Activity") == true), "SMTP recipient language was lost.");
+        Check(decodedMessages.All(m => m.TextBody?.Contains("https://localhost:7572/Issue?id=") == true), "SMTP application link incorrect.");
+        var pendingReminderCount = Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueReminderQueue\" WHERE \"UserId\"={smtpUsers[1]}"));
+        Check(pendingReminderCount == 1, "Repeated polling duplicated due reminders.");
+        Console.WriteLine("PASS: Oracle SMTP worker delivers real local HR/EN watched mail and a reminder, retries SMTP 451 once, and avoids duplicate reminders.");
+    }
+    finally
+    {
+        foreach (var row in delayedQueues) await FixtureSql($"UPDATE {Q("TMR_" + row.Table)} SET \"AvailableAt\"=:available WHERE \"UserId\"=:userId AND {Q(row.Key)}=:id" + (row.Due is not null ? " AND \"DueDate\"=:due" : ""),
+            row.Due is not null ? [("available", row.Available), ("userId", row.User), ("id", row.Id), ("due", row.Due.Value)] : [("available", row.Available), ("userId", row.User), ("id", row.Id)]);
+        foreach (var row in oldReminderFlags) await FixtureSql("UPDATE \"TMR_EmailNotificationPreferences\" SET \"SendDueReminders\"=:enabled WHERE \"UserId\"=:userId", ("enabled", row.Enabled ? 1 : 0), ("userId", row.User));
+    }
+}

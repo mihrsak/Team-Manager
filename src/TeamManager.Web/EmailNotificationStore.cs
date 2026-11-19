@@ -5,23 +5,25 @@ namespace TeamManager.Web;
 
 public sealed record EmailNotificationPreferences(string? Address, bool SendWatchedIssues, bool SendDueReminders);
 
-public sealed class EmailNotificationStore(IConfiguration config)
+public sealed class EmailNotificationStore(IConfiguration config, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
     public async Task<EmailNotificationPreferences> Get(int user)
     {
+        if (oracle.Enabled) return await oracle.MailPreferences(user);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
             "SELECT Address,SendWatchedIssues,SendDueReminders FROM dbo.EmailNotificationPreferences WHERE UserId=@user", connection);
-        command.Parameters.Add(P("@user",user));
+        command.Parameters.Add(P("@user", user));
         await using var reader = await command.ExecuteReaderAsync();
-        return await reader.ReadAsync() ? new(reader.IsDBNull(0)?null:reader.GetString(0),reader.GetBoolean(1),reader.GetBoolean(2)) : new(null,false,false);
+        return await reader.ReadAsync() ? new(reader.IsDBNull(0) ? null : reader.GetString(0), reader.GetBoolean(1), reader.GetBoolean(2)) : new(null, false, false);
     }
 
     public async Task Save(int user, string? address, bool sendWatchedIssues, bool sendDueReminders)
     {
+        if (oracle.Enabled) { await oracle.SaveMailPreferences(user, address, sendWatchedIssues, sendDueReminders); return; }
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
@@ -38,7 +40,7 @@ public sealed class EmailNotificationStore(IConfiguration config)
             IF @reminders=0 OR COALESCE(@oldAddress,N'')<>COALESCE(@address,N'')
                 DELETE dbo.IssueReminderQueue WHERE UserId=@user AND CompletedAt IS NULL;
             """, connection, transaction);
-        command.Parameters.AddRange([P("@user",user),P("@address",address),P("@send",sendWatchedIssues),P("@reminders",sendDueReminders)]);
+        command.Parameters.AddRange([P("@user", user), P("@address", address), P("@send", sendWatchedIssues), P("@reminders", sendDueReminders)]);
         await command.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
     }
