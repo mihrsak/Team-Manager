@@ -1190,3 +1190,25 @@ using (var certificateStore = new System.Security.Cryptography.X509Certificates.
     Check(await issues.ImportMail(admin, imapProject, MailHash("<imap-test@example.test>"), MailInput()) is null, "IMAP receipt did not deduplicate gateway retry.");
     Console.WriteLine("PASS: real local TLS IMAP connector decodes MIME into an Oracle private issue and acknowledges only after the receipt commits.");
 }
+
+var apiTokens = new ApiTokenStore(configuration, workspace);
+var apiName = "api" + suffix;
+await users.Create(apiName, "API owner", "", null, "SQL-test-password-2026", actorId: admin);
+var apiOwner = (await users.Find(apiName))!;
+var apiSecret = (await apiTokens.Create(apiOwner.Id, apiOwner.SessionVersion, "Oracle API"))!;
+Check(apiSecret.Length == 67 && await apiTokens.Authenticate(apiSecret, CancellationToken.None) == apiOwner.Id, "API token authentication failed.");
+var apiInfo = (await apiTokens.List(apiOwner.Id)).Single();
+Check(apiInfo.Active && !await apiTokens.Revoke(admin, apiInfo.Id), "API token ownership not enforced.");
+Check(await apiTokens.Authenticate("invalid", CancellationToken.None) is null, "Malformed API token accepted.");
+Check(await users.ChangePassword(apiOwner, "New-API-password-2026"), "API owner's password change failed.");
+Check(await apiTokens.Authenticate(apiSecret, CancellationToken.None) is null && await apiTokens.Create(apiOwner.Id, apiOwner.SessionVersion, "Stale") is null, "Old session API token survived password reset.");
+apiOwner = (await users.Find(apiName))!;
+apiSecret = (await apiTokens.Create(apiOwner.Id, apiOwner.SessionVersion, "Current"))!;
+await permissions.ManageAccount(admin, apiOwner.Id, false, null);
+Check(await apiTokens.Authenticate(apiSecret, CancellationToken.None) is null, "Deactivated owner retained API access.");
+await permissions.ManageAccount(admin, apiOwner.Id, true, null);
+apiOwner = (await users.Find(apiName))!;
+apiSecret = (await apiTokens.Create(apiOwner.Id, apiOwner.SessionVersion, "Revoke"))!;
+var currentApi = (await apiTokens.List(apiOwner.Id)).First();
+Check(await apiTokens.Revoke(apiOwner.Id, currentApi.Id) && await apiTokens.Authenticate(apiSecret, CancellationToken.None) is null, "Explicit API revocation failed.");
+Console.WriteLine("PASS: Oracle API tokens enforce ownership, hash authentication, malformed-token rejection, password/session invalidation, deactivation and explicit revocation.");

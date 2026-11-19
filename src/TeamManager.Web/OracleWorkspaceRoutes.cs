@@ -35,6 +35,7 @@ internal static class OracleWorkspaceRoutes
         "/Repositories",
         "/RepositoryHistory",
         "/MailIntake",
+        "/ApiTokens",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",
@@ -47,7 +48,7 @@ internal static class OracleWorkspaceRoutes
     internal static async Task Guard(HttpContext context, RequestDelegate next)
     {
         var segments = context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (Pages.Contains(context.Request.Path.Value?.TrimEnd('/') ?? "") || context.Request.Path == "/" ||
+        if ((HttpMethods.IsGet(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/v1", StringComparison.OrdinalIgnoreCase)) || Pages.Contains(context.Request.Path.Value?.TrimEnd('/') ?? "") || context.Request.Path == "/" ||
             (HttpMethods.IsPost(context.Request.Method) && segments is ["mail", "intake", var id] && int.TryParse(id, out var project) && project > 0))
         {
             await next(context);

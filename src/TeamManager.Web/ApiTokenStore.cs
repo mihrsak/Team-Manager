@@ -7,7 +7,7 @@ namespace TeamManager.Web;
 
 public sealed record ApiTokenInfo(int Id, string Name, DateTime ExpiresAt, bool Active);
 
-public sealed class ApiTokenStore(IConfiguration config)
+public sealed class ApiTokenStore(IConfiguration config, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
     private static byte[] Hash(string token) => SHA256.HashData(Encoding.ASCII.GetBytes(token));
@@ -15,6 +15,7 @@ public sealed class ApiTokenStore(IConfiguration config)
     public async Task<string?> Create(int user, int version, string name)
     {
         var token = "tm_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        if (oracle.Enabled) return await oracle.CreateApiToken(user, version, name, Hash(token)) ? token : null;
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -23,12 +24,13 @@ public sealed class ApiTokenStore(IConfiguration config)
             FROM dbo.AppUsers u WITH(HOLDLOCK)
             WHERE u.Id=@user AND u.IsActive=1 AND u.SessionVersion=@version
             """, connection);
-        command.Parameters.AddRange([P("@user",user),P("@version",version),P("@name",name),P("@hash",Hash(token))]);
+        command.Parameters.AddRange([P("@user", user), P("@version", version), P("@name", name), P("@hash", Hash(token))]);
         return await command.ExecuteNonQueryAsync() == 1 ? token : null;
     }
 
     public async Task<List<ApiTokenInfo>> List(int user)
     {
+        if (oracle.Enabled) return await oracle.ApiTokens(user);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -37,35 +39,37 @@ public sealed class ApiTokenStore(IConfiguration config)
             FROM dbo.ApiTokens t JOIN dbo.AppUsers u ON u.Id=t.UserId
             WHERE t.UserId=@user ORDER BY t.Id DESC
             """, connection);
-        command.Parameters.Add(P("@user",user));
+        command.Parameters.Add(P("@user", user));
         var tokens = new List<ApiTokenInfo>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
-            tokens.Add(new(reader.GetInt32(0),reader.GetString(1),reader.GetDateTime(2),reader.GetBoolean(3)));
+            tokens.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetDateTime(2), reader.GetBoolean(3)));
         return tokens;
     }
 
     public async Task<bool> Revoke(int user, int id)
     {
+        if (oracle.Enabled) return await oracle.RevokeApiToken(user, id);
         await using var connection = Connect();
         await connection.OpenAsync();
-        await using var command = new SqlCommand("DELETE dbo.ApiTokens WHERE UserId=@user AND Id=@id",connection);
-        command.Parameters.AddRange([P("@user",user),P("@id",id)]);
+        await using var command = new SqlCommand("DELETE dbo.ApiTokens WHERE UserId=@user AND Id=@id", connection);
+        command.Parameters.AddRange([P("@user", user), P("@id", id)]);
         return await command.ExecuteNonQueryAsync() == 1;
     }
 
     public async Task<int?> Authenticate(string token, CancellationToken cancellationToken)
     {
-        if (token.Length != 67 || !token.StartsWith("tm_",StringComparison.Ordinal) ||
+        if (token.Length != 67 || !token.StartsWith("tm_", StringComparison.Ordinal) ||
             token[3..].Any(character => character is not (>= '0' and <= '9' or >= 'a' and <= 'f')))
             return null;
+        if (oracle.Enabled) return await oracle.AuthenticateApiToken(Hash(token), cancellationToken);
         await using var connection = Connect();
         await connection.OpenAsync(cancellationToken);
         await using var command = new SqlCommand("""
             SELECT t.UserId FROM dbo.ApiTokens t JOIN dbo.AppUsers u ON u.Id=t.UserId
             WHERE t.TokenHash=@hash AND u.IsActive=1 AND t.SessionVersion=u.SessionVersion AND t.ExpiresAt>SYSUTCDATETIME()
-            """,connection);
-        command.Parameters.Add(P("@hash",Hash(token)));
+            """, connection);
+        command.Parameters.Add(P("@hash", Hash(token)));
         return await command.ExecuteScalarAsync(cancellationToken) as int?;
     }
 }

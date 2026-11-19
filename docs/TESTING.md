@@ -193,3 +193,7 @@ Relacijski testovi provjeravaju istodobnu dostavu iste poruke (jedan privatni za
 Za pregledničku provjeru gatewaya postaviti `TEAM_MANAGER_MAIL_SETTINGS` na ignorirane lokalne postavke s testnom rutom za projekt 1. Test čita tajnu izravno iz datoteke bez ispisa, provjerava 401 bez tokena, 201 za novu poruku, deduplikaciju i privatni zadatak te HR/EN prikaz ulazne e-pošte. `Test-Browser.cjs` dodaje ovu stranicu za oba jezika: 44 WCAG A/AA skeniranja uz konfigurirani Git demo (40 bez Git demo mape).
 
 Lokalno provjereno 19. 11. 2026.: Oracle transakcijski uvoz i konkurentna deduplikacija, rollback/ponovni pokušaj, opoziv prava, stvarni loopback TLS IMAP/MIME i Seen nakon commita, autentificirani HTTP gateway, privatni zadatak te 44 HR/EN WCAG A/AA skeniranja. SQL regresije, uključujući zajednički IMAP fixture, prošle su. Paket artifacts/oracle-mail-final vraća readiness 200 na https://localhost:7572.
+
+### Oracle API provjere
+
+Relacijski testovi provjeravaju hash autentikaciju, vlasništvo, nevaljan format, opoziv, deaktivaciju i promjenu lozinke/sesije. `node scripts/Test-OracleApi.cjs` provjerava prikaz tajne samo jednom, odbijanje zahtjeva bez tokena i nakon opoziva, autorizirano REST čitanje i HR/EN UI s dva axe skeniranja. Token se ne ispisuje u logove. Test koristi postojeće lokalne HTTPS postavke i `NODE_EXTRA_CA_CERTS`.

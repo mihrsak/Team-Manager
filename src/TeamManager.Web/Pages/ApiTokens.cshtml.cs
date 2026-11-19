@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class ApiTokensModel(ApiTokenStore tokens) : PageModel
+public sealed class ApiTokensModel(ApiTokenStore tokens, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public List<ApiTokenInfo> Tokens { get; private set; } = [];
     public string? NewToken { get; private set; }
@@ -21,7 +21,7 @@ public sealed class ApiTokensModel(ApiTokenStore tokens) : PageModel
         name = name?.Trim();
         if (!ModelState.IsValid || name is null or { Length: 0 or > 80 })
         {
-            ModelState.AddModelError("", "Unesi naziv tokena do 80 znakova.");
+            ModelState.AddModelError("", text["Unesi naziv tokena do 80 znakova."]);
             await OnGetAsync();
             return Page();
         }
@@ -34,7 +34,7 @@ public sealed class ApiTokensModel(ApiTokenStore tokens) : PageModel
 
     public async Task<IActionResult> OnPostRevokeAsync(int id)
     {
-        if (id <= 0 || !await tokens.Revoke(UserId,id)) return NotFound();
+        if (id <= 0 || !await tokens.Revoke(UserId, id)) return NotFound();
         return RedirectToPage();
     }
 }
