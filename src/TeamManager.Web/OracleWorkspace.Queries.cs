@@ -56,6 +56,7 @@ public sealed partial class OracleWorkspace
         var type = value switch
         {
             int or null => OracleDbType.Int32,
+            byte[] => OracleDbType.Raw,
             long => OracleDbType.Int64,
             DateTime => OracleDbType.TimeStamp,
             _ => OracleDbType.NVarchar2

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Localization;
 
 namespace TeamManager.Web;
+
 internal static class OracleWorkspaceRoutes
 {
     private static readonly HashSet<string> Pages = new(StringComparer.OrdinalIgnoreCase)
@@ -33,6 +34,7 @@ internal static class OracleWorkspaceRoutes
         "/Forum",
         "/Repositories",
         "/RepositoryHistory",
+        "/MailIntake",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",
@@ -44,7 +46,9 @@ internal static class OracleWorkspaceRoutes
     };
     internal static async Task Guard(HttpContext context, RequestDelegate next)
     {
-        if (Pages.Contains(context.Request.Path.Value?.TrimEnd('/') ?? "") || context.Request.Path == "/")
+        var segments = context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (Pages.Contains(context.Request.Path.Value?.TrimEnd('/') ?? "") || context.Request.Path == "/" ||
+            (HttpMethods.IsPost(context.Request.Method) && segments is ["mail", "intake", var id] && int.TryParse(id, out var project) && project > 0))
         {
             await next(context);
             return;

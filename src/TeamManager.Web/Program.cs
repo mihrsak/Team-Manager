@@ -90,7 +90,7 @@ builder.Services.AddSingleton<LdapDirectory>();
 builder.Services.AddScoped<ApiTokenStore>();
 builder.Services.AddScoped<RegistrationStore>();
 builder.Services.AddSingleton<ImapImportMonitor>();
-if (!oracleMode) builder.Services.AddHostedService<ImapIssueImporter>();
+builder.Services.AddHostedService<ImapIssueImporter>();
 builder.Services.AddScoped<Permissions>();
 builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();

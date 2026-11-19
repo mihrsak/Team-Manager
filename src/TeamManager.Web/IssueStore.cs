@@ -143,6 +143,7 @@ public sealed class IssueStore(IConfiguration config, Permissions permissions, W
 
     public async Task<int?> ImportMail(int user, int project, byte[] messageHash, IssueInput input)
     {
+        if (oracle.Enabled) return await oracle.ImportIssueMail(user, project, messageHash, input);
         if (!await Can(user, project, "issues.create") || !await Can(user, project, "issues.view"))
             throw new UnauthorizedAccessException();
 

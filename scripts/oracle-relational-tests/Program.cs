@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Data;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -1122,3 +1123,70 @@ if (Environment.GetEnvironmentVariable("TEAM_MANAGER_REPOSITORY_FIXTURE_OUT") is
 }
 Check(snapshots == 0, "Repositories loaded whole workspace.");
 Console.WriteLine("PASS: Oracle repositories preserve URLs, project bindings and atomic audit; history rights, local Git commits/diff, queued revocation, validation and closed-project rules hold.");
+
+var mailProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle mail " + suffix });
+var mailOther = await projects.Save(admin, null, new ProjectInput { Name = "Other mail " + suffix });
+byte[] MailHash(string id) => SHA256.HashData(Encoding.UTF8.GetBytes(id));
+var mailHash = MailHash("oracle-mail-" + suffix);
+IssueInput MailInput(string title = "Oracle mail čćž 🚀") => new() { Title = title, Description = "MIME decoded body čćž 🚀", IsPrivate = true };
+var deliveries = await Task.WhenAll(issues.ImportMail(admin, mailProject, mailHash, MailInput()), issues.ImportMail(admin, mailProject, mailHash, MailInput()));
+var importedId = deliveries.Single(id => id is not null)!.Value;
+Check(deliveries.Count(id => id is null) == 1 && (await issues.Get(admin, importedId)) is { Input.IsPrivate: true }, "Concurrent mail deduplication failed.");
+Check(await issues.ImportMail(admin, mailOther, mailHash, MailInput()) is not null, "Mail digest incorrectly global across projects.");
+var invalidHash = MailHash("rollback-" + suffix);
+try { var invalid = MailInput(); invalid.Type = "missing-type"; await issues.ImportMail(admin, mailProject, invalidHash, invalid); throw new Exception("Invalid mail created issue."); } catch (ArgumentException) { }
+Check(await issues.ImportMail(admin, mailProject, invalidHash, MailInput("Retry after rollback")) is not null, "Failed import left a receipt.");
+var mailRole = "mail" + suffix;
+await permissions.Save(admin, mailRole, "Mail importer", ["issues.view", "issues.create"], true);
+var mailName = "mail" + suffix;
+await users.Create(mailName, "Mail importer", "", null, "SQL-test-password-2026", actorId: admin);
+var mailUser = (await users.Find(mailName))!.Id;
+await permissions.Assign(admin, mailUser, mailRole, false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + mailUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = mailUser;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = mailRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = issues.ImportMail(mailUser, mailProject, MailHash("revoked-" + suffix), MailInput());
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Mail importer ignored identity lock.");
+    await issues.ImportMail(admin, mailOther, MailHash("independent-" + suffix), MailInput()).WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked mail importer created issue."); } catch (UnauthorizedAccessException) { }
+}
+try { await issues.ImportMail(mailUser, mailProject, mailHash, MailInput()); throw new Exception("Duplicate bypassed revoked rights."); } catch (UnauthorizedAccessException) { }
+var mailProjectInput = (await projects.List(admin)).Single(p => p.Id == mailProject).Input;
+mailProjectInput.State = "Closed";
+await projects.Save(admin, mailProject, mailProjectInput);
+try { await issues.ImportMail(admin, mailProject, MailHash("closed-" + suffix), MailInput()); throw new Exception("Closed project accepted mail."); } catch (UnauthorizedAccessException) { }
+Console.WriteLine("PASS: Oracle mail import atomically creates private issues/events and receipts; concurrent deduplication, per-project digests, rollback/retry, queued revocation and closed-project checks hold.");
+
+using (var certificateStore = new System.Security.Cryptography.X509Certificates.X509Store(System.Security.Cryptography.X509Certificates.StoreName.My, System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser))
+{
+    certificateStore.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+    var certificate = certificateStore.Certificates.Cast<System.Security.Cryptography.X509Certificates.X509Certificate2>()
+        .Where(c => c.HasPrivateKey && c.NotAfter > DateTime.Now && c.Extensions.Any(e => e.Oid?.Value == "1.3.6.1.4.1.311.84.1.1")).OrderByDescending(c => c.NotAfter).First();
+    using var mailbox = new TestImapMailbox(certificate);
+    var imapProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle TLS IMAP " + suffix });
+    var imapConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+    {
+        ["MailIntake:PollSeconds"] = "5", [$"MailIntake:Imap:{imapProject}:Enabled"] = "true",
+        [$"MailIntake:Imap:{imapProject}:Host"] = "localhost", [$"MailIntake:Imap:{imapProject}:Port"] = mailbox.Port.ToString(),
+        [$"MailIntake:Imap:{imapProject}:Username"] = "mailbox@example.test", [$"MailIntake:Imap:{imapProject}:Password"] = "local-test-only",
+        [$"MailIntake:Imap:{imapProject}:Folder"] = "INBOX", [$"MailIntake:Imap:{imapProject}:EmployeeNumber"] = "admin"
+    }).Build();
+    var monitor = new ImapImportMonitor();
+    await using var provider = new ServiceCollection().AddSingleton(users).AddSingleton(issues).BuildServiceProvider();
+    using var importer = new ImapIssueImporter(imapConfig, provider.GetRequiredService<IServiceScopeFactory>(), monitor, Microsoft.Extensions.Logging.Abstractions.NullLogger<ImapIssueImporter>.Instance);
+    await importer.StartAsync(CancellationToken.None);
+    for (var attempt = 0; attempt < 100 && !mailbox.Seen; attempt++) await Task.Delay(200);
+    await importer.StopAsync(CancellationToken.None);
+    Check(mailbox.Seen && monitor.Get(imapProject)?.LastIssueId is int, "TLS IMAP message was not committed/acknowledged.");
+    var imapId = monitor.Get(imapProject)!.LastIssueId!.Value;
+    Check((await issues.Get(admin, imapId)) is { Input.Title: "QA IMAP issue", Input.Description: "PLAIN text from IMAP", Input.IsPrivate: true }, "TLS IMAP MIME decoding changed.");
+    Check(await issues.ImportMail(admin, imapProject, MailHash("<imap-test@example.test>"), MailInput()) is null, "IMAP receipt did not deduplicate gateway retry.");
+    Console.WriteLine("PASS: real local TLS IMAP connector decodes MIME into an Oracle private issue and acknowledges only after the receipt commits.");
+}

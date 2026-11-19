@@ -52,10 +52,37 @@ async function checkStatus(page, path, status) {
     assert.equal((await page.request.get(path)).status(), status, path);
 }
 
+async function checkMail(browser, admin) {
+        if (process.env.TEAM_MANAGER_MAIL_SETTINGS) {
+            const mailSettings = JSON.parse(require('node:fs').readFileSync(process.env.TEAM_MANAGER_MAIL_SETTINGS, 'utf8'));
+            const secret = mailSettings.MailIntake.Routes['1'].Secret;
+            const request = await browser.newContext({ baseURL });
+            try {
+                const message = { messageId: 'oracle-gateway-' + suffix, subject: 'Oracle gateway ' + suffix, text: 'Poruka / Message čćž 🚀' };
+                assert.equal((await request.request.post('/mail/intake/1', { data: message })).status(), 401);
+                const created = await request.request.post('/mail/intake/1', { headers: { Authorization: 'Bearer ' + secret }, data: message });
+                assert.equal(created.status(), 201);
+                const imported = (await created.json()).issueId;
+                const duplicate = await request.request.post('/mail/intake/1', { headers: { Authorization: 'Bearer ' + secret }, data: message });
+                assert.equal(duplicate.status(), 200);
+                assert.equal((await duplicate.json()).duplicate, true);
+                await admin.goto('/Issue?id=' + imported);
+                assert.equal(await admin.locator('input[type=checkbox][name="Input.IsPrivate"]').isChecked(), true);
+                for (const language of ['en', 'hr']) {
+                    await post(admin, '/Profile?handler=Language', { language });
+                    await admin.goto('/MailIntake?projectId=1');
+                    assert.ok(await admin.getByRole('heading', { name: language === 'en' ? 'Incoming email' : 'Ulazna e-pošta', exact: true }).isVisible());
+                }
+                console.log('PASS: Oracle bearer mail gateway creates a private issue, rejects unauthenticated delivery, deduplicates retries and renders HR/EN intake.');
+            } finally { await request.close(); }
+        }
+}
+
 async function run() {
     const browser = await chromium.launch({ channel: 'msedge' });
     try {
         const admin = await login(browser, 'admin', process.env.TEAM_MANAGER_QA_PASSWORD || 'admin');
+        if (process.env.TEAM_MANAGER_ORACLE_MAIL_ONLY) { await checkMail(browser, admin); return; }
         await post(admin, '/Users?handler=Scope', { kind: 'unit', name: 'Oracle unit ' + suffix });
         await post(admin, '/Users?handler=Scope', { kind: 'team', name: 'Oracle team ' + suffix });
         const employee = 'ora' + suffix;
@@ -335,7 +362,9 @@ async function run() {
         await checkStatus(admin, '/Wiki?projectId=' + parent, 200);
         await checkStatus(admin, '/Forum?projectId=' + parent, 200);
         await checkStatus(admin, '/Repositories?projectId=' + parent, 200);
-        await checkStatus(admin, '/MailIntake?projectId=' + parent, 503);
+        await checkStatus(admin, '/MailIntake?projectId=' + parent, 200);
+        await checkStatus(reader, '/MailIntake?projectId=' + child, 404);
+        await checkMail(browser, admin);
         console.log('READY: ' + baseURL + '/Projects');
     } finally {
         await browser.close();

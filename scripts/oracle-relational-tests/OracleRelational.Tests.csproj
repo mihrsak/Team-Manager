@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../test-support/TestImapMailbox.cs" Link="TestImapMailbox.cs" />
     <ProjectReference Include="../../src/TeamManager.Web/TeamManager.Web.csproj" />
   </ItemGroup>
 </Project>

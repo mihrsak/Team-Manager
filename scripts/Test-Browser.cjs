@@ -180,7 +180,7 @@ async function run() {
             const form = page.locator('form[action*="handler=Language"]');
             await form.locator('[name=language]').selectOption(language);
             await form.locator('button').click();
-            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1', '/Wiki?projectId=1', wikiArticle, wikiArticle + '&revision=2&compare=1', '/Forum?projectId=1', forumLocked, forumOpen, ...repositoryRoutes]) {
+            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1', '/Wiki?projectId=1', wikiArticle, wikiArticle + '&revision=2&compare=1', '/Forum?projectId=1', forumLocked, forumOpen, ...repositoryRoutes, "/MailIntake?projectId=1"]) {
                 await audit(page, route, language);
             }
             await page.goto('/Search');
@@ -204,7 +204,7 @@ async function run() {
         await page.goto('/Issues');
         assert.equal(new URL(page.url()).pathname, '/Login');
         assert.deepEqual(violations, []);
-        console.log('PASS: ' + (process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT ? 42 : 38) + ' WCAG A/AA scans, keyboard skip link, locale switching and logout.');
+        console.log('PASS: ' + (process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT ? 44 : 40) + ' WCAG A/AA scans, keyboard skip link, locale switching and logout.');
     } finally {
         if (violations.length) console.error(JSON.stringify(violations, null, 2));
         await browser.close();

@@ -185,3 +185,11 @@ Za pripremu pregledničkog Git demo primjera postaviti `TEAM_MANAGER_REPOSITORY_
 
 
 Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, veze repozitorija i atomski audit, zasebna prava pregleda povijesti, opoziv tijekom čekanja, stvarni lokalni commitovi/razlike, HR/EN preglednički tokovi i 42 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-repositories-final radi na https://localhost:7572; readiness vraća 200.
+
+## DB-02: ulazna e-pošta na Oracleu
+
+Relacijski testovi provjeravaju istodobnu dostavu iste poruke (jedan privatni zadatak i jedan duplikat), odvojene potvrde po projektu, rollback i ponovni pokušaj, opoziv prava tijekom čekanja i zatvoren projekt. Zajednički loopback TLS IMAP fixture u `scripts/test-support/TestImapMailbox.cs` koristi stvarni MIME konektor i potvrđuje da se Seen postavlja tek nakon Oracle zadatka i potvrde poruke. SQL IMAP regresija koristi isti fixture.
+
+Za pregledničku provjeru gatewaya postaviti `TEAM_MANAGER_MAIL_SETTINGS` na ignorirane lokalne postavke s testnom rutom za projekt 1. Test čita tajnu izravno iz datoteke bez ispisa, provjerava 401 bez tokena, 201 za novu poruku, deduplikaciju i privatni zadatak te HR/EN prikaz ulazne e-pošte. `Test-Browser.cjs` dodaje ovu stranicu za oba jezika: 44 WCAG A/AA skeniranja uz konfigurirani Git demo (40 bez Git demo mape).
+
+Lokalno provjereno 19. 11. 2026.: Oracle transakcijski uvoz i konkurentna deduplikacija, rollback/ponovni pokušaj, opoziv prava, stvarni loopback TLS IMAP/MIME i Seen nakon commita, autentificirani HTTP gateway, privatni zadatak te 44 HR/EN WCAG A/AA skeniranja. SQL regresije, uključujući zajednički IMAP fixture, prošle su. Paket artifacts/oracle-mail-final vraća readiness 200 na https://localhost:7572.
