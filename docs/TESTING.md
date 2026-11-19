@@ -197,3 +197,6 @@ Lokalno provjereno 19. 11. 2026.: Oracle transakcijski uvoz i konkurentna dedupl
 ### Oracle API provjere
 
 Relacijski testovi provjeravaju hash autentikaciju, vlasništvo, nevaljan format, opoziv, deaktivaciju i promjenu lozinke/sesije. `node scripts/Test-OracleApi.cjs` provjerava prikaz tajne samo jednom, odbijanje zahtjeva bez tokena i nakon opoziva, autorizirano REST čitanje i HR/EN UI s dva axe skeniranja. Token se ne ispisuje u logove. Test koristi postojeće lokalne HTTPS postavke i `NODE_EXTRA_CA_CERTS`.
+### Oracle registracija – lokalne provjere
+
+Relacijski testovi provjeravaju istodobne duplikate i odluke, administratorski pristup, očuvanje lozinke, odbijanje i konflikt s postojećim računom. `Test-OracleRegistration.cjs` provjerava anonimni zahtjev, odobrenje, prijavu i zabranu podnositelju da čita zahtjeve; četiri HR/EN axe skeniranja obuhvaćaju oba obrasca. `Test-AccountSql.ps1 -ApplicationDll <paket>/TeamManager.Web.dll` izvršava isti tok na generiranoj privremenoj SQL bazi, uz sigurno gašenje i uklanjanje samo te baze. Oracle i SQL lokalne provjere prošle su 19. 11. 2026.; paket artifacts/oracle-registration-final vraća readiness 200.

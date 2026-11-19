@@ -1212,3 +1212,23 @@ apiSecret = (await apiTokens.Create(apiOwner.Id, apiOwner.SessionVersion, "Revok
 var currentApi = (await apiTokens.List(apiOwner.Id)).First();
 Check(await apiTokens.Revoke(apiOwner.Id, currentApi.Id) && await apiTokens.Authenticate(apiSecret, CancellationToken.None) is null, "Explicit API revocation failed.");
 Console.WriteLine("PASS: Oracle API tokens enforce ownership, hash authentication, malformed-token rejection, password/session invalidation, deactivation and explicit revocation.");
+
+var registrations = new RegistrationStore(configuration, new Microsoft.AspNetCore.Identity.PasswordHasher<AppUser>(), workspace);
+var registrationName = "reg" + suffix;
+await Task.WhenAll(registrations.Submit(registrationName, "Registration owner", "Registration-password-2026"), registrations.Submit(registrationName.ToUpperInvariant(), "Duplicate", "Registration-password-2026"));
+var pendingRegistration = (await registrations.Pending(admin)).Single(r => r.EmployeeNumber.Equals(registrationName, StringComparison.OrdinalIgnoreCase));
+Check(await users.Find(registrationName) is null, "Pending registration activated an account.");
+try { await registrations.Pending(viewer); throw new Exception("Nonadmin read registrations."); } catch (UnauthorizedAccessException) { }
+var decisions = await Task.WhenAll(registrations.Decide(admin, pendingRegistration.Id, true), registrations.Decide(admin, pendingRegistration.Id, true));
+Check(decisions.Count(v => v) == 1 && await users.Authenticate(registrationName, "Registration-password-2026") is { IsAdministrator: false, IsActive: true }, "Registration approval not atomic or password changed.");
+Check(!(await registrations.Pending(admin)).Any(r => r.Id == pendingRegistration.Id), "Approved request retained.");
+await registrations.Submit("reject" + suffix, "Rejected", "Registration-password-2026");
+var rejected = (await registrations.Pending(admin)).Single(r => r.EmployeeNumber == "reject" + suffix);
+Check(await registrations.Decide(admin, rejected.Id, false) && await users.Find(rejected.EmployeeNumber) is null, "Rejected registration created account.");
+await registrations.Submit("conflict" + suffix, "Conflict", "Registration-password-2026");
+var conflict = (await registrations.Pending(admin)).Single(r => r.EmployeeNumber == "conflict" + suffix);
+await users.Create(conflict.EmployeeNumber, "Existing", "", null, "SQL-test-password-2026", actorId: admin);
+try { await registrations.Decide(admin, conflict.Id, true); throw new Exception("Conflicting registration approved."); } catch (InvalidOperationException error) when (error.Message == "Račun s tim brojem radnika već postoji. Odbij zahtjev ako više nije potreban.") { }
+Check((await registrations.Pending(admin)).Any(r => r.Id == conflict.Id), "Conflict lost pending request.");
+Check(await registrations.Decide(admin, conflict.Id, false), "Conflicting registration rejection failed.");
+Console.WriteLine("PASS: Oracle registration serializes duplicate submissions/approvals, preserves password hashes, restricts pending access and retains conflicts without partial accounts/audit.");

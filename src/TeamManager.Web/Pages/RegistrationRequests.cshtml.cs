@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class RegistrationRequestsModel(RegistrationStore registrations) : PageModel
+public sealed class RegistrationRequestsModel(RegistrationStore registrations, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public List<PendingRegistration> Pending { get; private set; } = [];
 
@@ -13,7 +13,7 @@ public sealed class RegistrationRequestsModel(RegistrationStore registrations) :
     {
         if (!User.IsInRole("*")) return Forbid();
         Response.Headers.CacheControl = "private, no-store";
-        Pending = await registrations.Pending();
+        Pending = await registrations.Pending(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!));
         return Page();
     }
 
@@ -26,10 +26,11 @@ public sealed class RegistrationRequestsModel(RegistrationStore registrations) :
         {
             if (!await registrations.Decide(actor, id, approve.Value)) return NotFound();
         }
+        catch (RegistrationConflictException ex) { var result = await OnGetAsync(); ModelState.AddModelError("", text[ex.Message]); return result; }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {
             var result = await OnGetAsync();
-            ModelState.AddModelError("", "Račun s tim brojem radnika već postoji. Odbij zahtjev ako više nije potreban.");
+            ModelState.AddModelError("", text["Račun s tim brojem radnika već postoji. Odbij zahtjev ako više nije potreban."]);
             return result;
         }
         return RedirectToPage();

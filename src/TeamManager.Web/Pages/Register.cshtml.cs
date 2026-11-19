@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace TeamManager.Web.Pages;
 
 [EnableRateLimiting("Registration")]
-public sealed class RegisterModel(RegistrationStore registrations, IConfiguration configuration) : PageModel
+public sealed class RegisterModel(RegistrationStore registrations, IConfiguration configuration, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public bool Submitted { get; private set; }
 
@@ -26,7 +26,7 @@ public sealed class RegisterModel(RegistrationStore registrations, IConfiguratio
         if (!ModelState.IsValid || employee is null || !Regex.IsMatch(employee, @"^[a-z0-9._-]{1,30}$") ||
             name is null or { Length: 0 or > 100 } || password is null or { Length: < 10 or > 200 } || password != confirm)
         {
-            ModelState.AddModelError("", "Provjeri broj radnika, ime i podudaranje lozinki od 10 do 200 znakova.");
+            ModelState.AddModelError("", text["Provjeri broj radnika, ime i podudaranje lozinki od 10 do 200 znakova."]);
             return Page();
         }
 
