@@ -1,3 +1,7 @@
+using OracleConnection = TeamManager.Web.Data.RelationalConnection;
+using OracleTransaction = TeamManager.Web.Data.RelationalTransaction;
+using OracleCommand = TeamManager.Web.Data.RelationalCommand;
+using OracleDataReader = TeamManager.Web.Data.RelationalReader;
 using System.Data;
 using System.Text.RegularExpressions;
 using Oracle.ManagedDataAccess.Client;
@@ -24,7 +28,9 @@ public sealed partial class OracleWorkspace
         foreach (var table in Schema.Value.Tables.Where(t => t.Columns.Any(c => c.Name == "Id" && c.Type is "int" or "bigint")))
         {
             var sequence = "TMR_SEQ_" + table.Name;
-            await using var exists = new OracleCommand("SELECT COUNT(*) FROM USER_SEQUENCES WHERE SEQUENCE_NAME=:name", connection);
+            await using var exists = new OracleCommand(connection.IsDb2
+                ? "SELECT COUNT(*) FROM SYSCAT.SEQUENCES WHERE SEQSCHEMA=CURRENT SCHEMA AND SEQNAME=:name"
+                : "SELECT COUNT(*) FROM USER_SEQUENCES WHERE SEQUENCE_NAME=:name", connection);
             exists.Parameters.Add("name", OracleDbType.Varchar2).Value = sequence;
             if (Convert.ToInt32(await exists.ExecuteScalarAsync()) != 0) continue;
             await using var highWater = new OracleCommand($"SELECT GREATEST(COALESCE((SELECT MAX(\"Id\") FROM {table.SqlName}),0),COALESCE((SELECT LAST_VALUE FROM TMR_COUNTERS WHERE TABLE_NAME=:tableName),0)) FROM DUAL", connection);
@@ -42,11 +48,25 @@ public sealed partial class OracleWorkspace
         await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=10 WHERE ID=1"))
             await state.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
-        Console.WriteLine("PASS: Oracle sequences, scoped write locks and report indexes installed; existing sequences were not reset.");
+        Console.WriteLine($"PASS: {(IsDb2 ? "Db2" : "Oracle")} sequences, scoped write locks and report indexes installed; existing sequences were not reset.");
     }
 
     private static async Task AcquireWriteLock(OracleConnection connection, OracleTransaction transaction, string resource, int mode)
     {
+        if (connection.IsDb2)
+        {
+            await using var native = RelationalCommand(connection, transaction, "VALUES SYSIBMADM.DBMS_LOCK.REQUEST(SYSIBMADM.DBMS_UTILITY.GET_HASH_VALUE(CURRENT SCHEMA||':TeamManager:'||:resource,0,1073741823),:mode,10,TRUE)");
+            AddQueryParameter(native, "resource", resource); AddQueryParameter(native, "mode", mode);
+            var status = Convert.ToInt32(await native.ExecuteScalarAsync());
+            if (status == 4)
+            {
+                await using var convert = RelationalCommand(connection, transaction, "VALUES SYSIBMADM.DBMS_LOCK.CONVERT(SYSIBMADM.DBMS_UTILITY.GET_HASH_VALUE(CURRENT SCHEMA||':TeamManager:'||:resource,0,1073741823),:mode,10)");
+                AddQueryParameter(convert, "resource", resource); AddQueryParameter(convert, "mode", mode);
+                status = Convert.ToInt32(await convert.ExecuteScalarAsync());
+            }
+            if (status != 0) throw new OracleWriteBusyException();
+            return;
+        }
         await using var command = RelationalCommand(connection, transaction, """
             DECLARE lock_id PLS_INTEGER;
             BEGIN

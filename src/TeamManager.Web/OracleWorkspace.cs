@@ -1,3 +1,7 @@
+using OracleConnection = TeamManager.Web.Data.RelationalConnection;
+using OracleTransaction = TeamManager.Web.Data.RelationalTransaction;
+using OracleCommand = TeamManager.Web.Data.RelationalCommand;
+using OracleDataReader = TeamManager.Web.Data.RelationalReader;
 using System.Data;
 using System.Globalization;
 using System.Text.Json;
@@ -10,9 +14,9 @@ namespace TeamManager.Web;
 // Oracle owns the write lock and commit boundary, including authorization and history.
 public sealed partial class OracleWorkspace(IConfiguration configuration)
 {
-    public bool Enabled => configuration["Database:Provider"]?.Equals("Oracle", StringComparison.OrdinalIgnoreCase) == true;
+    public bool Enabled => configuration["Database:Provider"]?.Equals("Oracle", StringComparison.OrdinalIgnoreCase) == true || IsDb2;
 
-    private OracleConnection Connect() => new(configuration.GetConnectionString("TeamManagerOracle") ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManagerOracle."));
+    private OracleConnection Connect() => new(IsDb2 ? "db2:" + (configuration.GetConnectionString("TeamManagerDb2") ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManagerDb2.")) : configuration.GetConnectionString("TeamManagerOracle") ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManagerOracle."));
     public async Task Import()
     {
         await using var target = Connect();

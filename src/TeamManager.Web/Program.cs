@@ -13,9 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
 var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 if (!databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase) &&
-    !databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
-    throw new InvalidOperationException("Database:Provider must be SqlServer or Oracle.");
-var oracleMode = databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase);
+    !databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) && !databaseProvider.Equals("Db2", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("Database:Provider must be SqlServer, Oracle or Db2.");
+var oracleMode = databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase) || databaseProvider.Equals("Db2", StringComparison.OrdinalIgnoreCase);
 var proxy = builder.Configuration.GetSection("ReverseProxy");
 var trustedProxyNetwork = proxy["TrustedNetwork"];
 if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
@@ -148,7 +148,15 @@ if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
 
-if (args.Contains("--apply-oracle-concurrency"))
+if (Array.IndexOf(args, "--export-relational") is int exportIndex && exportIndex >= 0)
+{
+    await new OracleWorkspace(builder.Configuration).ExportRelational(args[exportIndex + 1]); return;
+}
+if (Array.IndexOf(args, "--import-db2-relational") is int importIndex && importIndex >= 0)
+{
+    await new OracleWorkspace(builder.Configuration).ImportDb2(args[importIndex + 1]); return;
+}
+if (args.Contains("--apply-oracle-concurrency") || args.Contains("--apply-relational-concurrency"))
 {
     await new OracleWorkspace(builder.Configuration).InstallConcurrency();
     return;

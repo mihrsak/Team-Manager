@@ -1,6 +1,6 @@
 # Status izdanja Team Manager
 
-Provjereno lokalno 19. 11. 2026. SQL Server i Oracle podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
+Provjereno lokalno 19. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
 ## Lokalna provjera
 
@@ -10,13 +10,15 @@ Provjereno lokalno 19. 11. 2026. SQL Server i Oracle podržavaju aktivne module:
 - Stvarni loopback TLS IMAP i SMTP testovi potvrđuju stvaranje privatnih zadataka, deduplikaciju, commit/Seen, HR/EN poruke, ponovne pokušaje, lease zaštitu i podsjetnike.
 - Cjeloviti Oracle browser tokovi i 52 automatizirana WCAG A/AA skeniranja su prošli; odvojeni API, registracijski, grupni i e-mail testovi provjeravaju dodatne autentikacijske i UI tokove.
 - SQL integracijske regresije i zasebni privremeni SQL testovi registracije/grupa su prošli.
+- Db2 Windows paket: `artifacts/db2-complete-final`, [pregled](https://localhost:7589/Projects), readiness 200. Linux slika `team-manager:db2-qa` radi kao UID 1654 iza [HTTPS proxyja](https://localhost:7591/Projects); sesija je potvrđena nakon restarta. Upute: [DB2-LOCAL.md](DB2-LOCAL.md).
+- Nova Db2 testna shema `TMR_QA_CE9D1C4885C8` prošla je migraciju, integritet i runtime/SMTP testove; testne snimke i lozinke nisu u Gitu.
 - Zaštitna lista Oracle ruta ostaje uključena. Svi aktivni moduli omogućeni su pojedinačno; neprovjereni/razvojni endpointi nisu globalno otvoreni.
 
-## Preostale provjere i rad
+## Zatvaranje lokalnog backloga i preostale ciljne provjere
 
 | Stavka | Stvarni status |
 |---|---|
-| DB-02 / Db2 LUW | Lokalni Db2 Community 12.1.5 pokrenut je u odvojenom rootful kontejneru s 3 GiB limita; službeni .NET 10 driver uspješno se povezuje i izvršava SQL. Provjerene su hijerarhija i aplikacijski lockovi. Runtime port aplikacije i migracijske integracije još nisu dovršeni. |
+| DB-02 / Db2 LUW | Lokalno dovršeno: službeni .NET 10 driver, 51 tipizirana tablica, svježa migracija i neovisna usporedba 10.465 zapisa, zamrznuta arhiva, ciljani SQL, sekvence i aplikacijski lockovi. Provjereni glavni moduli, ovlasti, paralelni upisi/opozivi, SMTP/podsjetnici, 52 HR/EN WCAG skeniranja i Linux runtime iza HTTPS proxyja sa sesijom nakon restarta. Ciljna produkcijska provjera ostaje otvorena. |
 | DB-02 / Db2 z/OS | Nije implementirano/provjereno na ciljnoj bazi; potreban je ciljni pristup i odgovarajuća Db2 Connect licenca. |
 | AUTH-06 | Lokalni Keycloak/OpenLDAP scenariji postoje; bankarski SSO/AD ostaje za ciljno okruženje. |
 | MAIL-01 | Lokalni gateway i TLS IMAP su provjereni; namjenski stvarni sandučić nije povezan/provjeren. |

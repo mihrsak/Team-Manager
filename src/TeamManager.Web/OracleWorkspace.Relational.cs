@@ -1,3 +1,7 @@
+using OracleConnection = TeamManager.Web.Data.RelationalConnection;
+using OracleTransaction = TeamManager.Web.Data.RelationalTransaction;
+using OracleCommand = TeamManager.Web.Data.RelationalCommand;
+using OracleDataReader = TeamManager.Web.Data.RelationalReader;
 using System.Data;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -9,11 +13,12 @@ namespace TeamManager.Web;
 public sealed partial class OracleWorkspace
 {
     private sealed record RelationalSchema(int Version, RelationalTable[] Tables);
-    private sealed record RelationalTable(string Name, RelationalColumn[] Columns, RelationalKey[] Keys)
+    private sealed record RelationalTable(string Name, RelationalColumn[] Columns, RelationalKey[] Keys, RelationalForeignKey[] ForeignKeys)
     {
         public string SqlName => Quote("TMR_" + Name);
         public string[] PrimaryKey => Keys.Single(k => k.Primary).Columns;
     }
+    private sealed record RelationalForeignKey(string Name, string[] Columns, string ReferencedTable, string[] ReferencedColumns);
     private sealed record RelationalKey(bool Primary, string[] Columns);
     private sealed record RelationalColumn(string Name, string Type, int Length, int Precision, int Scale,
         bool Nullable, string? DefaultValue)
@@ -173,14 +178,17 @@ public sealed partial class OracleWorkspace
     private static async Task PersistChanges(OracleConnection connection, OracleTransaction transaction,
         JsonObject? before, JsonObject after, bool persistCounters = true)
     {
-        // Foreign keys are deferred, so dependencies and cyclic project references can be
-        // changed atomically. Never delete and reinsert unchanged records or binary LOBs.
-        foreach (var table in Schema.Value.Tables)
+        // Db2 constraints are immediate: remove children before parents, then upsert parents
+        // before children. Oracle retains deferred constraints for cyclic references.
+        // Never delete and reinsert unchanged records or binary LOBs.
+        var ordered = connection.IsDb2 ? DependencyOrder() : Schema.Value.Tables;
+        foreach (var deleting in new[] { true, false })
+        foreach (var table in deleting ? ordered.Reverse() : ordered)
         {
             if (!after.ContainsKey(table.Name)) continue;
             var previous = (before?[table.Name] as JsonArray ?? []).OfType<JsonObject>().ToDictionary(r => RowKey(table, r));
             var current = after[table.Name]!.AsArray().OfType<JsonObject>().ToDictionary(r => RowKey(table, r));
-            foreach (var (key, row) in previous.Where(p => !current.ContainsKey(p.Key)))
+            foreach (var (key, row) in previous.Where(p => deleting && !current.ContainsKey(p.Key)))
             {
                 var predicates = table.PrimaryKey.Select((column, i) => $"{Quote(column)}=:k{i}");
                 await using var delete = RelationalCommand(connection, transaction, $"DELETE FROM {table.SqlName} WHERE {string.Join(" AND ", predicates)}");
@@ -191,6 +199,7 @@ public sealed partial class OracleWorkspace
                 }
                 if (await delete.ExecuteNonQueryAsync() != 1) throw new DBConcurrencyException();
             }
+            if (deleting) continue;
             foreach (var (key, row) in current)
             {
                 if (previous.TryGetValue(key, out var old) && JsonNode.DeepEquals(old, row)) continue;

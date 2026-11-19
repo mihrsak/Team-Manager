@@ -1,3 +1,7 @@
+using OracleConnection = TeamManager.Web.Data.RelationalConnection;
+using OracleTransaction = TeamManager.Web.Data.RelationalTransaction;
+using OracleCommand = TeamManager.Web.Data.RelationalCommand;
+using OracleDataReader = TeamManager.Web.Data.RelationalReader;
 using System.Data;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
