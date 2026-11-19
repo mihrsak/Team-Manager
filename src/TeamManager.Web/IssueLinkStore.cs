@@ -5,13 +5,13 @@ namespace TeamManager.Web;
 
 public sealed record IssueLink(int OtherId, string Title, string Kind, bool Outgoing, bool CanEdit);
 
-public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,OracleWorkspace oracle)
+public sealed class IssueLinkStore(IConfiguration config, IssueStore issues, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
     public async Task<List<IssueLink>> List(int user, int id, int project)
     {
-        if(oracle.Enabled)return await oracle.Links(user,id,project);
+        if (oracle.Enabled) return await oracle.Links(user, id, project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -25,7 +25,7 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,Orac
               AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,other.ProjectId,other.IsPrivate,other.CreatedBy,other.AssigneeId))
             ORDER BY l.Kind,other.Id OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@id", id), P("@project", project), P("@viewer",user)]);
+        command.Parameters.AddRange([P("@id", id), P("@project", project), P("@viewer", user)]);
 
         var candidates = new List<(int Id, string Title, int Project, string Kind, bool Outgoing)>();
         await using (var reader = await command.ExecuteReaderAsync())
@@ -49,12 +49,18 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,Orac
 
     public async Task<ILookup<int, int>> Dependencies(int user, IEnumerable<int> visibleIds)
     {
-        if(oracle.Enabled)return await oracle.Read(w=>{
-            var ids=visibleIds.ToHashSet();
-            return w.Rows("IssueLinks").Where(l=>OracleWorkspace.Workspace.Text(l,"Kind")=="blocks"&&ids.Contains(OracleWorkspace.Workspace.Int(l,"SourceId"))&&
-                ids.Contains(OracleWorkspace.Workspace.Int(l,"TargetId"))&&w.Find("Issues",OracleWorkspace.Workspace.Int(l,"SourceId"))is {} source&&OracleWorkspace.Visible(w,user,source)&&
-                w.Find("Issues",OracleWorkspace.Workspace.Int(l,"TargetId"))is {} target&&OracleWorkspace.Visible(w,user,target))
-                .ToLookup(l=>OracleWorkspace.Workspace.Int(l,"TargetId"),l=>OracleWorkspace.Workspace.Int(l,"SourceId"));
+        if (oracle.Enabled) return await oracle.Read(async w =>
+        {
+            var ids = visibleIds.ToHashSet();
+            var result = new List<(int Target, int Source)>();
+            foreach (var link in (await w.Rows("IssueLinks")).Where(l => OracleWorkspace.Workspace.Text(l, "Kind") == "blocks" && ids.Contains(OracleWorkspace.Workspace.Int(l, "SourceId")) && ids.Contains(OracleWorkspace.Workspace.Int(l, "TargetId"))))
+            {
+                var source = await w.Find("Issues", OracleWorkspace.Workspace.Int(link, "SourceId"));
+                var target = await w.Find("Issues", OracleWorkspace.Workspace.Int(link, "TargetId"));
+                if (source is not null && target is not null && await OracleWorkspace.Visible(w, user, source) && await OracleWorkspace.Visible(w, user, target))
+                    result.Add((OracleWorkspace.Workspace.Int(link, "TargetId"), OracleWorkspace.Workspace.Int(link, "SourceId")));
+            }
+            return result.ToLookup(l => l.Target, l => l.Source);
         });
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -68,7 +74,7 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,Orac
               AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,target.ProjectId,target.IsPrivate,target.CreatedBy,target.AssigneeId))
             ORDER BY l.SourceId OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.Add(P("@viewer",user));
+        command.Parameters.Add(P("@viewer", user));
         command.Parameters.Add(new SqlParameter("@issues", System.Data.SqlDbType.NVarChar, -1)
         {
             Value = System.Text.Json.JsonSerializer.Serialize(visibleIds)
@@ -82,7 +88,7 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,Orac
 
     public async Task Set(int user, int id, int otherId, string kind, bool outgoing, bool remove)
     {
-        if(oracle.Enabled){await oracle.SetLink(user,id,otherId,kind,outgoing,remove);return;}
+        if (oracle.Enabled) { await oracle.SetLink(user, id, otherId, kind, outgoing, remove); return; }
         if (id == otherId || kind is not ("related" or "duplicate" or "blocks" or "parent"))
             throw new ArgumentException("Odaberi drugi zadatak i valjanu vrstu veze.");
 

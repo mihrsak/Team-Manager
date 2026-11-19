@@ -34,7 +34,7 @@ public sealed partial class OracleWorkspace
             await using var create = new OracleCommand($"CREATE SEQUENCE {Quote(sequence)} START WITH {start} MAXVALUE {maximum} NOCYCLE CACHE 100", connection);
             await create.ExecuteNonQueryAsync();
         }
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync();
         // Validate the package grant before publishing the new runtime version.
         await AcquireWriteLock(connection, transaction, "policy", 6);
         await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=4 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,4)"))
@@ -74,18 +74,18 @@ public sealed partial class OracleWorkspace
         public int? ReservedProject { get; set; }
         public bool IssueCatalogs { get; init; }
     }
-    internal Task<T> WriteIssues<T>(int actor, IEnumerable<int> ids, Func<Workspace, T> action, params int[] relatedUsers)
+    internal Task<T> WriteIssues<T>(int actor, IEnumerable<int> ids, Func<Workspace, Task<T>> action, params int[] relatedUsers)
         => Run(action, true, new(actor, ids.Distinct().Order().ToArray(), [actor, .. relatedUsers], [], []));
-    internal Task<T> WriteUser<T>(int user, Func<Workspace, T> action)
+    internal Task<T> WriteUser<T>(int user, Func<Workspace, Task<T>> action)
         => Run(action, true, new(user, [], [], [user], []));
-    internal Task<T> WriteAccount<T>(int actor, int target, Func<Workspace, T> action, string? role = null, int? project = null)
+    internal Task<T> WriteAccount<T>(int actor, int target, Func<Workspace, Task<T>> action, string? role = null, int? project = null)
         => Run(action, true, new WriteScope(actor, [], [actor], [target], []) { Projects = project is int id ? [id] : [], CatalogReaders = role is null ? [] : ["role:" + role] });
-    private Task<T> WriteLogin<T>(string employee, Func<Workspace, T> action)
+    private Task<T> WriteLogin<T>(string employee, Func<Workspace, Task<T>> action)
         => Run(action, true, new(null, [], [], [], [], employee));
-    internal Task<T> WriteProjectData<T>(int actor, int project, string area, Func<Workspace, T> action)
+    internal Task<T> WriteProjectData<T>(int actor, int project, string area, Func<Workspace, Task<T>> action)
         => Run(action, true, new WriteScope(actor, [], [actor], [], [$"project-data:{project}:{area}"]) { Projects = [project] });
 
-    internal Task<T> WriteNamedAdministration<T>(int actor, string entity, Func<Workspace, T> action)
+    internal Task<T> WriteNamedAdministration<T>(int actor, string entity, Func<Workspace, Task<T>> action)
         => Run(action, true, new(actor, [], [actor], [], [entity]));
 
     private static async Task AcquireScope(OracleConnection connection, OracleTransaction transaction, WriteScope? scope)

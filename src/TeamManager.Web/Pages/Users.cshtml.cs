@@ -6,50 +6,51 @@ using Microsoft.Data.SqlClient;
 using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web.Pages;
-public class UsersModel(UserStore store,OracleWorkspace oracle):PageModel
+
+public class UsersModel(UserStore store, OracleWorkspace oracle) : PageModel
 {
-    private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    public List<DirectoryEntry> Entries {get;set;}=[];
-    public List<Team> Units {get;set;}=[];
-    public List<Team> Teams {get;set;}=[];
-    public List<Team> Projects {get;set;}=[];
-    public async Task OnGetAsync(){Entries=await store.Directory();Units=await store.Choices("unit");Teams=await store.Choices("team");Projects=await store.Choices("project");}
-    public async Task<IActionResult> OnPostCreateAsync(string? employee,string? name,string? job,int? unit,string? password)
+    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    public List<DirectoryEntry> Entries { get; set; } = [];
+    public List<Team> Units { get; set; } = [];
+    public List<Team> Teams { get; set; } = [];
+    public List<Team> Projects { get; set; } = [];
+    public async Task OnGetAsync() { Entries = await store.Directory(); Units = await store.Choices("unit"); Teams = await store.Choices("team"); Projects = await store.Choices("project"); }
+    public async Task<IActionResult> OnPostCreateAsync(string? employee, string? name, string? job, int? unit, string? password)
     {
-        if(!User.IsInRole("users.manage"))return Forbid();
-        employee=employee?.Trim().ToLowerInvariant();name=name?.Trim();job=job?.Trim()??"";
-        if(!ModelState.IsValid||!Regex.IsMatch(employee??"",@"^[a-z0-9._-]{1,30}$")||string.IsNullOrWhiteSpace(name)||name.Length>100||job.Length>100||password is null||password.Length<7||password.Length>200)
+        if (!User.IsInRole("users.manage")) return Forbid();
+        employee = employee?.Trim().ToLowerInvariant(); name = name?.Trim(); job = job?.Trim() ?? "";
+        if (!ModelState.IsValid || !Regex.IsMatch(employee ?? "", @"^[a-z0-9._-]{1,30}$") || string.IsNullOrWhiteSpace(name) || name.Length > 100 || job.Length > 100 || password is null || password.Length < 7 || password.Length > 200)
             return await Invalid("Provjeri broj radnika, ime i lozinku (najmanje 7 znakova).");
-        try{await store.Create(employee!,name,job,unit,password,actorId:UserId);}
-        catch(SqlException ex) when(ex.Number is 2601 or 2627 or 547){return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana.");}
-        catch(ArgumentException){return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana.");}
+        try { await store.Create(employee!, name, job, unit, password, actorId: UserId); }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627 or 547) { return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana."); }
+        catch (ArgumentException) { return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana."); }
         return RedirectToPage();
     }
-    public async Task<IActionResult> OnPostScopeAsync(string? kind,string? name)
+    public async Task<IActionResult> OnPostScopeAsync(string? kind, string? name)
     {
-        if(!User.IsInRole("organization.manage"))return Forbid();
-        name=name?.Trim();var table=kind switch {"unit"=>"OrganizationUnits","team"=>"Teams","project"=>"Projects",_=>null};
-        if(table is null||string.IsNullOrWhiteSpace(name)||name.Length>100)return await Invalid("Unesi valjan naziv do 100 znakova.");
-        if(oracle.Enabled)
+        if (!User.IsInRole("organization.manage")) return Forbid();
+        name = name?.Trim(); var table = kind switch { "unit" => "OrganizationUnits", "team" => "Teams", "project" => "Projects", _ => null };
+        if (table is null || string.IsNullOrWhiteSpace(name) || name.Length > 100) return await Invalid("Unesi valjan naziv do 100 znakova.");
+        if (oracle.Enabled)
         {
-            if(kind=="project")
-                await oracle.SaveProject(UserId,null,new ProjectInput{Name=name});
+            if (kind == "project")
+                await oracle.SaveProject(UserId, null, new ProjectInput { Name = name });
             else
-                await oracle.WriteNamedAdministration(UserId,$"organization-name:{kind}:{name.ToUpperInvariant()}",w=>
+                await oracle.WriteNamedAdministration(UserId, $"organization-name:{kind}:{name.ToUpperInvariant()}", async w =>
                 {
-                    if(!OracleWorkspace.Right(w,UserId,"organization.manage"))throw new UnauthorizedAccessException();
-                    if(w.Rows(table).Any(r=>OracleWorkspace.Workspace.Text(r,"Name").Equals(name,StringComparison.OrdinalIgnoreCase)))
+                    if (!(await OracleWorkspace.Right(w, UserId, "organization.manage"))) throw new UnauthorizedAccessException();
+                    if ((await w.Rows(table)).Any(r => OracleWorkspace.Workspace.Text(r, "Name").Equals(name, StringComparison.OrdinalIgnoreCase)))
                         throw new ArgumentException("Taj naziv već postoji.");
-                    if(kind=="unit") w.Add(table,("Id",w.Next(table)),("Name",name));
-                    else w.Add(table,("Id",w.Next(table)),("Name",name),("CreatedAt",DateTime.UtcNow));
-                    OracleWorkspace.Audit(w,UserId,$"organization.{kind}.create",name);
+                    if (kind == "unit") w.Add(table, ("Id", (await w.Next(table))), ("Name", name));
+                    else w.Add(table, ("Id", (await w.Next(table))), ("Name", name), ("CreatedAt", DateTime.UtcNow));
+                    await OracleWorkspace.Audit(w, UserId, $"organization.{kind}.create", name);
                     return true;
                 });
             return RedirectToPage();
         }
-        try{await store.ExecuteAudited(new(UserId,$"organization.{kind}.create",name),$"INSERT dbo.{table}(Name) VALUES(@name)",P("@name",name));}
-        catch(SqlException ex) when(ex.Number is 2601 or 2627){return await Invalid("Taj naziv već postoji.");}
+        try { await store.ExecuteAudited(new(UserId, $"organization.{kind}.create", name), $"INSERT dbo.{table}(Name) VALUES(@name)", P("@name", name)); }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627) { return await Invalid("Taj naziv već postoji."); }
         return RedirectToPage();
     }
-    private async Task<IActionResult> Invalid(string message){ModelState.AddModelError("",message);await OnGetAsync();return Page();}
+    private async Task<IActionResult> Invalid(string message) { ModelState.AddModelError("", message); await OnGetAsync(); return Page(); }
 }

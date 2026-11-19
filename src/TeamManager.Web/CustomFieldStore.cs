@@ -6,7 +6,7 @@ namespace TeamManager.Web;
 public sealed record CustomFieldValue(int Id, string Name, string? Value, int Revision);
 public sealed record FieldTarget(string Title, int? ProjectId, int? IssueId, bool CanEdit);
 
-public sealed class CustomFieldStore(IConfiguration config, ProjectStore projects, IssueStore issues,OracleWorkspace oracle)
+public sealed class CustomFieldStore(IConfiguration config, ProjectStore projects, IssueStore issues, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
@@ -22,7 +22,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
 
     public async Task<FieldTarget?> Target(int actor, bool managesUsers, string scope, int id)
     {
-        if(oracle.Enabled)return await oracle.Read(w=>OracleWorkspace.FieldTarget(w,actor,scope,id));
+        if (oracle.Enabled) return await oracle.Read(async w => (await OracleWorkspace.FieldTarget(w, actor, scope, id)));
         if (scope == "project")
         {
             var project = (await projects.List(actor)).Find(item => item.Id == id);
@@ -45,7 +45,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
             WHERE t.Id=@id AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
             OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@id", id),P("@viewer",actor)]);
+        command.Parameters.AddRange([P("@id", id), P("@viewer", actor)]);
         await using var reader = await command.ExecuteReaderAsync();
         if (!await reader.ReadAsync()) return null;
         var owner = reader.GetInt32(0);
@@ -58,7 +58,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
 
     public async Task<List<CustomFieldValue>> List(int actor, string scope, int? id, FieldTarget? target)
     {
-        if(oracle.Enabled)return await oracle.Fields(actor,scope,id);
+        if (oracle.Enabled) return await oracle.Fields(actor, scope, id);
         await using var connection = Connect();
         await connection.OpenAsync();
         var timeGuard = scope == "time" && id is not null
@@ -74,31 +74,35 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
             FROM dbo.CustomFields f LEFT JOIN dbo.{ValueTable(scope)} v ON v.FieldId=f.Id AND v.EntityId=@entity
             WHERE f.Scope=@scope {timeGuard} ORDER BY f.Name OPTION(MAXRECURSION 0)
             """, connection);
-        command.Parameters.AddRange([P("@scope",scope), P("@entity",id), P("@issue",target?.IssueId), P("@project",target?.ProjectId),P("@viewer",actor)]);
+        command.Parameters.AddRange([P("@scope", scope), P("@entity", id), P("@issue", target?.IssueId), P("@project", target?.ProjectId), P("@viewer", actor)]);
         var fields = new List<CustomFieldValue>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
-            fields.Add(new(reader.GetInt32(0),reader.GetString(1),reader.IsDBNull(2)?null:reader.GetString(2),reader.GetInt32(3)));
+            fields.Add(new(reader.GetInt32(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2), reader.GetInt32(3)));
         return fields;
     }
 
     public async Task Create(int actor, string scope, string name)
     {
-        if(oracle.Enabled){await oracle.WriteNamedAdministration(actor,$"custom-field-name:{scope}:{name.Trim().ToUpperInvariant()}",w=>{
-            if(!OracleWorkspace.Rights(w,actor).Contains("*"))throw new UnauthorizedAccessException();
-            if(w.Rows("CustomFields").Any(r=>OracleWorkspace.Workspace.Text(r,"Scope")==scope&&OracleWorkspace.Workspace.Text(r,"Name")==name))
-                throw new ArgumentException("Taj naziv već postoji.");
-            w.Add("CustomFields",("Id",w.Next("CustomFields")),("Scope",scope),("Name",name));
-            OracleWorkspace.Audit(w,actor,"custom-field.create",name,scope);return true;
-        });return;}
+        if (oracle.Enabled)
+        {
+            await oracle.WriteNamedAdministration(actor, $"custom-field-name:{scope}:{name.Trim().ToUpperInvariant()}", async w =>
+            {
+                if (!(await OracleWorkspace.Rights(w, actor)).Contains("*")) throw new UnauthorizedAccessException();
+                if ((await w.Rows("CustomFields")).Any(r => OracleWorkspace.Workspace.Text(r, "Scope") == scope && OracleWorkspace.Workspace.Text(r, "Name") == name))
+                    throw new ArgumentException("Taj naziv već postoji.");
+                w.Add("CustomFields", ("Id", (await w.Next("CustomFields"))), ("Scope", scope), ("Name", name));
+                await OracleWorkspace.Audit(w, actor, "custom-field.create", name, scope); return true;
+            }); return;
+        }
         await using var connection = Connect();
-        await AdministrationAuditStore.Execute(connection,new(actor,"custom-field.create",name,scope),
-            "INSERT dbo.CustomFields(Scope,Name) VALUES(@scope,@name)",P("@scope",scope),P("@name",name));
+        await AdministrationAuditStore.Execute(connection, new(actor, "custom-field.create", name, scope),
+            "INSERT dbo.CustomFields(Scope,Name) VALUES(@scope,@name)", P("@scope", scope), P("@name", name));
     }
 
     public async Task Set(int actor, bool managesUsers, string scope, int entity, int field, int revision, string? value)
     {
-        if(oracle.Enabled){await oracle.SetField(actor,scope,entity,field,revision,value);return;}
+        if (oracle.Enabled) { await oracle.SetField(actor, scope, entity, field, revision, value); return; }
         var target = await Target(actor, managesUsers, scope, entity);
         if (target?.CanEdit != true) throw new UnauthorizedAccessException();
         value = value?.Trim();
@@ -110,14 +114,14 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync();
         if (scope == "time")
         {
-            await IssueStore.RequireActive(connection,transaction,target.ProjectId!.Value,true);
-            await IssueStore.RequireIssueProject(connection,transaction,target.IssueId!.Value,target.ProjectId.Value,actor);
+            await IssueStore.RequireActive(connection, transaction, target.ProjectId!.Value, true);
+            await IssueStore.RequireIssueProject(connection, transaction, target.IssueId!.Value, target.ProjectId.Value, actor);
         }
         else if (scope == "project")
         {
             await using var active = new SqlCommand(
-                "SELECT 1 FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@entity AND State='Active'",connection,transaction);
-            active.Parameters.Add(P("@entity",entity));
+                "SELECT 1 FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@entity AND State='Active'", connection, transaction);
+            active.Parameters.Add(P("@entity", entity));
             if (await active.ExecuteScalarAsync() is null) throw new UnauthorizedAccessException();
         }
 
@@ -136,7 +140,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
                 SELECT 1;
             END
             ELSE SELECT 0;
-            """,connection,transaction);
+            """, connection, transaction);
         command.Parameters.AddRange([P("@scope",scope),P("@entity",entity),P("@field",field),P("@revision",revision),
             new SqlParameter("@value",System.Data.SqlDbType.NVarChar,500){Value=string.IsNullOrEmpty(value)?DBNull.Value:value}]);
         var affected = (int)(await command.ExecuteScalarAsync())!;

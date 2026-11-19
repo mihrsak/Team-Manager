@@ -7,12 +7,12 @@ public sealed partial class OracleWorkspace
 {
     internal static string[] IssueCatalogKeys(IssueInput input) =>
         ["value:IssueTypes:" + input.Type, "value:IssueStatuses:" + input.Status, "value:IssuePriorities:" + input.Priority, "workflow-type:" + input.Type];
-    private Task<T> WriteIssueChanges<T>(int actor, IEnumerable<int> ids, Func<Workspace, T> action, int? project = null, IssueInput? input = null, string[]? catalogs = null)
+    private Task<T> WriteIssueChanges<T>(int actor, IEnumerable<int> ids, Func<Workspace, Task<T>> action, int? project = null, IssueInput? input = null, string[]? catalogs = null)
         => Run(action, true, new WriteScope(actor, ids.Distinct().Order().ToArray(), input?.AssigneeId is int assigned ? [actor, assigned] : [actor], [], [])
         { Projects = project is int selected ? [selected] : [], IssueCatalogs = true, CatalogReaders = [.. input is null ? [] : IssueCatalogKeys(input), .. catalogs ?? []] });
-    internal Task<T> WriteCatalog<T>(int actor, string[] readers, string[] writers, Func<Workspace, T> action)
+    internal Task<T> WriteCatalog<T>(int actor, string[] readers, string[] writers, Func<Workspace, Task<T>> action)
         => Run(action, true, new WriteScope(actor, [], [actor], [], []) { CatalogReaders = readers, CatalogWriters = writers });
-    internal Task<T> WriteProjectMetadata<T>(int actor, int? project, int? parent, string? name, Func<Workspace, T> action)
+    internal Task<T> WriteProjectMetadata<T>(int actor, int? project, int? parent, string? name, Func<Workspace, Task<T>> action)
         => Run(action, true, new WriteScope(actor, [], [actor], [], name is null ? [] : ["project-name:" + name.Trim().ToUpperInvariant()])
         { NewProject = project is null, CatalogReaders = project is null ? ["role:Voditelj"] : [], Projects = new[] { project, parent }.OfType<int>().Distinct().ToArray(), ProjectWriters = project is int id ? [id] : [] });
 

@@ -33,7 +33,7 @@ public sealed class OracleProjectImport(IConfiguration configuration)
         await using var source = new SqlConnection(sourceString);
         await source.OpenAsync();
         await using var sourceTransaction = (SqlTransaction)await source.BeginTransactionAsync(IsolationLevel.Serializable);
-        await using var targetTransaction = target.BeginTransaction();
+        await using var targetTransaction = (OracleTransaction)await target.BeginTransactionAsync();
         foreach (var sql in new[] {
             "LOCK TABLE TM_IMPORTED_PROJECTS IN EXCLUSIVE MODE",
             "DELETE FROM TM_IMPORTED_TIME_ENTRIES", "DELETE FROM TM_IMPORTED_ISSUE_EVENTS",
@@ -137,7 +137,8 @@ public sealed class OracleProjectImport(IConfiguration configuration)
         {
             await using var command = new OracleCommand(
                 "SELECT ID,TITLE,ISSUE_TYPE,STATUS,PRIORITY,IS_PRIVATE FROM TM_IMPORTED_ISSUES WHERE PROJECT_ID=:project ORDER BY ID DESC",
-                connection) { BindByName = true, CommandTimeout = 10 };
+                connection)
+            { BindByName = true, CommandTimeout = 10 };
             command.Parameters.Add("project", OracleDbType.Int32).Value = projectId.Value;
             await using var rows = await command.ExecuteReaderAsync(token);
             while (await rows.ReadAsync(token))

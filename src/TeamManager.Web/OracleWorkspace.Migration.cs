@@ -41,7 +41,7 @@ public sealed partial class OracleWorkspace
             await using var command = new OracleCommand(statement.Trim(), connection) { CommandTimeout = 60 };
             await command.ExecuteNonQueryAsync();
         }
-        await using var transaction = connection.BeginTransaction();
+        await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync();
         await using var source = RelationalCommand(connection, transaction,
             "SELECT CONTENT,REVISION FROM TM_ACTIVE_WORKSPACE WHERE ID=1 FOR UPDATE WAIT 30");
         JsonObject legacy;

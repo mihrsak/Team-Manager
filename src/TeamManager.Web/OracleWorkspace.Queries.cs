@@ -13,16 +13,17 @@ public sealed partial class OracleWorkspace
     private static readonly Counter<long> FullReads = QueryMeter.CreateCounter<long>("oracle.full_workspace_reads");
 
     // Values are always bound. Table/column names and predicates come only from store code.
-    private static JsonArray SelectRows(OracleConnection connection, OracleTransaction transaction,
+    private static async Task<JsonArray> SelectRows(OracleConnection connection, OracleTransaction transaction,
         string name, string predicate, (string Name, object? Value)[] parameters)
     {
         var table = Schema.Value.Tables.Single(t => t.Name == name);
-        using var command = RelationalCommand(connection, transaction,
+        await using var command = RelationalCommand(connection, transaction,
             $"SELECT t.\"__EMPTY\",{string.Join(',', table.Columns.Select(c => "t." + Quote(c.Name)))} FROM {table.SqlName} t WHERE {predicate}");
         foreach (var (key, value) in parameters) AddQueryParameter(command, key, value);
-        using var reader = command.ExecuteReader();
+        // Prefetch complete LOBs during ReadAsync; typed getters below only decode buffered values.
+        await using var reader = await command.ExecuteReaderAsync();
         var rows = new JsonArray();
-        while (reader.Read()) rows.Add(ReadTypedRow(table, reader));
+        while (await reader.ReadAsync()) rows.Add(ReadTypedRow(table, reader));
         SelectedRows.Add(rows.Count, new KeyValuePair<string, object?>("query", name));
         return rows;
     }

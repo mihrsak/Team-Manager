@@ -5,87 +5,89 @@ using Microsoft.Data.SqlClient;
 using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web.Pages;
-public class ProfileModel(UserStore store,Permissions permissions, Microsoft.AspNetCore.Identity.IPasswordHasher<AppUser> hasher, OracleWorkspace oracle):PageModel
+
+public class ProfileModel(UserStore store, Permissions permissions, Microsoft.AspNetCore.Identity.IPasswordHasher<AppUser> hasher, OracleWorkspace oracle) : PageModel
 {
-    public IActionResult OnPost()=>BadRequest();
-    public AppUser? Person {get;set;}
-    public List<AccessRole> Roles {get;set;}=[];
-    public List<string> GlobalRoles {get;set;}=[];
-    public HashSet<int> ManageTeams {get;set;}=[];
-    public HashSet<int> ManageProjects {get;set;}=[];
-    public List<Team> Units {get;set;}=[];
-    public List<Team> TeamChoices {get;set;}=[];
-    public List<Team> ProjectChoices {get;set;}=[];
-    public List<Membership> Teams {get;set;}=[];
-    public List<Membership> Projects {get;set;}=[];
-    private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    public bool IsSelf=>Person?.Id.ToString()==User.FindFirstValue(ClaimTypes.NameIdentifier);
-    public bool CanEdit=>IsSelf||User.IsInRole("users.manage");
-    public string UnitName=>Units.FirstOrDefault(x=>x.Id==Person?.OrganizationUnitId)?.Name??"Nije dodijeljena";
+    public IActionResult OnPost() => BadRequest();
+    public AppUser? Person { get; set; }
+    public List<AccessRole> Roles { get; set; } = [];
+    public List<string> GlobalRoles { get; set; } = [];
+    public HashSet<int> ManageTeams { get; set; } = [];
+    public HashSet<int> ManageProjects { get; set; } = [];
+    public List<Team> Units { get; set; } = [];
+    public List<Team> TeamChoices { get; set; } = [];
+    public List<Team> ProjectChoices { get; set; } = [];
+    public List<Membership> Teams { get; set; } = [];
+    public List<Membership> Projects { get; set; } = [];
+    private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    public bool IsSelf => Person?.Id.ToString() == User.FindFirstValue(ClaimTypes.NameIdentifier);
+    public bool CanEdit => IsSelf || User.IsInRole("users.manage");
+    public string UnitName => Units.FirstOrDefault(x => x.Id == Person?.OrganizationUnitId)?.Name ?? "Nije dodijeljena";
     public async Task<IActionResult> OnGetAsync(int? id)
     {
-        var selected=id??int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        Person=(await store.Directory()).FirstOrDefault(x=>x.User.Id==selected)?.User;
-        if(Person is null)return NotFound();
-        Roles=await permissions.Roles();GlobalRoles=await permissions.GlobalRoles(selected);
-        Units=await store.Choices("unit");TeamChoices=await store.Choices("team");ProjectChoices=await store.Choices("project");Teams=await store.Memberships(selected,true);Projects=await store.Memberships(selected,false);
-        foreach(var t in TeamChoices)if(await permissions.CanManageMembers(User,"team",t.Id))ManageTeams.Add(t.Id);
-        foreach(var p in ProjectChoices)if(await permissions.CanManageMembers(User,"project",p.Id))ManageProjects.Add(p.Id);
+        var selected = id ?? int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        Person = (await store.Directory()).FirstOrDefault(x => x.User.Id == selected)?.User;
+        if (Person is null) return NotFound();
+        Roles = await permissions.Roles(); GlobalRoles = await permissions.GlobalRoles(selected);
+        Units = await store.Choices("unit"); TeamChoices = await store.Choices("team"); ProjectChoices = await store.Choices("project"); Teams = await store.Memberships(selected, true); Projects = await store.Memberships(selected, false);
+        foreach (var t in TeamChoices) if (await permissions.CanManageMembers(User, "team", t.Id)) ManageTeams.Add(t.Id);
+        foreach (var p in ProjectChoices) if (await permissions.CanManageMembers(User, "project", p.Id)) ManageProjects.Add(p.Id);
         return Page();
     }
-    public async Task<IActionResult> OnPostSaveAsync(int id,string? name,string? job,int? unit)
+    public async Task<IActionResult> OnPostSaveAsync(int id, string? name, string? job, int? unit)
     {
-        await OnGetAsync(id);if(Person is null)return NotFound();if(!CanEdit)return Forbid();
-        name=name?.Trim();job=job?.Trim()??"";
-        if(!ModelState.IsValid||string.IsNullOrWhiteSpace(name)||name.Length>100||job.Length>100)return Invalid("Unesi ime i funkciju do 100 znakova.");
-        if(!User.IsInRole("users.manage"))unit=Person.OrganizationUnitId;
-        if(oracle.Enabled)
+        await OnGetAsync(id); if (Person is null) return NotFound(); if (!CanEdit) return Forbid();
+        name = name?.Trim(); job = job?.Trim() ?? "";
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(name) || name.Length > 100 || job.Length > 100) return Invalid("Unesi ime i funkciju do 100 znakova.");
+        if (!User.IsInRole("users.manage")) unit = Person.OrganizationUnitId;
+        if (oracle.Enabled)
         {
-            await oracle.WriteAccount(UserId,id,w=>{
-                if(UserId!=id&&!OracleWorkspace.Right(w,UserId,"users.manage"))throw new UnauthorizedAccessException();
-                if(unit is not null&&w.Find("OrganizationUnits",unit.Value)is null)throw new ArgumentException("Organizacijska jedinica nije valjana.");
-                var row=w.Find("AppUsers",id)??throw new UnauthorizedAccessException();
-                if(unit!=OracleWorkspace.Workspace.OptionalInt(row,"OrganizationUnitId")&&!OracleWorkspace.Right(w,UserId,"users.manage"))throw new UnauthorizedAccessException();
-                OracleWorkspace.Workspace.Set(row,"DisplayName",name);
-                OracleWorkspace.Workspace.Set(row,"JobTitle",job);
-                OracleWorkspace.Workspace.Set(row,"OrganizationUnitId",unit);
-                OracleWorkspace.Audit(w,UserId,"account.update",Person.EmployeeNumber);return true;
+            await oracle.WriteAccount(UserId, id, async w =>
+            {
+                if (UserId != id && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
+                if (unit is not null && (await w.Find("OrganizationUnits", unit.Value)) is null) throw new ArgumentException("Organizacijska jedinica nije valjana.");
+                var row = (await w.Find("AppUsers", id)) ?? throw new UnauthorizedAccessException();
+                if (unit != OracleWorkspace.Workspace.OptionalInt(row, "OrganizationUnitId") && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
+                OracleWorkspace.Workspace.Set(row, "DisplayName", name);
+                OracleWorkspace.Workspace.Set(row, "JobTitle", job);
+                OracleWorkspace.Workspace.Set(row, "OrganizationUnitId", unit);
+                await OracleWorkspace.Audit(w, UserId, "account.update", Person.EmployeeNumber); return true;
             });
-            return Success(id,"Podaci su spremljeni.");
+            return Success(id, "Podaci su spremljeni.");
         }
         const string sql = "UPDATE dbo.AppUsers SET DisplayName=@n,JobTitle=@j,OrganizationUnitId=@o WHERE Id=@id";
-        SqlParameter[] parameters = [P("@n",name),P("@j",job),P("@o",unit),P("@id",id)];
+        SqlParameter[] parameters = [P("@n", name), P("@j", job), P("@o", unit), P("@id", id)];
         try
         {
             if (!IsSelf || unit != Person.OrganizationUnitId)
-                await store.ExecuteAudited(new(UserId,"account.update",Person.EmployeeNumber),sql,parameters);
+                await store.ExecuteAudited(new(UserId, "account.update", Person.EmployeeNumber), sql, parameters);
             else
-                await store.Execute(sql,parameters);
+                await store.Execute(sql, parameters);
         }
-        catch(SqlException ex) when(ex.Number==547){return Invalid("Organizacijska jedinica nije valjana.");}
-        return Success(id,"Podaci su spremljeni.");
+        catch (SqlException ex) when (ex.Number == 547) { return Invalid("Organizacijska jedinica nije valjana."); }
+        return Success(id, "Podaci su spremljeni.");
     }
-    public async Task<IActionResult> OnPostPasswordAsync(int id,string? currentPassword,string? newPassword,string? confirmPassword)
+    public async Task<IActionResult> OnPostPasswordAsync(int id, string? currentPassword, string? newPassword, string? confirmPassword)
     {
-        await OnGetAsync(id);if(Person is null)return NotFound();if(!IsSelf)return Forbid();
-        if(newPassword is null||newPassword.Length<10||newPassword.Length>200||newPassword!=confirmPassword||string.IsNullOrEmpty(currentPassword)||currentPassword.Length>200)return Invalid("Nova lozinka mora imati najmanje 10 znakova, a potvrda mora biti jednaka.");
-        var authenticated = await store.Authenticate(Person.EmployeeNumber,currentPassword);
-        if(authenticated is null || authenticated.SessionVersion != Person.SessionVersion)return Invalid("Trenutna lozinka nije ispravna ili je račun privremeno zaključan.");
+        await OnGetAsync(id); if (Person is null) return NotFound(); if (!IsSelf) return Forbid();
+        if (newPassword is null || newPassword.Length < 10 || newPassword.Length > 200 || newPassword != confirmPassword || string.IsNullOrEmpty(currentPassword) || currentPassword.Length > 200) return Invalid("Nova lozinka mora imati najmanje 10 znakova, a potvrda mora biti jednaka.");
+        var authenticated = await store.Authenticate(Person.EmployeeNumber, currentPassword);
+        if (authenticated is null || authenticated.SessionVersion != Person.SessionVersion) return Invalid("Trenutna lozinka nije ispravna ili je račun privremeno zaključan.");
         if (!await store.ChangePassword(authenticated, newPassword))
             return Invalid("Račun je u međuvremenu promijenjen. Ponovno se prijavi.");
         return Success(id, "Lozinka je promijenjena. Ponovno se prijavi.");
     }
-    public async Task<IActionResult> OnPostMembershipAsync(int id,string? kind,int scopeId,string? role,bool removeRole=false,bool replacePrimary=false)
+    public async Task<IActionResult> OnPostMembershipAsync(int id, string? kind, int scopeId, string? role, bool removeRole = false, bool replacePrimary = false)
     {
-        if(kind is not ("team" or "project")||!await permissions.CanManageMembers(User,kind,scopeId))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
-        if(!ModelState.IsValid||!Roles.Any(x=>x.Name==role)||scopeId<=0)return Invalid("Odaberi tim ili projekt i valjanu ulogu.");
+        if (kind is not ("team" or "project") || !await permissions.CanManageMembers(User, kind, scopeId)) return Forbid(); await OnGetAsync(id); if (Person is null) return NotFound();
+        if (!ModelState.IsValid || !Roles.Any(x => x.Name == role) || scopeId <= 0) return Invalid("Odaberi tim ili projekt i valjanu ulogu.");
         // Scope managers cannot delegate permissions they do not possess in that scope.
-        var effective=await permissions.Effective(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),kind,scopeId);
-        if(!effective.Contains("*")&&Roles.Single(x=>x.Name==role).Permissions.Any(x=>!effective.Contains(x)))return Forbid();
-        if(oracle.Enabled)
+        var effective = await permissions.Effective(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!), kind, scopeId);
+        if (!effective.Contains("*") && Roles.Single(x => x.Name == role).Permissions.Any(x => !effective.Contains(x))) return Forbid();
+        if (oracle.Enabled)
         {
-            await oracle.Membership(UserId,id,kind,scopeId,role,removeRole,replacePrimary,false);
-            return Success(id,"Članstvo i uloga su spremljeni.");
+            await oracle.Membership(UserId, id, kind, scopeId, role, removeRole, replacePrimary, false);
+            return Success(id, "Članstvo i uloga su spremljeni.");
         }
         var sql = kind == "team"
             ? """
@@ -124,22 +126,22 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
                   INSERT dbo.ProjectMemberRoles(ProjectId,UserId,RoleName) VALUES(@s,@u,@r);
               COMMIT;
               """;
-        try{await store.ExecuteAudited(new(UserId,removeRole?"membership.role.remove":replacePrimary?"membership.role.replace":"membership.role.add",Person.EmployeeNumber,$"{kind} #{scopeId}: {role}"),sql,P("@s",scopeId),P("@u",id),P("@r",role),P("@name",Person.EmployeeNumber),P("@remove",removeRole),P("@replace",replacePrimary));}
-        catch(SqlException ex) when(ex.Number is 547 or 2601 or 2627){return Invalid("Članstvo nije spremljeno. Provjeri postoji li tim/projekt i ima li već člana s istim brojem radnika.");}
-        return Success(id,"Članstvo i uloga su spremljeni.");
+        try { await store.ExecuteAudited(new(UserId, removeRole ? "membership.role.remove" : replacePrimary ? "membership.role.replace" : "membership.role.add", Person.EmployeeNumber, $"{kind} #{scopeId}: {role}"), sql, P("@s", scopeId), P("@u", id), P("@r", role), P("@name", Person.EmployeeNumber), P("@remove", removeRole), P("@replace", replacePrimary)); }
+        catch (SqlException ex) when (ex.Number is 547 or 2601 or 2627) { return Invalid("Članstvo nije spremljeno. Provjeri postoji li tim/projekt i ima li već člana s istim brojem radnika."); }
+        return Success(id, "Članstvo i uloga su spremljeni.");
     }
-    public async Task<IActionResult> OnPostRemoveAsync(int id,string? kind,int scopeId)
+    public async Task<IActionResult> OnPostRemoveAsync(int id, string? kind, int scopeId)
     {
-        if(kind is not ("team" or "project")||!await permissions.CanManageMembers(User,kind,scopeId))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
-        if(kind is not ("team" or "project"))return BadRequest();
-        if(oracle.Enabled)
+        if (kind is not ("team" or "project") || !await permissions.CanManageMembers(User, kind, scopeId)) return Forbid(); await OnGetAsync(id); if (Person is null) return NotFound();
+        if (kind is not ("team" or "project")) return BadRequest();
+        if (oracle.Enabled)
         {
-            await oracle.Membership(UserId,id,kind,scopeId,null,false,false,true);
-            return Success(id,"Članstvo je uklonjeno.");
+            await oracle.Membership(UserId, id, kind, scopeId, null, false, false, true);
+            return Success(id, "Članstvo je uklonjeno.");
         }
-        try{await store.ExecuteAudited(new(UserId,"membership.remove",Person.EmployeeNumber,$"{kind} #{scopeId}"),kind=="team"?"DELETE dbo.Members WHERE TeamId=@s AND UserId=@u":"DELETE dbo.ProjectMembers WHERE ProjectId=@s AND UserId=@u",P("@s",scopeId),P("@u",id));}
-        catch(SqlException ex) when(ex.Number==547){return Invalid("Član ima dodijeljene zadatke. Najprije ih preraspodijeli.");}
-        return Success(id,"Članstvo je uklonjeno.");
+        try { await store.ExecuteAudited(new(UserId, "membership.remove", Person.EmployeeNumber, $"{kind} #{scopeId}"), kind == "team" ? "DELETE dbo.Members WHERE TeamId=@s AND UserId=@u" : "DELETE dbo.ProjectMembers WHERE ProjectId=@s AND UserId=@u", P("@s", scopeId), P("@u", id)); }
+        catch (SqlException ex) when (ex.Number == 547) { return Invalid("Član ima dodijeljene zadatke. Najprije ih preraspodijeli."); }
+        return Success(id, "Članstvo je uklonjeno.");
     }
     public async Task<IActionResult> OnPostAccountAsync(int id, string? accountAction, string? password)
     {
@@ -162,15 +164,15 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         return Success(id, "Radnja je izvršena. Prethodne sesije su opozvane.");
     }
 
-    private IActionResult Invalid(string text){ModelState.AddModelError("",text);return Page();}
-    public async Task<IActionResult> OnPostGlobalRoleAsync(int id,string role,bool remove)
+    private IActionResult Invalid(string text) { ModelState.AddModelError("", text); return Page(); }
+    public async Task<IActionResult> OnPostGlobalRoleAsync(int id, string role, bool remove)
     {
-        if(!User.IsInRole("roles.manage"))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
-        if(!Roles.Any(x=>x.Name==role))return Invalid("Nepostojeća rola.");
-        try{await permissions.Assign(UserId,id,role,remove);}
-        catch(SqlException ex) when(ex.Number==51001){return Invalid("Mora ostati barem jedan puni administrator.");}
-        catch(InvalidOperationException ex){return Invalid(ex.Message);}
-        return Success(id,"Globalne role su spremljene.");
+        if (!User.IsInRole("roles.manage")) return Forbid(); await OnGetAsync(id); if (Person is null) return NotFound();
+        if (!Roles.Any(x => x.Name == role)) return Invalid("Nepostojeća rola.");
+        try { await permissions.Assign(UserId, id, role, remove); }
+        catch (SqlException ex) when (ex.Number == 51001) { return Invalid("Mora ostati barem jedan puni administrator."); }
+        catch (InvalidOperationException ex) { return Invalid(ex.Message); }
+        return Success(id, "Globalne role su spremljene.");
     }
     public async Task<IActionResult> OnPostLanguageAsync(string? language)
     {
@@ -186,5 +188,5 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         return RedirectToPage(new { id = UserId });
     }
 
-    private IActionResult Success(int id,string text){TempData["Notice"]=text;return RedirectToPage(new{id});}
+    private IActionResult Success(int id, string text) { TempData["Notice"] = text; return RedirectToPage(new { id }); }
 }

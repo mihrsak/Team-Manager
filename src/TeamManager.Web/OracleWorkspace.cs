@@ -54,7 +54,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             while (await rows.ReadAsync()) sequences[rows.GetString(0)] = rows.GetInt64(1);
         document["_Sequences"] = sequences;
         await snapshot.CommitAsync();
-        await using var transaction = target.BeginTransaction();
+        await using var transaction = (OracleTransaction)await target.BeginTransactionAsync();
         await using var insert = new OracleCommand("INSERT INTO TM_ACTIVE_WORKSPACE (ID,REVISION,CONTENT) VALUES (1,1,:content)", target)
         {
             Transaction = transaction,
@@ -67,8 +67,8 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         await MigrateRelational();
     }
 
-    internal async Task<T> Read<T>(Func<Workspace, T> action) => await Run(action, false);
-    private async Task<T> Run<T>(Func<Workspace, T> action, bool write, WriteScope? scope = null)
+    internal async Task<T> Read<T>(Func<Workspace, Task<T>> action) => await Run(action, false);
+    private async Task<T> Run<T>(Func<Workspace, Task<T>> action, bool write, WriteScope? scope = null)
     {
         for (var attempt = 0; attempt < 3; attempt++)
         {
@@ -78,11 +78,11 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         }
         throw new OracleWriteBusyException();
     }
-    private async Task<T> RunOnce<T>(Func<Workspace, T> action, bool write, WriteScope? scope)
+    private async Task<T> RunOnce<T>(Func<Workspace, Task<T>> action, bool write, WriteScope? scope)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
-        await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
+        await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
             "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=4)");
         var version = await state.ExecuteScalarAsync();
@@ -91,9 +91,9 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         if (write) await AcquireScope(connection, transaction, scope);
         var before = new JsonObject { ["_Sequences"] = new JsonObject() };
         var document = new JsonObject { ["_Sequences"] = new JsonObject() };
-        JsonArray Fetch(string table, string predicate, (string Name, object? Value)[] parameters)
+        async Task<JsonArray> Fetch(string table, string predicate, (string Name, object? Value)[] parameters)
         {
-            var rows = SelectRows(connection, transaction, table, predicate, parameters);
+            var rows = await SelectRows(connection, transaction, table, predicate, parameters);
             var baseline = before[table] as JsonArray;
             if (baseline is null) before[table] = baseline = new JsonArray();
             var definition = Schema.Value.Tables.Single(t => t.Name == table);
@@ -103,7 +103,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             return rows;
         }
         var usedReservedProject = false;
-        long Counter(string table)
+        async Task<long> Counter(string table)
         {
             if (table == "Projects" && !usedReservedProject && scope?.ReservedProject is int reserved)
             {
@@ -111,13 +111,13 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
                 return reserved;
             }
             if (!Schema.Value.Tables.Any(t => t.Name == table && t.Columns.Any(c => c.Name == "Id"))) throw new InvalidOperationException("Unknown Oracle identity table.");
-            using var command = RelationalCommand(connection, transaction, $"SELECT {Quote("TMR_SEQ_" + table)}.NEXTVAL FROM DUAL");
-            return Convert.ToInt64(command.ExecuteScalar());
+            await using var command = RelationalCommand(connection, transaction, $"SELECT {Quote("TMR_SEQ_" + table)}.NEXTVAL FROM DUAL");
+            return Convert.ToInt64(await command.ExecuteScalarAsync());
         }
         var workspace = new Workspace(document, Fetch, Counter);
-        if (scope?.Actor is int actor && (workspace.Find("AppUsers", actor) is not { } active || !Workspace.Flag(active, "IsActive")))
+        if (scope?.Actor is int actor && ((await workspace.Find("AppUsers", actor)) is not { } active || !Workspace.Flag(active, "IsActive")))
             throw new UnauthorizedAccessException();
-        var result = action(workspace);
+        var result = await action(workspace);
         if (write)
         {
             var after = NormalizeDocument(document, partial: true);
@@ -132,7 +132,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
     }
 
     internal sealed class Workspace(JsonObject document,
-        Func<string, string, (string Name, object? Value)[], JsonArray>? fetch = null, Func<string, long>? counter = null)
+        Func<string, string, (string Name, object? Value)[], Task<JsonArray>>? fetch = null, Func<string, Task<long>>? counter = null)
     {
         internal JsonObject Document { get; } = document;
         internal bool PreserveAdministrator { get; set; }
@@ -148,7 +148,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             Document[table] = created;
             return created;
         }
-        internal IEnumerable<JsonObject> Where(string table, string predicate, params (string Name, object? Value)[] parameters)
+        internal async Task<IEnumerable<JsonObject>> Where(string table, string predicate, params (string Name, object? Value)[] parameters)
         {
             if (fetch is null) throw new InvalidOperationException("Targeted queries require an Oracle transaction.");
             var definition = Schema.Value.Tables.Single(t => t.Name == table);
@@ -162,7 +162,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
                 return current.OfType<JsonObject>().Where(r => matched.Contains(RowKey(definition, r)));
             queries[queryKey] = matched = [];
             var selected = new List<JsonObject>();
-            foreach (var row in fetch(table, predicate, parameters).OfType<JsonObject>())
+            foreach (var row in (await fetch(table, predicate, parameters)).OfType<JsonObject>())
             {
                 var key = RowKey(definition, row);
                 matched.Add(key);
@@ -172,23 +172,23 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             }
             return selected;
         }
-        internal IEnumerable<JsonObject> By(string table, string column, object? value)
+        internal async Task<IEnumerable<JsonObject>> By(string table, string column, object? value)
         {
             if (!Schema.Value.Tables.Single(t => t.Name == table).Columns.Any(c => c.Name == column)) throw new ArgumentException("Unknown column.");
-            _ = Where(table, $"t.{Quote(column)}=:value", ("value", value)).ToArray();
+            _ = (await Where(table, $"t.{Quote(column)}=:value", ("value", value))).ToArray();
             var expected = JsonSerializer.SerializeToNode(value);
             return Table(table).OfType<JsonObject>().Where(r => JsonNode.DeepEquals(r[column], expected));
         }
-        internal IEnumerable<JsonObject> Rows(string table)
+        internal async Task<IEnumerable<JsonObject>> Rows(string table)
         {
-            if (fetch is not null && loadedAll.Add(table)) _ = Where(table, "1=1").ToArray();
+            if (fetch is not null && loadedAll.Add(table)) _ = (await Where(table, "1=1")).ToArray();
             return Table(table).OfType<JsonObject>();
         }
-        internal JsonObject? Find(string table, int id)
+        internal async Task<JsonObject?> Find(string table, int id)
         {
             var found = Table(table).OfType<JsonObject>().FirstOrDefault(r => Id(r) == id);
             if (found is not null || fetch is null || loadedAll.Contains(table)) return found;
-            return By(table, "Id", id).FirstOrDefault();
+            return (await By(table, "Id", id)).FirstOrDefault();
         }
         internal void InitializeSequences()
         {
@@ -204,13 +204,13 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             Document["_Sequences"] = sequences;
         }
 
-        internal int Next(string table) => checked((int)NextLong(table));
-        internal long NextLong(string table)
+        internal async Task<int> Next(string table) => checked((int)await NextLong(table));
+        internal async Task<long> NextLong(string table)
         {
             var sequences = Document["_Sequences"]!.AsObject();
             if (counter is not null)
             {
-                var allocated = counter(table);
+                var allocated = await counter(table);
                 sequences[table] = allocated;
                 return allocated;
             }
@@ -228,13 +228,13 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
             return row;
         }
 
-        internal void RemoveBy(string table, string column, object? value, Func<JsonObject, bool>? filter = null)
+        internal async Task RemoveBy(string table, string column, object? value, Func<JsonObject, bool>? filter = null)
         {
-            foreach (var row in By(table, column, value).Where(r => filter is null || filter(r)).ToArray()) Table(table).Remove(row);
+            foreach (var row in (await By(table, column, value)).Where(r => filter is null || filter(r)).ToArray()) Table(table).Remove(row);
         }
-        internal void Remove(string table, Func<JsonObject, bool> filter)
+        internal async Task Remove(string table, Func<JsonObject, bool> filter)
         {
-            foreach (var row in Rows(table).Where(filter).ToArray())
+            foreach (var row in (await Rows(table)).Where(filter).ToArray())
                 Table(table).Remove(row);
         }
 

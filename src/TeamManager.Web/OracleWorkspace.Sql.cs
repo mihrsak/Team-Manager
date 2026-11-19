@@ -33,7 +33,7 @@ public sealed partial class OracleWorkspace
     {
         await using var connection = Connect();
         await connection.OpenAsync();
-        await using var transaction = connection.BeginTransaction(IsolationLevel.Serializable);
+        await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync(IsolationLevel.Serializable);
         await using var command = RelationalCommand(connection, transaction, sql);
         bind(command);
         var result = new List<T>();

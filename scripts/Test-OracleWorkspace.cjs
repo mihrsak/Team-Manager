@@ -106,7 +106,8 @@ async function run() {
         assert.equal(await admin.getByText('Oracle personal ' + suffix, { exact: false }).count(), 0);
 
         const token = await reader.locator('input[name=__RequestVerificationToken]').first().inputValue();
-        const content = Buffer.from('Oracle binary attachment \u0000 \u010d \ud83d\ude80', 'utf8');
+        // Cross multiple Oracle fetch buffers and retain every byte, including zeros.
+        const content = Buffer.concat([Buffer.from('Oracle binary attachment \u0000 \u010d \ud83d\ude80', 'utf8'), Buffer.from(Array.from({ length: 262144 }, (_, i) => i % 256))]);
         const upload = await reader.request.post('/Issue?id=' + publicIssue + '&handler=Upload', {
             multipart: {
                 __RequestVerificationToken: token,

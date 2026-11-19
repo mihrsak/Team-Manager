@@ -10,13 +10,13 @@ public sealed record RoadmapMatch(int ProjectId, string Project, int Id, string 
 
 public sealed record RoadmapStatusCount(int ItemId, string Status, bool IsClosed, int Count);
 
-public sealed class RoadmapStore(IConfiguration configuration, ProjectStore projects,OracleWorkspace oracle)
+public sealed class RoadmapStore(IConfiguration configuration, ProjectStore projects, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
     public async Task<List<RoadmapItem>> List(int project)
     {
-        if(oracle.Enabled)return await oracle.Roadmap(project);
+        if (oracle.Enabled) return await oracle.Roadmap(project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -35,7 +35,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task<List<RoadmapMatch>> Search(IEnumerable<int> visibleProjects, string query)
     {
-        if(oracle.Enabled)return await oracle.RoadmapSearchSql(visibleProjects,query);
+        if (oracle.Enabled) return await oracle.RoadmapSearchSql(visibleProjects, query);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -60,7 +60,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task<ILookup<int, RoadmapStatusCount>> Progress(int user, int project)
     {
-        if(oracle.Enabled)return await oracle.RoadmapProgressSql(user,project);
+        if (oracle.Enabled) return await oracle.RoadmapProgressSql(user, project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -74,7 +74,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
             ORDER BY s.IsClosed,i.Status OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.Add(P("@project", project));
-        command.Parameters.Add(P("@viewer",user));
+        command.Parameters.Add(P("@viewer", user));
         var counts = new List<RoadmapStatusCount>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -84,22 +84,26 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task Save(int user, int project, RoadmapItem item)
     {
-        if(oracle.Enabled){await oracle.WriteProjectData(user,project,"roadmap",w=>{
-            if(!OracleWorkspace.Manage(w,user,project))throw new UnauthorizedAccessException();
-            if(w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")
-                throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");
-            var row=item.Id==0?null:w.Find("ProjectMilestones",item.Id);
-            if(item.Id!=0&&(row is null||OracleWorkspace.Workspace.Int(row,"ProjectId")!=project||
-                OracleWorkspace.Workspace.Int(row,"Revision")!=item.Revision))throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");
-            if(w.Rows("ProjectMilestones").Any(m=>OracleWorkspace.Workspace.Id(m)!=item.Id&&OracleWorkspace.Workspace.Int(m,"ProjectId")==project&&
-                OracleWorkspace.Workspace.Text(m,"Kind")==item.Kind&&OracleWorkspace.Workspace.Text(m,"Name")==item.Name))
-                throw new ArgumentException("Taj naziv već postoji za odabranu vrstu.");
-            row??=w.Add("ProjectMilestones",("Id",w.Next("ProjectMilestones")),("ProjectId",project),("Revision",-1));
-            OracleWorkspace.Workspace.Set(row,"Kind",item.Kind);OracleWorkspace.Workspace.Set(row,"Name",item.Name);
-            OracleWorkspace.Workspace.Set(row,"Description",item.Description);OracleWorkspace.Workspace.Set(row,"TargetDate",item.TargetDate);
-            OracleWorkspace.Workspace.Set(row,"IsComplete",item.IsComplete);OracleWorkspace.Workspace.Revise(row);
-            OracleWorkspace.Audit(w,user,item.Id==0?"roadmap.create":"roadmap.update",item.Name);return true;
-        });return;}
+        if (oracle.Enabled)
+        {
+            await oracle.WriteProjectData(user, project, "roadmap", async w =>
+            {
+                if (!(await OracleWorkspace.Manage(w, user, project))) throw new UnauthorizedAccessException();
+                if ((await w.Find("Projects", project)) is not { } p || OracleWorkspace.Workspace.Text(p, "State") != "Active")
+                    throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");
+                var row = item.Id == 0 ? null : (await w.Find("ProjectMilestones", item.Id));
+                if (item.Id != 0 && (row is null || OracleWorkspace.Workspace.Int(row, "ProjectId") != project ||
+                    OracleWorkspace.Workspace.Int(row, "Revision") != item.Revision)) throw new InvalidOperationException("Plan je u međuvremenu izmijenjen ili projekt više nije aktivan.");
+                if ((await w.Rows("ProjectMilestones")).Any(m => OracleWorkspace.Workspace.Id(m) != item.Id && OracleWorkspace.Workspace.Int(m, "ProjectId") == project &&
+                    OracleWorkspace.Workspace.Text(m, "Kind") == item.Kind && OracleWorkspace.Workspace.Text(m, "Name") == item.Name))
+                    throw new ArgumentException("Taj naziv već postoji za odabranu vrstu.");
+                row ??= w.Add("ProjectMilestones", ("Id", (await w.Next("ProjectMilestones"))), ("ProjectId", project), ("Revision", -1));
+                OracleWorkspace.Workspace.Set(row, "Kind", item.Kind); OracleWorkspace.Workspace.Set(row, "Name", item.Name);
+                OracleWorkspace.Workspace.Set(row, "Description", item.Description); OracleWorkspace.Workspace.Set(row, "TargetDate", item.TargetDate);
+                OracleWorkspace.Workspace.Set(row, "IsComplete", item.IsComplete); OracleWorkspace.Workspace.Revise(row);
+                await OracleWorkspace.Audit(w, user, item.Id == 0 ? "roadmap.create" : "roadmap.update", item.Name); return true;
+            }); return;
+        }
         if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         var sql = item.Id == 0
@@ -116,7 +120,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
               """;
 
         var rows = await AdministrationAuditStore.Execute(connection,
-            new(user,item.Id==0?"roadmap.create":"roadmap.update",item.Name,$"Projekt #{project}; {item.Kind}"),sql,
+            new(user, item.Id == 0 ? "roadmap.create" : "roadmap.update", item.Name, $"Projekt #{project}; {item.Kind}"), sql,
             P("@project", project), P("@id", item.Id), P("@revision", item.Revision),
             P("@kind", item.Kind), P("@name", item.Name), P("@description", item.Description), P("@complete", item.IsComplete),
             new SqlParameter("@date", System.Data.SqlDbType.Date) { Value = (object?)item.TargetDate ?? DBNull.Value });
