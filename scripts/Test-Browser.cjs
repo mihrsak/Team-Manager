@@ -124,12 +124,19 @@ async function run() {
         await member.goto('/Workflow');
         assert.equal(new URL(member.url()).pathname.toLowerCase(), '/denied');
         console.log('PASS: issue creation, comment, time, private project, membership, private issue and global permission.');
+        await page.goto('/ProjectNews?projectId=1');
+        const publication = page.locator('form[action*="handler=Publish"]');
+        await publication.locator('[name=title]').fill('Browser news ' + suffix);
+        await publication.locator('[name=body]').fill('HR/EN news accessibility čćž');
+        await publication.locator('button').click();
+        const newsArticle = new URL(page.url()).pathname + new URL(page.url()).search;
+        assert.ok(new URL(page.url()).searchParams.get('newsId'));
         for (const language of ['hr', 'en']) {
             await page.goto('/Profile');
             const form = page.locator('form[action*="handler=Language"]');
             await form.locator('[name=language]').selectOption(language);
             await form.locator('button').click();
-            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile']) {
+            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle]) {
                 await audit(page, route, language);
             }
             await page.goto('/Search');
@@ -153,7 +160,7 @@ async function run() {
         await page.goto('/Issues');
         assert.equal(new URL(page.url()).pathname, '/Login');
         assert.deepEqual(violations, []);
-        console.log('PASS: 18 WCAG A/AA scans, keyboard skip link, locale switching and logout.');
+        console.log('PASS: 22 WCAG A/AA scans, keyboard skip link, locale switching and logout.');
     } finally {
         if (violations.length) console.error(JSON.stringify(violations, null, 2));
         await browser.close();

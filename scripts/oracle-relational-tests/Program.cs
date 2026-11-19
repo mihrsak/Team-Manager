@@ -848,3 +848,55 @@ await using (var held = holder.BeginTransaction())
 }
 Check(Convert.ToInt32(await Scalar($"SELECT \"IsRead\" FROM \"TMR_IssueNotifications\" WHERE \"UserId\"={noticeUser} AND \"EventId\"={notice.EventId}")) == 0, "Hidden notification state was modified.");
 Console.WriteLine("PASS: time-field and notification writes resolve their issue first, lock its permission dependencies, and reject module revocation without partial updates.");
+
+// Project news must remain usable without SQL Server, including authority changes while queued.
+var news = new ProjectNewsStore(configuration, workspace);
+var newsProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle news " + suffix });
+var newsOther = await projects.Save(admin, null, new ProjectInput { Name = "Other news " + suffix });
+var newsBody = string.Concat(Enumerable.Repeat("Ž č ć š đ 🚀 HR/EN\n", 180));
+var newsId = (await news.Publish(admin, newsProject, "Oracle novosti / News", newsBody))!.Value;
+Check((await news.List(admin, newsProject, null)).Single().Body == "", "News list loaded article body.");
+Check((await news.List(admin, newsProject, newsId)).Single().Body == newsBody, "News Unicode body changed.");
+Check((await news.List(admin, newsOther, newsId)).Count == 0, "News crossed project boundary.");
+Check(!await news.Comment(admin, newsOther, newsId, "Wrong project"), "Cross-project comment was inserted.");
+var newsRole = "news" + suffix;
+await permissions.Save(admin, newsRole, "News tests", ["issues.view", "news.comment"], true);
+var newsName = "news" + suffix;
+await users.Create(newsName, "News reader", "", null, "SQL-test-password-2026", actorId: admin);
+var newsUser = (await users.Find(newsName))!.Id;
+await FixtureSql("INSERT INTO \"TMR_ProjectMembers\" (\"ProjectId\",\"UserId\",\"Role\") VALUES(:projectId,:userId,:role)", ("projectId", newsProject), ("userId", newsUser), ("role", newsRole));
+await news.Comment(newsUser, newsProject, newsId, "Komentar / Comment čćž 🚀");
+Check((await news.Comments(newsUser, newsProject, newsId)).Single().Body == "Komentar / Comment čćž 🚀", "Comment relation/body changed.");
+Check((await news.Comments(admin, newsProject, newsId)).Single().Author == "News reader", "Comment author link changed.");
+Check((await news.List(admin, newsProject, newsId)).Single().Author == (await users.Find("admin"))!.DisplayName, "Article author link changed.");
+try { await news.Publish(newsUser, newsProject, "Unauthorized", "No manager right"); throw new Exception("Reader published news."); } catch (UnauthorizedAccessException) { }
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + newsUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_ProjectMembers\" WHERE \"ProjectId\"=:project AND \"UserId\"=:userId", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("project", OracleDbType.Int32).Value = newsProject;
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = newsUser;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = news.Comment(newsUser, newsProject, newsId, "Revoked while waiting");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "News write ignored identity lock.");
+    await news.Publish(admin, newsOther, "Independent news", "Other project remains writable").WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked reader added comment."); } catch (UnauthorizedAccessException) { }
+}
+Check((await news.List(newsUser, newsProject, newsId)).Count == 0 && (await news.Comments(newsUser, newsProject, newsId)).Count == 0, "Revoked user read private news/comments.");
+Check((await news.Comments(admin, newsProject, newsId)).Count == 1, "Rejected comment partially committed.");
+var newsInput = (await projects.List(admin)).Single(p => p.Id == newsProject).Input;
+newsInput.State = "Closed";
+await projects.Save(admin, newsProject, newsInput);
+Check(await news.Publish(admin, newsProject, "Closed", "Must not publish") is null && !await news.Comment(admin, newsProject, newsId, "Closed"), "Closed project accepted news writes.");
+Check((await news.List(admin, newsProject, newsId)).Single().Body == newsBody, "Closing project lost article.");
+newsInput = (await projects.List(admin)).Single(p => p.Id == newsProject).Input;
+newsInput.IsPublic = true;
+await projects.Save(admin, newsProject, newsInput);
+Check((await news.List(newsUser, newsProject, newsId)).Count == 1 && (await news.Comments(newsUser, newsProject, newsId)).Count == 1, "Public news denied authenticated nonmember.");
+await permissions.ManageAccount(admin, newsUser, false, null);
+Check((await news.List(newsUser, newsProject, newsId)).Count == 0 && (await news.Comments(newsUser, newsProject, newsId)).Count == 0, "Inactive user read public news.");
+Check(snapshots == 0, "News loaded a whole workspace.");
+Console.WriteLine("PASS: Oracle news retains Unicode article/comment relationships, scoped reads, author names, private access and closed-project rules; queued revocation rejects writes while independent projects progress.");

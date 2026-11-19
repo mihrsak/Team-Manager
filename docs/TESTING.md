@@ -139,3 +139,11 @@ Nakon migracije `039-email-notification-queue.sql` pod **Moj profil → Obavijes
 Runtime Oracle pozivi koriste asinkroni početak transakcije, ExecuteReaderAsync/ReadAsync i ExecuteScalarAsync. Tipizirani getteri čitaju već dohvaćen redak; RelationalCommand prefetchira cijele LOB vrijednosti. Callbackovi koriste isti otvoreni connection/transaction i ne pokreću paralelne naredbe na toj vezi. Za provjeru SQL Server grane pokrenuti `scripts/Test-Integration.ps1` uz `Database__Provider=SqlServer`.
 
 Lokalno provjereno 19. 11. 2026.: Release build, obje Oracle sheme (1.875 i 1.877 arhiviranih zapisa), HTTP HR/EN 503/403, Oracle preglednički tokovi s većim BLOB-om, 18 WCAG A/AA skeniranja s HR/EN prebacivanjem i tipkovnicom te SQL integracije uključujući SMTP/IMAP. Završni lokalni paket na https://localhost:7572 vraća readiness 200.
+
+## DB-02: projektne novosti na Oracleu
+
+Oracle relacijski testovi sada obuhvaćaju objavljivanje i komentiranje uz nedostupan SQL Server, Unicode tekst, veze autora i komentara, čitanje bez tijela u popisu, pristup privatnim/javnim objavama i neaktivne račune. Provjeravaju izolaciju projekata, odbijanje objave bez upravljačkih prava i upisa u zatvoren projekt te ponovno vrednovanje članstva nakon čekanja na identity lock. Dok jedan komentator čeka, objavljivanje u drugom projektu mora završiti; odbijeni komentar ne smije ostati spremljen.
+
+`Test-OracleWorkspace.cjs` provjerava i objavu, komentiranje s naslijeđenim pravima, HTML escaping, pogrešan projekt, neposredan opoziv pristupa te HR/EN naslove i validaciju. `Test-Browser.cjs` proširen je na 22 automatizirana WCAG A/AA skeniranja: popis novosti i detalji s obrascem komentara uključeni su za oba jezika. Za sve Oracle testove koristiti iste lokalne postavke i varijable opisane iznad; testove koji pišu u istu shemu pokretati slijedno.
+
+Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, Oracle preglednički tokovi novosti i zadataka, 22 HR/EN WCAG A/AA skeniranja te SQL regresije. Paket artifacts/oracle-news-final radi na https://localhost:7572; readiness vraća 200.

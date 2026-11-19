@@ -76,6 +76,28 @@ async function run() {
         await checkStatus(reader, '/Issue?id=' + publicIssue, 200);
         await checkStatus(reader, '/Issue?id=' + privateIssue, 404);
         console.log('PASS: private project, parent role inheritance and private issue visibility.');
+        const newsPath = '/ProjectNews?projectId=' + child;
+        const published = await post(admin, newsPath + '&handler=Publish', {
+            title: 'Oracle novosti / News ' + suffix, body: 'Ž č ć š đ 🚀 <b>plain text</b>'
+        });
+        const newsId = new URL(published.url()).searchParams.get('newsId');
+        assert.ok(Number(newsId) > 0);
+        const articlePath = newsPath + '&newsId=' + newsId;
+        await checkStatus(reader, articlePath, 200);
+        const commented = await post(reader, articlePath + '&handler=Comment', { body: 'Komentar / Comment <script> čćž 🚀' });
+        assert.ok((await commented.text()).includes('&lt;script&gt;'));
+        const wrongProject = await project(admin, 'Oracle news boundary ' + suffix);
+        await checkStatus(admin, '/ProjectNews?projectId=' + wrongProject + '&newsId=' + newsId, 404);
+        for (const language of ['en', 'hr']) {
+            await post(admin, '/Profile?handler=Language', { language });
+            await admin.goto(articlePath);
+            assert.ok(await admin.getByRole('heading', { name: language === 'en' ? 'Project news' : 'Projektne novosti', exact: true }).isVisible());
+            const invalid = await post(admin, newsPath + '&handler=Publish', { title: 'x'.repeat(151), body: 'Invalid length' });
+            assert.ok((await invalid.text()).includes(language === 'en'
+                ? 'Enter a title up to 150 characters and text up to 4,000 characters.'
+                : 'Unesi naslov do 150 znakova i tekst do 4000 znakova.'));
+        }
+        console.log('PASS: Oracle news publish/comment, inherited access, project isolation, HTML escaping and HR/EN validation.');
 
         // Both writes carry the same revision. Oracle must commit one edit and reject the other.
         const fields = {
@@ -131,6 +153,7 @@ async function run() {
         await post(reader, '/Profile?handler=Language', { language: 'en' });
         await reader.goto('/Workflow');
         assert.equal(new URL(reader.url()).pathname, '/Denied');
+        await checkStatus(reader, articlePath, 404);
         console.log('PASS: membership revocation protects direct issue and attachment URLs immediately.');
 
         const guard = await post(admin, '/Roles', {

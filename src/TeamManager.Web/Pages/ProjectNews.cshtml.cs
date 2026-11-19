@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore news, Permissions permissions) : PageModel
+public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore news, Permissions permissions, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<ProjectNewsItem> Items { get; private set; } = [];
@@ -21,11 +21,11 @@ public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore new
         Project = project;
         NewsId = newsId;
 
-        Items = await news.List(projectId, newsId);
+        Items = await news.List(UserId, projectId, newsId);
         if (newsId is int selected)
         {
             if (Items.Count == 0) return NotFound();
-            Comments = await news.Comments(projectId, selected);
+            Comments = await news.Comments(UserId, projectId, selected);
         }
 
         if (project.Input.State == "Active")
@@ -67,7 +67,7 @@ public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore new
 
     private IActionResult Invalid(string message)
     {
-        ModelState.AddModelError("", message);
+        ModelState.AddModelError("", text[message]);
         return Page();
     }
 }

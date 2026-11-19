@@ -6,12 +6,13 @@ namespace TeamManager.Web;
 public sealed record ProjectNewsItem(int Id, string Title, string Body, string Author, DateTime At);
 public sealed record ProjectNewsComment(string Body, string Author, DateTime At);
 
-public sealed class ProjectNewsStore(IConfiguration configuration)
+public sealed class ProjectNewsStore(IConfiguration configuration, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
-    public async Task<List<ProjectNewsItem>> List(int project, int? newsId)
+    public async Task<List<ProjectNewsItem>> List(int user, int project, int? newsId)
     {
+        if (oracle.Enabled) return await oracle.NewsList(user, project, newsId);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -28,8 +29,9 @@ public sealed class ProjectNewsStore(IConfiguration configuration)
         return items;
     }
 
-    public async Task<List<ProjectNewsComment>> Comments(int project, int newsId)
+    public async Task<List<ProjectNewsComment>> Comments(int user, int project, int newsId)
     {
+        if (oracle.Enabled) return await oracle.NewsComments(user, project, newsId);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -47,6 +49,7 @@ public sealed class ProjectNewsStore(IConfiguration configuration)
 
     public async Task<int?> Publish(int actor, int project, string title, string body)
     {
+        if (oracle.Enabled) return await oracle.PublishNews(actor, project, title, body);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -60,6 +63,7 @@ public sealed class ProjectNewsStore(IConfiguration configuration)
 
     public async Task<bool> Comment(int actor, int project, int newsId, string body)
     {
+        if (oracle.Enabled) return await oracle.CommentNews(actor, project, newsId, body);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
