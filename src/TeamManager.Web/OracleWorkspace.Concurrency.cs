@@ -37,7 +37,7 @@ public sealed partial class OracleWorkspace
         await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync();
         // Validate the package grant before publishing the new runtime version.
         await AcquireWriteLock(connection, transaction, "policy", 6);
-        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=4 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,4)"))
+        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=5 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,5)"))
             await feature.ExecuteNonQueryAsync();
         await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=10 WHERE ID=1"))
             await state.ExecuteNonQueryAsync();
@@ -73,6 +73,7 @@ public sealed partial class OracleWorkspace
         public bool NewProject { get; init; }
         public int? ReservedProject { get; set; }
         public bool IssueCatalogs { get; init; }
+        public int[] GroupWriters { get; init; } = [];
     }
     internal Task<T> WriteIssues<T>(int actor, IEnumerable<int> ids, Func<Workspace, Task<T>> action, params int[] relatedUsers)
         => Run(action, true, new(actor, ids.Distinct().Order().ToArray(), [actor, .. relatedUsers], [], []));
@@ -137,8 +138,13 @@ public sealed partial class OracleWorkspace
             var value = await account.ExecuteScalarAsync();
             if (value is not null and not DBNull) writers.Add(Convert.ToInt32(value));
         }
+        var identities = readers.Union(writers).Order().ToArray();
+        var groups = await MembershipGroups(connection, transaction, identities);
+        foreach (var group in groups.Select(g => g.Group).Union(scope.GroupWriters).Order())
+            await AcquireWriteLock(connection, transaction, "group:" + group, scope.GroupWriters.Contains(group) ? 6 : 4);
         foreach (var user in readers.Union(writers).Order())
             await AcquireWriteLock(connection, transaction, "identity:" + user, writers.Contains(user) ? 6 : 4);
+        if (!groups.SetEquals(await MembershipGroups(connection, transaction, identities))) throw new OracleScopeChangedException();
         var paths = await ProjectPaths(connection, transaction, roots);
         foreach (var project in paths.Keys.Union(scope.ProjectWriters).Order())
             await AcquireWriteLock(connection, transaction, "project:" + project, scope.ProjectWriters.Contains(project) || scope.ReservedProject == project ? 6 : 4);

@@ -1232,3 +1232,56 @@ try { await registrations.Decide(admin, conflict.Id, true); throw new Exception(
 Check((await registrations.Pending(admin)).Any(r => r.Id == conflict.Id), "Conflict lost pending request.");
 Check(await registrations.Decide(admin, conflict.Id, false), "Conflicting registration rejection failed.");
 Console.WriteLine("PASS: Oracle registration serializes duplicate submissions/approvals, preserves password hashes, restricts pending access and retains conflicts without partial accounts/audit.");
+
+var groupsStore = new GroupStore(configuration, workspace);
+var groupName = "Group " + suffix;
+await groupsStore.Create(admin, groupName);
+var managedGroup = (await groupsStore.List(admin)).Groups.Single(g => g.Name == groupName).Id;
+var groupedName = "grp" + suffix;
+await users.Create(groupedName, "Grouped writer", "", null, "SQL-test-password-2026", actorId: admin);
+var groupedUser = (await users.Find(groupedName))!.Id;
+var groupedRole = "grp" + suffix;
+await permissions.Save(admin, groupedRole, "Group test", ["issues.view", "issues.comment"], true);
+await groupsStore.SetRole(admin, managedGroup, groupedRole, false);
+await groupsStore.SetMember(admin, managedGroup, groupedUser, false);
+await groupsStore.SetMember(admin, managedGroup, groupedUser, false);
+Check((await permissions.Effective(groupedUser)).Contains("issues.comment"), "Group role not granted.");
+try { await groupsStore.List(groupedUser); throw new Exception("Nonadmin read group directory."); } catch (UnauthorizedAccessException) { }
+var groupProject = await projects.Save(admin, null, new ProjectInput { Name = "Group project " + suffix });
+var groupIssue = await issues.Save(admin, groupProject, null, new IssueInput { Title = "Group permission dependency" });
+var groupIndependentIssue = await issues.Save(admin, groupProject, null, new IssueInput { Title = "Independent group actor" });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "group:" + managedGroup, 6);
+    await using (var revoke = new OracleCommand($"DELETE FROM \"TMR_UserGroupRoles\" WHERE \"GroupId\"={managedGroup}", holder) { Transaction = held }) await revoke.ExecuteNonQueryAsync();
+    var queued = issues.Comment(groupedUser, groupIssue, "Revoked group writer");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Issue write ignored group dependency lock.");
+    await issues.Comment(admin, groupIndependentIssue, "Independent actor").WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked group writer commented."); } catch (UnauthorizedAccessException) { }
+}
+await groupsStore.SetRole(admin, managedGroup, groupedRole, false);
+await groupsStore.SetMember(admin, managedGroup, groupedUser, true);
+Check(!(await permissions.Effective(groupedUser)).Contains("issues.comment"), "Group removal retained rights.");
+Check((await groupsStore.List(admin)).Assignments.All(a => a.GroupId != managedGroup || a.UserId != groupedUser), "Group membership removal failed.");
+Console.WriteLine("PASS: Oracle groups retain members/roles/audit, enforce administrator access and serialize dependent writes with group revocation while unrelated actors progress.");
+
+if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase))
+{
+    var fullGroupRole = (string)(await Scalar("SELECT r.\"RoleName\" FROM \"TMR_UserRoles\" r JOIN \"TMR_RolePermissions\" p ON p.\"RoleName\"=r.\"RoleName\" WHERE r.\"UserId\"=" + admin + " AND p.\"Permission\"='*' FETCH FIRST 1 ROW ONLY"))!;
+    await groupsStore.SetMember(admin, managedGroup, groupedUser, false);
+    await groupsStore.SetRole(admin, managedGroup, fullGroupRole, false);
+    var activeGroupBefore = new List<int>();
+    await using (var activeUsers = new OracleCommand($"SELECT \"Id\" FROM \"TMR_AppUsers\" WHERE \"IsActive\"=1 AND \"Id\"<>{groupedUser}", connection))
+    await using (var activeRows = await activeUsers.ExecuteReaderAsync())
+        while (await activeRows.ReadAsync()) activeGroupBefore.Add(activeRows.GetInt32(0));
+    try
+    {
+        await FixtureSql($"UPDATE \"TMR_AppUsers\" SET \"IsActive\"=0 WHERE \"IsActive\"=1 AND \"Id\"<>{groupedUser}");
+        try { await groupsStore.SetRole(groupedUser, managedGroup, fullGroupRole, true); throw new Exception("Last group administrator removed."); }
+        catch (InvalidOperationException error) when (error.Message.StartsWith("Mora ostati")) { }
+        Check((await permissions.Effective(groupedUser)).Contains("*"), "Last group administrator rollback failed.");
+    }
+    finally { foreach (var id in activeGroupBefore) await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", id)); }
+    Console.WriteLine("PASS: removing the only full administrator granted through a group rolls back membership/role and audit changes.");
+}

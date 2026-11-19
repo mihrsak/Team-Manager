@@ -38,6 +38,7 @@ internal static class OracleWorkspaceRoutes
         "/ApiTokens",
         "/Register",
         "/RegistrationRequests",
+        "/Groups",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",

@@ -200,3 +200,6 @@ Relacijski testovi provjeravaju hash autentikaciju, vlasništvo, nevaljan format
 ### Oracle registracija – lokalne provjere
 
 Relacijski testovi provjeravaju istodobne duplikate i odluke, administratorski pristup, očuvanje lozinke, odbijanje i konflikt s postojećim računom. `Test-OracleRegistration.cjs` provjerava anonimni zahtjev, odobrenje, prijavu i zabranu podnositelju da čita zahtjeve; četiri HR/EN axe skeniranja obuhvaćaju oba obrasca. `Test-AccountSql.ps1 -ApplicationDll <paket>/TeamManager.Web.dll` izvršava isti tok na generiranoj privremenoj SQL bazi, uz sigurno gašenje i uklanjanje samo te baze. Oracle i SQL lokalne provjere prošle su 19. 11. 2026.; paket artifacts/oracle-registration-final vraća readiness 200.
+### Oracle grupe i ovisnosti ovlasti
+
+Relacijski testovi provjeravaju kreiranje, idempotentna članstva, dodjelu/uklanjanje uloga, administratorski pristup i opoziv grupnih ovlasti dok zadatak čeka. Drugi korisnik i zadatak moraju nastaviti upis. U izdvojenoj migracijskoj shemi provjerava se i rollback uklanjanja posljednjeg punog administratora čija prava dolaze samo iz grupe. `Test-OracleGroups.cjs` pokriva kreiranje, dodjelu/uklanjanje uloge i dva HR/EN axe skeniranja; `Test-AccountSql.ps1 -BrowserScript Test-OracleGroups.cjs` provjerava isti UI na privremenoj SQL bazi.

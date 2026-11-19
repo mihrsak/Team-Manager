@@ -84,11 +84,11 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         await connection.OpenAsync();
         await using var transaction = (OracleTransaction)await connection.BeginTransactionAsync(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
-            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=4)");
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=5)");
+        if (write) await AcquireScope(connection, transaction, scope);
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
-        if (write) await AcquireScope(connection, transaction, scope);
         var before = new JsonObject { ["_Sequences"] = new JsonObject() };
         var document = new JsonObject { ["_Sequences"] = new JsonObject() };
         async Task<JsonArray> Fetch(string table, string predicate, (string Name, object? Value)[] parameters)

@@ -6,12 +6,13 @@ namespace TeamManager.Web;
 public sealed record GroupAssignment(int GroupId, int? UserId, string? RoleName);
 public sealed record GroupDirectory(List<Team> Groups, List<GroupAssignment> Assignments);
 
-public sealed class GroupStore(IConfiguration configuration)
+public sealed class GroupStore(IConfiguration configuration, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
-    public async Task<GroupDirectory> List()
+    public async Task<GroupDirectory> List(int actor)
     {
+        if (oracle.Enabled) return await oracle.Groups(actor);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -34,10 +35,10 @@ public sealed class GroupStore(IConfiguration configuration)
     }
 
     public Task Create(int actor, string name)
-        => Execute(new(actor,"group.create",name),"INSERT dbo.UserGroups(Name) VALUES(@name)", P("@name", name));
+        => oracle.Enabled ? oracle.CreateGroup(actor, name) : Execute(new(actor, "group.create", name), "INSERT dbo.UserGroups(Name) VALUES(@name)", P("@name", name));
 
-    public Task SetMember(int actor,int groupId, int userId, bool remove)
-        => Execute(new(actor,remove?"group.member.remove":"group.member.add",$"#{groupId}",$"Korisnik #{userId}"),remove
+    public Task SetMember(int actor, int groupId, int userId, bool remove)
+        => oracle.Enabled ? oracle.ChangeGroupMember(actor, groupId, userId, remove) : Execute(new(actor, remove ? "group.member.remove" : "group.member.add", $"#{groupId}", $"Korisnik #{userId}"), remove
             ? "DELETE dbo.UserGroupMembers WHERE GroupId=@group AND UserId=@user"
             : """
               INSERT dbo.UserGroupMembers(GroupId,UserId)
@@ -45,8 +46,8 @@ public sealed class GroupStore(IConfiguration configuration)
                   SELECT 1 FROM dbo.UserGroupMembers WITH(UPDLOCK,HOLDLOCK) WHERE GroupId=@group AND UserId=@user)
               """, P("@group", groupId), P("@user", userId));
 
-    public Task SetRole(int actor,int groupId, string role, bool remove)
-        => Execute(new(actor,remove?"group.role.remove":"group.role.add",$"#{groupId}",role),remove
+    public Task SetRole(int actor, int groupId, string role, bool remove)
+        => oracle.Enabled ? oracle.ChangeGroupRole(actor, groupId, role, remove) : Execute(new(actor, remove ? "group.role.remove" : "group.role.add", $"#{groupId}", role), remove
             ? "DELETE dbo.UserGroupRoles WHERE GroupId=@group AND RoleName=@role"
             : """
               INSERT dbo.UserGroupRoles(GroupId,RoleName)
