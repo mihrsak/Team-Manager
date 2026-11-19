@@ -35,14 +35,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task<List<RoadmapMatch>> Search(IEnumerable<int> visibleProjects, string query)
     {
-        if(oracle.Enabled)return await oracle.Read(w=>{
-            var ids=visibleProjects.ToHashSet();
-            return w.Rows("ProjectMilestones").Where(m=>ids.Contains(OracleWorkspace.Workspace.Int(m,"ProjectId"))&&
-                (OracleWorkspace.Workspace.Text(m,"Name")+" "+OracleWorkspace.Workspace.Text(m,"Description")).Contains(query,StringComparison.OrdinalIgnoreCase))
-                .Take(20).Select(m=>new RoadmapMatch(OracleWorkspace.Workspace.Int(m,"ProjectId"),
-                    OracleWorkspace.Workspace.Text(w.Find("Projects",OracleWorkspace.Workspace.Int(m,"ProjectId"))!,"Name"),
-                    OracleWorkspace.Workspace.Id(m),OracleWorkspace.Workspace.Text(m,"Kind"),OracleWorkspace.Workspace.Text(m,"Name"))).ToList();
-        });
+        if(oracle.Enabled)return await oracle.RoadmapSearchSql(visibleProjects,query);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -67,11 +60,7 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
 
     public async Task<ILookup<int, RoadmapStatusCount>> Progress(int user, int project)
     {
-        if(oracle.Enabled)return await oracle.Read(w=>w.Rows("Issues").Where(i=>OracleWorkspace.Workspace.Int(i,"ProjectId")==project&&
-            OracleWorkspace.Workspace.OptionalInt(i,"RoadmapItemId")is not null&&OracleWorkspace.Visible(w,user,i))
-            .GroupBy(i=>(Id:OracleWorkspace.Workspace.Int(i,"RoadmapItemId"),Status:OracleWorkspace.Workspace.Text(i,"Status")))
-            .Select(g=>new RoadmapStatusCount(g.Key.Id,g.Key.Status,w.Rows("IssueStatuses").Any(s=>OracleWorkspace.Workspace.Text(s,"Name")==g.Key.Status&&
-                OracleWorkspace.Workspace.Flag(s,"IsClosed")),g.Count())).ToLookup(r=>r.ItemId));
+        if(oracle.Enabled)return await oracle.RoadmapProgressSql(user,project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""

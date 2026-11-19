@@ -178,14 +178,14 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
 
     public async Task SetTheme(int userId, string theme)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{var r=w.Find("AppUsers",userId)??throw new UnauthorizedAccessException();Set(r,"DisplayTheme",theme);return true;});return;}
+        if(oracle.Enabled){await oracle.WriteUser(userId,w=>{var r=w.Find("AppUsers",userId)??throw new UnauthorizedAccessException();Set(r,"DisplayTheme",theme);return true;});return;}
         await Execute("UPDATE dbo.AppUsers SET DisplayTheme=@theme WHERE Id=@id AND IsActive=1",
             P("@theme", theme), P("@id", userId));
     }
 
     public async Task SetLanguage(int userId, string language)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{var r=w.Find("AppUsers",userId)??throw new UnauthorizedAccessException();Set(r,"UiLanguage",language);return true;});return;}
+        if(oracle.Enabled){await oracle.WriteUser(userId,w=>{var r=w.Find("AppUsers",userId)??throw new UnauthorizedAccessException();Set(r,"UiLanguage",language);return true;});return;}
         await Execute("UPDATE dbo.AppUsers SET UiLanguage=@language WHERE Id=@id AND IsActive=1",
             P("@language", language), P("@id", userId));
     }

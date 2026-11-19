@@ -148,6 +148,11 @@ if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
 
+if (args.Contains("--apply-oracle-concurrency"))
+{
+    await new OracleWorkspace(builder.Configuration).InstallConcurrency();
+    return;
+}
 if (args.Contains("--migrate-oracle-workspace"))
 {
     await new OracleWorkspace(builder.Configuration).MigrateRelational();
@@ -231,7 +236,22 @@ app.Use(async (context, next) =>
     }
     finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
 });
-if (oracleMode) app.Use(OracleWorkspaceRoutes.Guard);
+if (oracleMode)
+{
+    app.Use(async (context, next) =>
+    {
+        try { await next(context); }
+        catch (OracleWriteBusyException error) when (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.Headers.RetryAfter = "1";
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            var text = context.RequestServices.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<UiText>>();
+            await context.Response.WriteAsync(text[error.Message]);
+        }
+    });
+    app.Use(OracleWorkspaceRoutes.Guard);
+}
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();

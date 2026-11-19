@@ -71,8 +71,8 @@ public sealed partial class OracleWorkspace
         return Id(row);
     }
 
-    internal Task<int> SaveIssue(int user, int project, int? id, IssueInput input) => Write(w => SaveIssue(w, user, project, id, input));
-    internal Task Bulk(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority) => Write(w =>
+    internal Task<int> SaveIssue(int user, int project, int? id, IssueInput input) => WriteIssues(id is int existing ? [existing] : [], w => SaveIssue(w, user, project, id, input));
+    internal Task Bulk(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority) => WriteIssues(revisions.Keys, w =>
     {
         if (revisions.Count is < 1 or > 100 || status is null && priority is null)
             throw new ArgumentException("Odaberi od 1 do 100 zadataka i barem jednu promjenu.");
@@ -88,7 +88,7 @@ public sealed partial class OracleWorkspace
 
         return true;
     });
-    internal Task<int> Transfer(int user, int id, int revision, int destination, bool move) => Write(w =>
+    internal Task<int> Transfer(int user, int id, int revision, int destination, bool move) => WriteIssues([id], w =>
     {
         var row = RequireIssue(w, user, id);
         var source = Int(row, "ProjectId");
@@ -115,14 +115,14 @@ public sealed partial class OracleWorkspace
         Event(w, id, user, "moved", JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination }));
         return id;
     });
-    internal Task Comment(int user, int id, string text) => Write(w =>
+    internal Task Comment(int user, int id, string text) => WriteIssues([id], w =>
     {
         RequireIssue(w, user, id, "issues.comment");
         if (string.IsNullOrWhiteSpace(text) || text.Length > 4000)
             throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
         return Event(w, id, user, "comment", text.Trim());
     });
-    internal Task LogTime(int user, int id, DateTime date, decimal hours, string? note, string? activity) => Write(w =>
+    internal Task LogTime(int user, int id, DateTime date, decimal hours, string? note, string? activity) => WriteIssues([id], w =>
     {
         RequireIssue(w, user, id, "time.log");
         if (hours <= 0 || hours > 24 || decimal.Round(hours, 2) != hours || date.Year < 1753 || (note?.Length ?? 0) > 1000)

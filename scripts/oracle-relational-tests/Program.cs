@@ -257,3 +257,167 @@ await projects.SetModules(admin, project, false, false, closedInput.Revision);
 Check(!await issues.Can(admin, project, "issues.view") && await issues.Get(admin, issueId) is null, "Disabled module remained readable.");
 Check(snapshots == 0, "Module operation loaded the workspace.");
 Console.WriteLine("PASS: closed-project and disabled-module SQL checks match mutation authorization.");
+
+// Hold real Oracle locks on a separate connection. A blocked write to one issue
+// must not stall an unrelated issue, even while the old global rows are locked.
+var fineProject = await projects.Save(admin, null, new ProjectInput { Name = "Fine locks " + suffix });
+var fineA = await issues.Save(admin, fineProject, null, new IssueInput { Title = "Lock A " + suffix, IsPrivate = false });
+var fineB = await issues.Save(admin, fineProject, null, new IssueInput { Title = "Lock B " + suffix, IsPrivate = false });
+await using var holder = new OracleConnection(connectionString);
+await holder.OpenAsync();
+async Task Hold(OracleTransaction transaction, string resource, int mode)
+{
+    await using var command = new OracleCommand("""
+        BEGIN :result:=DBMS_LOCK.REQUEST(DBMS_UTILITY.GET_HASH_VALUE(SYS_CONTEXT('USERENV','CURRENT_SCHEMA')||':TeamManager:'||:resource,0,1073741823),:mode,1,TRUE); END;
+        """, holder) { Transaction = transaction, BindByName = true };
+    command.Parameters.Add("resource", OracleDbType.Varchar2).Value = resource;
+    command.Parameters.Add("mode", OracleDbType.Int32).Value = mode;
+    var result = command.Parameters.Add("result", OracleDbType.Int32);
+    result.Direction = ParameterDirection.Output;
+    await command.ExecuteNonQueryAsync();
+    Check(result.Value.ToString() == "0", "Fixture could not acquire Oracle lock.");
+}
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "policy", 4);
+    await Hold(held, "issue:" + fineA, 6);
+    await using (var legacy = new OracleCommand("SELECT ID FROM TMR_WORKSPACE WHERE ID=1 FOR UPDATE", holder) { Transaction = held }) await legacy.ExecuteScalarAsync();
+    await using (var legacy = new OracleCommand("SELECT LAST_VALUE FROM TMR_COUNTERS WHERE TABLE_NAME='IssueEvents' FOR UPDATE", holder) { Transaction = held }) await legacy.ExecuteScalarAsync();
+    var waiting = issues.Comment(admin, fineA, "Held issue");
+    await issues.Comment(admin, fineB, "Independent issue").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!waiting.IsCompleted, "Same-issue write ignored its lock.");
+    var policyChange = permissions.Assign(admin, viewer, readRole, true);
+    Check(await Task.WhenAny(policyChange, Task.Delay(200)) != policyChange, "Policy mutation ignored in-flight shared writes.");
+    await held.RollbackAsync();
+    await waiting.WaitAsync(TimeSpan.FromSeconds(5));
+    await policyChange.WaitAsync(TimeSpan.FromSeconds(5));
+}
+Console.WriteLine("PASS: unrelated issue completes while another issue, legacy workspace row and legacy counter are locked; policy changes wait for in-flight writes.");
+
+var concurrentIds = await Task.WhenAll(Enumerable.Range(0, 12).Select(n => issues.Save(admin, fineProject, null, new IssueInput { Title = $"Concurrent {suffix} {n}", IsPrivate = false })));
+Check(concurrentIds.Distinct().Count() == 12, "Parallel inserts reused an Oracle sequence ID.");
+var beforeRetry = await issues.Save(admin, fineProject, null, new IssueInput { Title = "Before installer retry " + suffix });
+await workspace.InstallConcurrency();
+var afterRetry = await issues.Save(admin, fineProject, null, new IssueInput { Title = "After installer retry " + suffix });
+Check(afterRetry > beforeRetry, "Installer reset an active Oracle sequence.");
+async Task<bool> BulkAttempt(int first, int second, string priority)
+{
+    try { await issues.UpdateMany(admin, new Dictionary<int, int> { { first, 1 }, { second, 1 } }, null, priority); return true; }
+    catch (InvalidOperationException error) when (error.Message.StartsWith("Zadatak je")) { return false; }
+}
+var bulkResults = await Task.WhenAll(BulkAttempt(fineA, fineB, "Visok"), BulkAttempt(fineB, fineA, "Nizak"));
+Check(bulkResults.Count(x => x) == 1, "Reversed bulk edits did not resolve as one atomic commit and one stale revision.");
+Check((await issues.Get(admin, fineA))!.Input.Priority == (await issues.Get(admin, fineB))!.Input.Priority, "Bulk edit committed only part of the update.");
+Console.WriteLine("PASS: parallel inserts use unique IDs, installer retries preserve sequence progress, reversed bulk edits avoid deadlock and partial commits.");
+
+var contributor = "sqlCon" + suffix;
+await users.Create(contributor, "SQL contributor " + suffix, "", null, "SQL-test-password-2026", actorId: admin);
+var writer = (await users.Find(contributor))!.Id;
+var writerRole = "sqlWrite" + suffix;
+await permissions.Save(admin, writerRole, "SQL concurrency fixture", ["issues.view", "issues.comment", "time.log"], true);
+await permissions.Assign(admin, writer, writerRole, false);
+var eventCount = Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueEvents\" WHERE \"IssueId\"={fineB}"));
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "policy", 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = writer;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = writerRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = issues.Comment(writer, fineB, "Must not commit after revocation");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Queued write bypassed policy lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked write was accepted."); }
+    catch (UnauthorizedAccessException) { }
+}
+Check(eventCount == Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueEvents\" WHERE \"IssueId\"={fineB}")), "Revoked write left an event.");
+await permissions.Assign(admin, writer, writerRole, false);
+Console.WriteLine("PASS: queued writes recheck committed permissions after policy-lock release and cannot commit using revoked rights.");
+
+// SQL aggregation and limits must apply after visibility/time-module filtering.
+var hidden = await issues.Save(admin, fineProject, null, new IssueInput { Title = "Hidden report issue " + suffix, IsPrivate = true });
+await issues.LogTime(admin, fineB, new(2026, 11, 20), 1.25m, "Public time", "SQL QA");
+await issues.LogTime(admin, fineB, new(2026, 11, 20), 1.25m, "Public time", "SQL QA");
+await issues.LogTime(admin, hidden, new(2026, 11, 20), 7.5m, "Private time", "SQL QA");
+await issues.LogTime(writer, fineB, new(2026, 11, 20), 1.75m, "Contributor time", "SQL QA");
+counts.Clear();
+var publicTime = await issues.TimeReport(writer, [fineProject], new(2026, 11, 20), new(2026, 11, 20), null, "sql qa");
+Check(publicTime.Sum(x => x.Hours) == 4.25m, "Time aggregate leaked a private issue or lost public hours.");
+Check((await issues.TimeReport(admin, [fineProject], new(2026, 11, 20), new(2026, 11, 20), null, "SQL QA")).Sum(x => x.Hours) == 11.75m, "Admin time aggregate lost private hours.");
+Check((await issues.TimeReport(writer, [fineProject], null, null, contributor, null)).Single().Hours == 1.75m, "Person filter changed aggregate.");
+Check(counts.Keys.All(k => k == "TimeReport") && counts.GetValueOrDefault("TimeReport") == 5, "Time report fetched raw rows rather than aggregates.");
+var roadmap = new RoadmapStore(configuration, projects, workspace);
+await roadmap.Save(admin, fineProject, new RoadmapItem(0, "milestone", "SQL report " + suffix, "", null, false, 0));
+var milestone = (await roadmap.List(fineProject)).Single();
+foreach (var selected in new[] { fineB, hidden })
+{
+    var changed = (await issues.Get(admin, selected))!.Input;
+    changed.RoadmapItemId = milestone.Id;
+    await issues.Save(admin, fineProject, selected, changed);
+}
+
+counts.Clear();
+Check((await roadmap.Progress(writer, fineProject))[milestone.Id].Sum(x => x.Count) == 1, "Roadmap count leaked private issues.");
+Check((await roadmap.Progress(admin, fineProject))[milestone.Id].Sum(x => x.Count) == 2, "Admin roadmap count lost private issues.");
+Check(counts.Keys.All(k => k == "RoadmapProgress") && counts["RoadmapProgress"] == 2, "Roadmap fetched raw issues rather than status aggregates.");
+Check((await roadmap.Search([fineProject], "SQL report " + suffix)).Single().Id == milestone.Id, "SQL roadmap search changed project filtering.");
+await issues.SetWatching(writer, fineB, true);
+for (var n = 0; n < 60; n++) await issues.Comment(admin, fineB, $"SQL report {n}");
+await issues.Comment(admin, hidden, "Hidden latest report event");
+counts.Clear();
+var recent = await issues.RecentActivity(writer, [fineProject]);
+var personal = new IssuePersonalStore(configuration, issues, workspace);
+var notifications = await personal.Notifications(writer);
+var audit = new AdministrationAuditStore(configuration, workspace);
+var audits = await audit.Recent();
+Check(recent.Count == 50 && recent.All(e => e.IssueId != hidden), "Activity limit or visibility changed.");
+Check(notifications.Count == 50 && notifications.All(n => n.IssueId == fineB), "Notification limit or visibility changed.");
+Check(audits.Count <= 100 && counts.GetValueOrDefault("AdministrationAudit") == audits.Count, "Audit limit was not applied in SQL.");
+Check(counts.Keys.All(k => k is "RecentActivity" or "Notifications" or "AdministrationAudit") && counts["RecentActivity"] == 50 && counts["Notifications"] == 50, "Helper reports fetched unrelated rows or LOBs.");
+Check(await personal.MarkRead(writer, notifications[0].EventId), "Notification could not be marked read.");
+Check((await personal.Notifications(writer)).All(n => n.EventId != notifications[0].EventId), "Read notification displaced newer unread notifications.");
+var moduleInput = (await projects.List(admin)).Single(p => p.Id == fineProject).Input;
+await projects.SetModules(admin, fineProject, true, false, moduleInput.Revision);
+Check((await issues.TimeReport(writer, [fineProject], null, null, null, null)).Count == 0, "Time report ignored disabled time module.");
+Check((await issues.RecentActivity(writer, [fineProject])).All(e => e.Kind != "time"), "Activity exposed time events with time module disabled.");
+await permissions.ManageAccount(admin, writer, false, null);
+Check((await personal.Notifications(writer)).Count == 0 && (await issues.RecentActivity(writer, [fineProject])).Count == 0, "Reports exposed data to inactive account.");
+Check(snapshots == 0, "Concurrency/report flow loaded the workspace.");
+Console.WriteLine("PASS: SQL reports enforce aggregation, filters, private visibility, time-module flags, inactive accounts and 50/100-row limits without fetching raw workspaces or unrelated LOBs.");
+
+var busyMessage="Spremanje je trenutačno zauzeto. Pokušaj ponovno.";
+var resources=new System.Resources.ResourceManager("TeamManager.Web.Resources.UiText",typeof(UiText).Assembly);
+Check(resources.GetString(busyMessage,CultureInfo.GetCultureInfo("en"))=="Saving is temporarily busy. Please try again.","English lock-timeout message missing.");
+await using(var held=holder.BeginTransaction())
+{
+    await Hold(held,"issue:"+fineA,6);
+    try{await issues.Comment(admin,fineA,"Must time out");throw new Exception("Expected lock timeout.");}
+    catch(InvalidOperationException error) when(error.Message==busyMessage){}
+    await held.RollbackAsync();
+}
+await issues.Comment(admin,fineA,"Lock released after timeout").WaitAsync(TimeSpan.FromSeconds(5));
+Console.WriteLine("PASS: lock timeout reports a localized retry message and releases transactional locks for a successful retry.");
+if(Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is {Length:>0} httpAddress)
+{
+    var address=new Uri(httpAddress);
+    Check(address.IsLoopback && address.Scheme=="https","HTTP verification requires loopback HTTPS.");
+    using var http=new HttpClient(new HttpClientHandler{CookieContainer=new System.Net.CookieContainer()}){BaseAddress=address};
+    string Token(string html)=>System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html,"name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+    var login=await http.GetStringAsync("/Login");
+    using(var response=await http.PostAsync("/Login",new FormUrlEncodedContent(new Dictionary<string,string>{{"EmployeeNumber","admin"},{"Password",Environment.GetEnvironmentVariable("TEAM_MANAGER_QA_PASSWORD")??"admin"},{"__RequestVerificationToken",Token(login)}}))) response.EnsureSuccessStatusCode();
+    foreach(var language in new[]{"hr","en"})
+    {
+        var form=await http.GetStringAsync("/Issue?id="+fineA);
+        using(var response=await http.PostAsync("/Profile?handler=Language",new FormUrlEncodedContent(new Dictionary<string,string>{{"language",language},{"__RequestVerificationToken",Token(form)}}))) response.EnsureSuccessStatusCode();
+        form=await http.GetStringAsync("/Issue?id="+fineA);
+        await using var held=holder.BeginTransaction();
+        await Hold(held,"issue:"+fineA,6);
+        using var responseBusy=await http.PostAsync("/Issue?id="+fineA+"&handler=Comment",new FormUrlEncodedContent(new Dictionary<string,string>{{"text","HTTP timeout"},{"__RequestVerificationToken",Token(form)}}));
+        Check(responseBusy.StatusCode==System.Net.HttpStatusCode.ServiceUnavailable && responseBusy.Headers.RetryAfter is not null,"Busy handler did not return a retryable 503.");
+        Check(await responseBusy.Content.ReadAsStringAsync()==(language=="hr"?busyMessage:"Saving is temporarily busy. Please try again."),"HTTP retry message locale changed.");
+        await held.RollbackAsync();
+    }
+    Console.WriteLine("PASS: unhandled HTTP lock timeouts return localized HR/EN 503 responses with Retry-After rather than server errors.");
+}

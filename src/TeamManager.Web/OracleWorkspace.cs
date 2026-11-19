@@ -69,16 +69,21 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
 
     internal async Task<T> Read<T>(Func<Workspace, T> action) => await Run(action, false);
     internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
-    private async Task<T> Run<T>(Func<Workspace, T> action, bool write)
+    private async Task<T> Run<T>(Func<Workspace, T> action, bool write, string[]? resources = null)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
-            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1" + (write ? " FOR UPDATE WAIT 10" : ""));
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=1)");
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
+        if (write)
+        {
+            await AcquireWriteLock(connection, transaction, "policy", resources is null ? 6 : 4);
+            foreach (var resource in (resources ?? []).Order(StringComparer.Ordinal)) await AcquireWriteLock(connection, transaction, resource, 6);
+        }
         var before = new JsonObject { ["_Sequences"] = new JsonObject() };
         var document = new JsonObject { ["_Sequences"] = new JsonObject() };
         JsonArray Fetch(string table, string predicate, (string Name, object? Value)[] parameters)
@@ -94,23 +99,17 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         }
         long Counter(string table)
         {
-            using var command = RelationalCommand(connection, transaction, "SELECT LAST_VALUE FROM TMR_COUNTERS WHERE TABLE_NAME=:name");
-            command.Parameters.Add("name", OracleDbType.Varchar2).Value = table;
-            var value = command.ExecuteScalar();
-            if (value is null or DBNull) throw new InvalidOperationException("Missing Oracle counter for " + table);
-            var count = Convert.ToInt64(value);
-            before["_Sequences"]![table] = count;
-            return count;
+            if (!Schema.Value.Tables.Any(t => t.Name == table && t.Columns.Any(c => c.Name == "Id"))) throw new InvalidOperationException("Unknown Oracle identity table.");
+            using var command = RelationalCommand(connection, transaction, $"SELECT {Quote("TMR_SEQ_" + table)}.NEXTVAL FROM DUAL");
+            return Convert.ToInt64(command.ExecuteScalar());
         }
         var workspace = new Workspace(document, Fetch, Counter);
         var result = action(workspace);
         if (write)
         {
             var after = NormalizeDocument(document, partial: true);
-            await PersistChanges(connection, transaction, before, after);
+            await PersistChanges(connection, transaction, before, after, persistCounters: false);
             if (workspace.PreserveAdministrator) await RequireAdministrator(connection, transaction);
-            await using var update = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET REVISION=REVISION+1 WHERE ID=1");
-            await update.ExecuteNonQueryAsync();
             await using var constraints = RelationalCommand(connection, transaction, "SET CONSTRAINTS ALL IMMEDIATE");
             await constraints.ExecuteNonQueryAsync();
         }
@@ -195,7 +194,12 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         internal long NextLong(string table)
         {
             var sequences = Document["_Sequences"]!.AsObject();
-            if (sequences[table] is null && counter is not null) sequences[table] = counter(table);
+            if (counter is not null)
+            {
+                var allocated = counter(table);
+                sequences[table] = allocated;
+                return allocated;
+            }
             var next = checked((sequences[table] is { } value ? long.Parse(value.ToJsonString(), CultureInfo.InvariantCulture) : 0L) + 1);
             sequences[table] = next;
             return next;

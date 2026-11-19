@@ -34,10 +34,7 @@ public sealed class AdministrationAuditStore(IConfiguration config,OracleWorkspa
 
     public async Task<List<AdministrationAuditEntry>> Recent()
     {
-        if(oracle.Enabled)return await oracle.Read(w=>w.Rows("AdministrationAudit").OrderByDescending(r=>OracleWorkspace.Workspace.Long(r,"Id")).Take(100)
-            .Select(r=>new AdministrationAuditEntry(OracleWorkspace.Workspace.Date(r,"CreatedAt")!.Value,
-                OracleWorkspace.Workspace.Text(r,"ActorEmployeeNumber"),OracleWorkspace.Workspace.Text(r,"Action"),
-                OracleWorkspace.Workspace.Text(r,"Subject"),OracleWorkspace.Workspace.Text(r,"Details"))).ToList());
+        if(oracle.Enabled)return await oracle.RecentAuditSql();
         await using var connection = new SqlConnection(config.GetConnectionString("TeamManager"));
         await connection.OpenAsync();
         await using var command = new SqlCommand("""

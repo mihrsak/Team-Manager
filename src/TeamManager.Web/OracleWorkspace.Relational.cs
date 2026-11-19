@@ -171,7 +171,7 @@ public sealed partial class OracleWorkspace
     }
 
     private static async Task PersistChanges(OracleConnection connection, OracleTransaction transaction,
-        JsonObject? before, JsonObject after)
+        JsonObject? before, JsonObject after, bool persistCounters = true)
     {
         // Foreign keys are deferred, so dependencies and cyclic project references can be
         // changed atomically. Never delete and reinsert unchanged records or binary LOBs.
@@ -211,6 +211,7 @@ public sealed partial class OracleWorkspace
                 if (await command.ExecuteNonQueryAsync() != 1) throw new DBConcurrencyException();
             }
         }
+        if (!persistCounters) return;
         foreach (var (name, value) in after["_Sequences"]!.AsObject())
         {
             if (before?["_Sequences"]?[name] is { } previous && JsonNode.DeepEquals(previous, value)) continue;

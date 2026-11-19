@@ -17,8 +17,9 @@ public sealed partial class OracleWorkspace
             var installed = await marker.ExecuteScalarAsync();
             if (installed is not null and not DBNull)
             {
-                if (Convert.ToInt32(installed) != Schema.Value.Version)
+                if (Convert.ToInt32(installed) is not (6 or 7))
                     throw new InvalidOperationException("Unexpected relational Oracle schema version.");
+                await InstallConcurrency();
                 Console.WriteLine("Relational Oracle migration already applied; active data was not overwritten.");
                 return;
             }
@@ -56,6 +57,7 @@ public sealed partial class OracleWorkspace
             if (Convert.ToInt32(await marker.ExecuteScalarAsync()) != 0)
             {
                 await transaction.RollbackAsync();
+                await InstallConcurrency();
                 Console.WriteLine("Relational Oracle migration already applied; active data was not overwritten.");
                 return;
             }
@@ -80,6 +82,7 @@ public sealed partial class OracleWorkspace
         publish.Parameters.Add("revision", OracleDbType.Int64).Value = revision;
         await publish.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
+        await InstallConcurrency();
         Console.WriteLine($"PASS: migrated and compared {total} records across {Schema.Value.Tables.Length} relational Oracle tables, including binary data and counters. Legacy JSON is archived and frozen.");
     }
 
