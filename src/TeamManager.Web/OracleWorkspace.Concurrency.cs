@@ -13,7 +13,7 @@ public sealed partial class OracleWorkspace
         await using (var state = new OracleCommand("SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1", connection))
         {
             var version = Convert.ToInt32(await state.ExecuteScalarAsync());
-            if (version is not (6 or 7 or 8 or 9)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
+            if (version is not (6 or 7 or 8 or 9 or 10)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
         }
         var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "database/oracle/007-concurrency-and-reports.sql"));
         foreach (var statement in Regex.Split(sql, @"(?m)^/\s*$").Where(s => !string.IsNullOrWhiteSpace(s)))
@@ -37,9 +37,9 @@ public sealed partial class OracleWorkspace
         await using var transaction = connection.BeginTransaction();
         // Validate the package grant before publishing the new runtime version.
         await AcquireWriteLock(connection, transaction, "policy", 6);
-        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=3 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,3)"))
+        await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=4 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,4)"))
             await feature.ExecuteNonQueryAsync();
-        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=9 WHERE ID=1"))
+        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=10 WHERE ID=1"))
             await state.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
         Console.WriteLine("PASS: Oracle sequences, scoped write locks and report indexes installed; existing sequences were not reset.");
@@ -70,6 +70,8 @@ public sealed partial class OracleWorkspace
         public int[] ProjectWriters { get; init; } = [];
         public string[] CatalogReaders { get; init; } = [];
         public string[] CatalogWriters { get; init; } = [];
+        public bool NewProject { get; init; }
+        public int? ReservedProject { get; set; }
         public bool IssueCatalogs { get; init; }
     }
     internal Task<T> WriteIssues<T>(int actor, IEnumerable<int> ids, Func<Workspace, T> action, params int[] relatedUsers)
@@ -88,14 +90,20 @@ public sealed partial class OracleWorkspace
 
     private static async Task AcquireScope(OracleConnection connection, OracleTransaction transaction, WriteScope? scope)
     {
-        await AcquireWriteLock(connection, transaction, "policy", scope is null ? 6 : 4);
-        if (scope is null) return;
+        if (scope is null) throw new InvalidOperationException("An explicit Oracle write scope is required.");
+        await AcquireWriteLock(connection, transaction, "policy", 4);
+        if (scope.NewProject && scope.ReservedProject is null)
+        {
+            await using var allocate = RelationalCommand(connection, transaction, "SELECT \"TMR_SEQ_Projects\".NEXTVAL FROM DUAL");
+            scope.ReservedProject = checked(Convert.ToInt32(await allocate.ExecuteScalarAsync()));
+        }
         // All writers follow the same phases: policy, issue IDs, identity IDs,
         // then administrative entities. All actor, assignee and watcher dependencies are known before identity locking.
         foreach (var id in scope.Issues.Order()) await AcquireWriteLock(connection, transaction, "issue:" + id, 6);
         var readers = scope.Readers.ToHashSet();
         var writers = scope.Writers.ToHashSet();
         var roots = scope.Projects.ToHashSet();
+        if (scope.ReservedProject is int reserved) roots.Add(reserved);
         var catalogReaders = scope.CatalogReaders.ToHashSet(StringComparer.Ordinal);
         foreach (var id in scope.Issues)
         {
@@ -133,7 +141,7 @@ public sealed partial class OracleWorkspace
             await AcquireWriteLock(connection, transaction, "identity:" + user, writers.Contains(user) ? 6 : 4);
         var paths = await ProjectPaths(connection, transaction, roots);
         foreach (var project in paths.Keys.Union(scope.ProjectWriters).Order())
-            await AcquireWriteLock(connection, transaction, "project:" + project, scope.ProjectWriters.Contains(project) ? 6 : 4);
+            await AcquireWriteLock(connection, transaction, "project:" + project, scope.ProjectWriters.Contains(project) || scope.ReservedProject == project ? 6 : 4);
         var confirmed = await ProjectPaths(connection, transaction, roots);
         if (paths.Count != confirmed.Count || paths.Any(p => !confirmed.TryGetValue(p.Key, out var parent) || parent != p.Value))
             throw new OracleScopeChangedException();

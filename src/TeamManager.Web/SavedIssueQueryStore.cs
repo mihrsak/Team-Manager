@@ -36,8 +36,9 @@ public sealed class SavedIssueQueryStore(IConfiguration configuration,OracleWork
 
     public async Task Create(int user, string name, int? project, string? status, string? search, string? sortOrder, string? groupBy, string? columns)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{
-            if(w.Rows("SavedIssueQueries").Any(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user&&OracleWorkspace.Workspace.Text(r,"Name")==name))
+        if(oracle.Enabled){await oracle.WriteSavedQuery(user,project,status,w=>{
+            if(project is int selected&&!OracleWorkspace.Can(w,user,selected,"issues.view"))throw new ArgumentException("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan.");
+            if(w.By("SavedIssueQueries","UserId",user).Any(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user&&OracleWorkspace.Workspace.Text(r,"Name")==name))
                 throw new ArgumentException("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan.");
             w.Add("SavedIssueQueries",("Id",w.Next("SavedIssueQueries")),("UserId",user),("Name",name),("ProjectId",project),
                 ("Status",status),("SearchText",search),("SortOrder",sortOrder),("GroupBy",groupBy),("Columns",columns));return true;
@@ -55,7 +56,7 @@ public sealed class SavedIssueQueryStore(IConfiguration configuration,OracleWork
 
     public async Task<bool> Delete(int user, int id)
     {
-        if(oracle.Enabled)return await oracle.Write(w=>{var row=w.Find("SavedIssueQueries",id);
+        if(oracle.Enabled)return await oracle.WriteSavedQuery(user,null,null,w=>{var row=w.Find("SavedIssueQueries",id);
             if(row is null||OracleWorkspace.Workspace.Int(row,"UserId")!=user)return false;w.Table("SavedIssueQueries").Remove(row);return true;});
         await using var connection = Connect();
         await connection.OpenAsync();

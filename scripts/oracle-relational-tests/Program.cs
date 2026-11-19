@@ -541,7 +541,7 @@ if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase
         var result = await Task.WhenAll(RevokeSelf(targetA), RevokeSelf(targetB));
         Check(result.Count(x => x) == 1, "Concurrent administrator revocations did not preserve one full administrator.");
     }
-    finally { foreach(var id in activeBefore) await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", id)); }
+    finally { foreach (var id in activeBefore) await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", id)); }
     Console.WriteLine("PASS: concurrent self-revocations in the isolated schema cannot remove the last active full administrator.");
 }
 var managerName = "sqlManager" + suffix;
@@ -742,3 +742,109 @@ async Task<bool> MoveAttempt(int id, ProjectInput input)
 var cycleResults = await Task.WhenAll(MoveAttempt(cycleA, inputCycleA), MoveAttempt(cycleB, inputCycleB));
 Check(cycleResults.Count(x => x) == 1, "Concurrent reparenting introduced a cycle or rejected both valid first moves.");
 Console.WriteLine("PASS: hierarchy paths are rediscovered after waiting; stale inherited authority is rejected and reversed concurrent moves cannot create cycles.");
+
+// Creation reserves and locks its own ID before validating names and parents.
+var createName = "Reserved project " + suffix;
+var probeId = Convert.ToInt32(await Scalar("SELECT \"TMR_SEQ_Projects\".NEXTVAL FROM DUAL"));
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "project-name:" + createName.ToUpperInvariant(), 6);
+    var creating = projects.Save(admin, null, new ProjectInput { Name = createName });
+    Check(await Task.WhenAny(creating, Task.Delay(200)) != creating, "Project creation ignored its name lock.");
+    var guessedEdit = projects.Save(admin, probeId + 1, new ProjectInput { Name = "Guessed pending project " + suffix, Revision = 0 });
+    var independent = await projects.Save(admin, null, new ProjectInput { Name = "Independent creation " + suffix }).WaitAsync(TimeSpan.FromSeconds(5));
+    await issues.Comment(admin, branchTaskB, "Project creation does not stall existing issues").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!guessedEdit.IsCompleted, "Reserved project ID was not protected against a guessed-ID edit.");
+    await held.RollbackAsync();
+    var created = await creating;
+    Check(created == probeId + 1 && independent != created, "Reserved project ID changed during creation.");
+    try { await guessedEdit; throw new Exception("Stale guessed-ID edit was accepted."); }
+    catch (InvalidOperationException error) when (error.Message.StartsWith("Projekt je")) { }
+    Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_ProjectMembers\" WHERE \"ProjectId\"={created} AND \"UserId\"={admin}")) == 1, "Creator membership was not atomic.");
+}
+async Task<int?> CreateNamed(string name)
+{
+    try { return await projects.Save(admin, null, new ProjectInput { Name = name }); } catch (ArgumentException) { return null; }
+}
+var duplicateProjects = await Task.WhenAll(CreateNamed("Duplicate project " + suffix), CreateNamed(("Duplicate project " + suffix).ToUpperInvariant()));
+Check(duplicateProjects.Count(id => id is not null) == 1, "Parallel project creation bypassed case-insensitive uniqueness.");
+Console.WriteLine("PASS: new projects reserve and lock their IDs; unrelated creation and writes progress, creator membership is atomic, and duplicate names/stale guessed-ID edits are rejected.");
+
+var links = new IssueLinkStore(configuration, issues, workspace);
+var graphIds = concurrentIds.Take(6).ToArray();
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "link-graph:blocks", 6);
+    var blocked = links.Set(admin, graphIds[0], graphIds[1], "blocks", true, false);
+    await links.Set(admin, graphIds[2], graphIds[3], "parent", true, false).WaitAsync(TimeSpan.FromSeconds(5));
+    await links.Set(admin, graphIds[4], graphIds[5], "related", true, false).WaitAsync(TimeSpan.FromSeconds(5));
+    await issues.Comment(admin, branchTaskB, "Independent graph activity").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!blocked.IsCompleted, "Directed graph edit ignored its graph-kind lock.");
+    await held.RollbackAsync(); await blocked;
+}
+await links.Set(admin, graphIds[2], graphIds[3], "blocks", true, false);
+async Task<bool> LinkAttempt(int first, int second)
+{
+    try { await links.Set(admin, first, second, "blocks", true, false); return true; } catch (ArgumentException) { return false; }
+}
+var graphResults = await Task.WhenAll(LinkAttempt(graphIds[1], graphIds[2]), LinkAttempt(graphIds[3], graphIds[0]));
+Check(graphResults.Count(x => x) == 1, "Concurrent disjoint graph edits introduced a directed cycle.");
+Console.WriteLine("PASS: graph kinds and unrelated issue pairs progress independently; disjoint concurrent edges cannot close a directed cycle.");
+
+var fields = new CustomFieldStore(configuration, projects, issues, workspace);
+await fields.Create(admin, "project", "Structural field A " + suffix);
+await fields.Create(admin, "project", "Structural field B " + suffix);
+var projectTarget = await fields.Target(admin, true, "project", branchA);
+var fieldList = await fields.List(admin, "project", branchA, projectTarget);
+var fieldA = fieldList.Single(f => f.Name == "Structural field A " + suffix).Id;
+var fieldB = fieldList.Single(f => f.Name == "Structural field B " + suffix).Id;
+var saved = new SavedIssueQueryStore(configuration, workspace);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, $"project-data:{branchA}:field-value:{fieldA}", 6);
+    var blocked = fields.Set(admin, true, "project", branchA, fieldA, 0, "A");
+    await fields.Set(admin, true, "project", branchA, fieldB, 0, "B").WaitAsync(TimeSpan.FromSeconds(5));
+    await saved.Create(targetB, "Independent saved query " + suffix, null, null, null, null, null, null).WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!blocked.IsCompleted, "Custom field value ignored its own key.");
+    await held.RollbackAsync(); await blocked;
+}
+var savedRow = (await saved.List(targetB)).Single(q => q.Name == "Independent saved query " + suffix);
+Check(!await saved.Delete(targetA, savedRow.Id), "Saved query ownership was not enforced.");
+Check(await saved.Delete(targetB, savedRow.Id), "Owner could not delete saved query.");
+Console.WriteLine("PASS: field values and saved queries use entity/user scopes, preserve revisions and enforce ownership without global serialization.");
+
+await issues.LogTime(admin, branchTaskB, new(2026, 11, 20), 1m, "Scoped field time");
+var timeEntry = Convert.ToInt32(await Scalar($"SELECT MAX(\"Id\") FROM \"TMR_TimeEntries\" WHERE \"IssueId\"={branchTaskB}"));
+await fields.Create(admin, "time", "Structural time field " + suffix);
+var timeTarget = await fields.Target(admin, true, "time", timeEntry);
+var timeField = (await fields.List(admin, "time", timeEntry, timeTarget)).Single(f => f.Name == "Structural time field " + suffix).Id;
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "project:" + branchB, 6);
+    await using (var disable = new OracleCommand($"UPDATE \"TMR_Projects\" SET \"TimeEnabled\"=0,\"Revision\"=\"Revision\"+1 WHERE \"Id\"={branchB}", holder) { Transaction = held }) await disable.ExecuteNonQueryAsync();
+    var queued = fields.Set(admin, true, "time", timeEntry, timeField, 0, "Must not save");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Time-field write bypassed its project dependency.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Time field was saved after time module was disabled."); } catch (UnauthorizedAccessException) { }
+}
+Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_TimeFieldValues\" WHERE \"EntityId\"={timeEntry} AND \"FieldId\"={timeField}")) == 0, "Rejected time-field write partially committed.");
+var restore = (await projects.List(admin)).Single(p => p.Id == branchB).Input;
+await projects.SetModules(admin, branchB, true, true, restore.Revision);
+var noticeName = "sqlNotice" + suffix;
+await users.Create(noticeName, "Scoped notification", "", null, "SQL-test-password-2026", actorId: admin);
+var noticeUser = (await users.Find(noticeName))!.Id;
+await permissions.Assign(admin, noticeUser, readRole, false);
+await issues.SetWatching(noticeUser, branchTaskB, true);
+await issues.Comment(admin, branchTaskB, "Scoped notification record");
+var notice = (await new IssuePersonalStore(configuration, issues, workspace).Notifications(noticeUser)).First();
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "project:" + branchB, 6);
+    await using (var disable = new OracleCommand($"UPDATE \"TMR_Projects\" SET \"IssuesEnabled\"=0,\"Revision\"=\"Revision\"+1 WHERE \"Id\"={branchB}", holder) { Transaction = held }) await disable.ExecuteNonQueryAsync();
+    var queued = personal.MarkRead(noticeUser, notice.EventId);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Notification write bypassed project visibility dependency.");
+    await held.CommitAsync();
+    Check(!await queued, "Hidden notification was marked read.");
+}
+Check(Convert.ToInt32(await Scalar($"SELECT \"IsRead\" FROM \"TMR_IssueNotifications\" WHERE \"UserId\"={noticeUser} AND \"EventId\"={notice.EventId}")) == 0, "Hidden notification state was modified.");
+Console.WriteLine("PASS: time-field and notification writes resolve their issue first, lock its permission dependencies, and reject module revocation without partial updates.");

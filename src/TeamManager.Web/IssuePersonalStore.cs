@@ -92,9 +92,10 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues,
 
     public async Task<bool> MarkRead(int user, int eventId)
     {
-        if(oracle.Enabled)return await oracle.Write(w=>{
-            var n=w.Rows("IssueNotifications").FirstOrDefault(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user&&OracleWorkspace.Workspace.Int(r,"EventId")==eventId);
+        if(oracle.Enabled)return await oracle.WriteNotification(user,eventId,w=>{
+            var n=w.By("IssueNotifications","UserId",user).FirstOrDefault(r=>OracleWorkspace.Workspace.Int(r,"EventId")==eventId);
             if(n is null||w.Find("Issues",OracleWorkspace.Workspace.Int(n,"IssueId"))is not {} issue||!OracleWorkspace.Visible(w,user,issue))return false;
+            if(w.Find("IssueEvents",eventId) is not {} entry || (OracleWorkspace.Workspace.Text(entry,"Kind")=="time"&&!OracleWorkspace.Can(w,user,OracleWorkspace.Workspace.Int(issue,"ProjectId"),"time.view")))return false;
             OracleWorkspace.Workspace.Set(n,"IsRead",true);return true;
         });
         var allowed = await issues.Projects(user);

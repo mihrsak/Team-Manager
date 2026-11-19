@@ -13,8 +13,8 @@ public sealed partial class OracleWorkspace
     internal Task<T> WriteCatalog<T>(int actor, string[] readers, string[] writers, Func<Workspace, T> action)
         => Run(action, true, new WriteScope(actor, [], [actor], [], []) { CatalogReaders = readers, CatalogWriters = writers });
     internal Task<T> WriteProjectMetadata<T>(int actor, int? project, int? parent, string? name, Func<Workspace, T> action)
-        => project is null ? Write(action) : Run(action, true, new WriteScope(actor, [], [actor], [], name is null ? [] : ["project-name:" + name.Trim().ToUpperInvariant()])
-        { Projects = new[] { project, parent }.OfType<int>().Distinct().ToArray(), ProjectWriters = project is int id ? [id] : [] });
+        => Run(action, true, new WriteScope(actor, [], [actor], [], name is null ? [] : ["project-name:" + name.Trim().ToUpperInvariant()])
+        { NewProject = project is null, CatalogReaders = project is null ? ["role:Voditelj"] : [], Projects = new[] { project, parent }.OfType<int>().Distinct().ToArray(), ProjectWriters = project is int id ? [id] : [] });
 
     private static async Task<Dictionary<int, int?>> ProjectPaths(OracleConnection connection, OracleTransaction transaction, IEnumerable<int> roots)
     {

@@ -11,7 +11,7 @@ public sealed partial class OracleWorkspace
             throw new UnauthorizedAccessException();
         return w.Where("IssueLinks", "t.\"SourceId\"=:id OR t.\"TargetId\"=:id", ("id",id)).Select(l => (Link: l, Other: w.Find("Issues", Int(l, "SourceId") == id ? Int(l, "TargetId") : Int(l, "SourceId")))).Where(x => x.Other is not null && Visible(w, user, x.Other)).Select(x => new IssueLink(Id(x.Other!), Text(x.Other!, "Title"), Text(x.Link, "Kind"), Int(x.Link, "SourceId") == id, Can(w, user, Int(x.Other!, "ProjectId"), "issues.edit"))).ToList();
     });
-    internal Task SetLink(int user, int id, int other, string kind, bool outgoing, bool remove) => Write(w =>
+    internal Task SetLink(int user, int id, int other, string kind, bool outgoing, bool remove) => WriteLink(user,id,other,kind,w =>
     {
         if (id == other || kind is not ("related" or "duplicate" or "blocks" or "parent"))
             throw new ArgumentException("Odaberi drugi zadatak i valjanu vrstu veze.");
@@ -27,10 +27,10 @@ public sealed partial class OracleWorkspace
 
         bool Match(JsonObject l) => Int(l, "SourceId") == source && Int(l, "TargetId") == target && Text(l, "Kind") == kind;
         if (remove)
-            w.Remove("IssueLinks", Match);
-        else if (!w.Rows("IssueLinks").Any(Match))
+            w.RemoveBy("IssueLinks","SourceId",source,Match);
+        else if (!w.By("IssueLinks","SourceId",source).Any(Match))
         {
-            if (kind == "parent" && w.Rows("IssueLinks").Any(l => Int(l, "TargetId") == target && Text(l, "Kind") == "parent"))
+            if (kind == "parent" && w.By("IssueLinks","TargetId",target).Any(l => Text(l, "Kind") == "parent"))
                 throw new ArgumentException("Podzadatak već ima nadređeni zadatak.");
             if (kind is "blocks" or "parent")
             {
@@ -43,7 +43,7 @@ public sealed partial class OracleWorkspace
                         throw new ArgumentException("Ova bi veza stvorila ciklus.");
                     if (!seen.Add(node))
                         continue;
-                    foreach (var link in w.Rows("IssueLinks").Where(l => Int(l, "SourceId") == node && Text(l, "Kind") == kind))
+                    foreach (var link in w.By("IssueLinks","SourceId",node).Where(l => Text(l, "Kind") == kind))
                         pending.Push(Int(link, "TargetId"));
                 }
             }

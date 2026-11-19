@@ -42,7 +42,7 @@ public sealed partial class OracleWorkspace
             return new CustomFieldValue(Id(f), Text(f, "Name"), value is null ? null : value["Value"]?.GetValue<string>(), value is null ? 0 : Int(value, "Revision"));
         }).ToList();
     });
-    internal Task SetField(int actor, string scope, int entity, int field, int revision, string? value) => Write(w =>
+    internal Task SetField(int actor, string scope, int entity, int field, int revision, string? value) => WriteFieldValue(actor,scope,entity,field,w =>
     {
         if (FieldTarget(w, actor, scope, entity)?.CanEdit != true)
             throw new UnauthorizedAccessException();

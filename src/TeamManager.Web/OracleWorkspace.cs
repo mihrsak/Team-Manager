@@ -68,7 +68,6 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
     }
 
     internal async Task<T> Read<T>(Func<Workspace, T> action) => await Run(action, false);
-    internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
     private async Task<T> Run<T>(Func<Workspace, T> action, bool write, WriteScope? scope = null)
     {
         for (var attempt = 0; attempt < 3; attempt++)
@@ -85,7 +84,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
-            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=3)");
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=4)");
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
@@ -103,8 +102,14 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
                 if (keys.Add(RowKey(definition, row))) baseline.Add(row.DeepClone());
             return rows;
         }
+        var usedReservedProject = false;
         long Counter(string table)
         {
+            if (table == "Projects" && !usedReservedProject && scope?.ReservedProject is int reserved)
+            {
+                usedReservedProject = true;
+                return reserved;
+            }
             if (!Schema.Value.Tables.Any(t => t.Name == table && t.Columns.Any(c => c.Name == "Id"))) throw new InvalidOperationException("Unknown Oracle identity table.");
             using var command = RelationalCommand(connection, transaction, $"SELECT {Quote("TMR_SEQ_" + table)}.NEXTVAL FROM DUAL");
             return Convert.ToInt64(command.ExecuteScalar());
