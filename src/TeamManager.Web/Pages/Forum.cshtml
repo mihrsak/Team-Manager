@@ -62,7 +62,7 @@ else
             {
                 <li><a asp-page="/Forum" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@item.Id">@item.Title</a>
                     · @item.Author · @item.At.ToString("dd.MM.yyyy")
-                    @if (item.IsLocked) { <span> · Zaključano</span> }
+                    @if (item.IsLocked) { <span> · @Text["Zaključano"]</span> }
                 </li>
             }
         </ul>

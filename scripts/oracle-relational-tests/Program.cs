@@ -1003,3 +1003,61 @@ try { await wiki.Save(admin, wikiProject, wikiId, 2, "Closed", "Forbidden"); thr
 Check((await wiki.Revision(admin, wikiProject, wikiId, 1))!.Body == wikiBody, "Closed project lost history.");
 Check(snapshots == 0, "Wiki loaded whole workspace.");
 Console.WriteLine("PASS: Oracle wiki retains long Unicode bodies, authors and immutable history; concurrent stale edits, duplicate titles, project boundaries, queued revocation and closed-project rules are enforced.");
+
+var forum = new ProjectForumStore(configuration, workspace);
+var forumProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle forum " + suffix });
+var forumOther = await projects.Save(admin, null, new ProjectInput { Name = "Other forum " + suffix });
+var forumBody = string.Concat(Enumerable.Repeat("Ž č ć š đ 🚀 HR/EN\n", 180));
+var forumId = (await forum.Create(admin, forumProject, "Tema / Topic", forumBody))!.Value;
+Check((await forum.Topics(admin, forumProject, null)).Single().Body == "", "Forum list fetched body.");
+Check((await forum.Topics(admin, forumProject, forumId)).Single().Body == forumBody, "Forum Unicode body changed.");
+var forumRole = "forum" + suffix;
+await permissions.Save(admin, forumRole, "Forum poster", ["issues.view", "forum.post"], true);
+var forumName = "forum" + suffix;
+await users.Create(forumName, "Forum poster", "", null, "SQL-test-password-2026", actorId: admin);
+var forumUser = (await users.Find(forumName))!.Id;
+Check((await forum.Topics(forumUser, forumProject, forumId)).Count == 0 && (await forum.Replies(forumUser, forumProject, forumId)).Count == 0, "Private forum leaked.");
+await permissions.Assign(admin, forumUser, forumRole, false);
+Check(await forum.Reply(forumUser, forumProject, forumId, "Odgovor čćž 🚀"), "Authorized reply failed.");
+Check((await forum.Replies(admin, forumProject, forumId)).Single() is { Body: "Odgovor čćž 🚀", Author: "Forum poster" }, "Reply body/author relationship changed.");
+try { await forum.SetLocked(forumUser, forumProject, forumId, true); throw new Exception("Poster moderated topic."); } catch (UnauthorizedAccessException) { }
+Check((await forum.Topics(admin, forumOther, forumId)).Count == 0 && (await forum.Replies(admin, forumOther, forumId)).Count == 0 && !await forum.Reply(admin, forumOther, forumId, "Wrong project") && !await forum.SetLocked(admin, forumOther, forumId, true), "Forum crossed project boundary.");
+var independentForum = (await forum.Create(admin, forumProject, "Independent topic", "Independent"))!.Value;
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, $"project-data:{forumProject}:forum-topic:{forumId}", 6);
+    await using (var closeTopic = new OracleCommand($"UPDATE \"TMR_ForumTopics\" SET \"IsLocked\"=1 WHERE \"Id\"={forumId}", holder) { Transaction = held }) await closeTopic.ExecuteNonQueryAsync();
+    var queued = forum.Reply(forumUser, forumProject, forumId, "Must see locked state");
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Reply ignored topic lock.");
+    await forum.Reply(admin, forumProject, independentForum, "Unrelated topic progresses").WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    Check(!await queued, "Reply entered locked topic.");
+}
+Check((await forum.Replies(admin, forumProject, forumId)).Count == 1, "Rejected reply partially committed.");
+Check(await forum.SetLocked(admin, forumProject, forumId, false), "Unlock failed.");
+await permissions.Save(admin, forumRole, "Forum moderator", ["issues.view", "forum.post", "forum.moderate"], false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + forumUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = forumUser;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = forumRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queuedReply = forum.Reply(forumUser, forumProject, forumId, "Revoked reply");
+    var queuedLock = forum.SetLocked(forumUser, forumProject, forumId, true);
+    Check(await Task.WhenAny(queuedReply, Task.Delay(200)) != queuedReply && !queuedLock.IsCompleted, "Forum ignored identity lock.");
+    await forum.Create(admin, forumOther, "Independent project", "Still writable").WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queuedReply; throw new Exception("Revoked poster replied."); } catch (UnauthorizedAccessException) { }
+    try { await queuedLock; throw new Exception("Revoked moderator locked topic."); } catch (UnauthorizedAccessException) { }
+}
+Check((await forum.Topics(admin, forumProject, forumId)).Single().IsLocked == false && (await forum.Replies(admin, forumProject, forumId)).Count == 1, "Rejected forum mutation changed data.");
+var forumInput = (await projects.List(admin)).Single(p => p.Id == forumProject).Input;
+forumInput.State = "Closed";
+await projects.Save(admin, forumProject, forumInput);
+Check(await forum.Create(admin, forumProject, "Closed", "No") is null && !await forum.Reply(admin, forumProject, forumId, "Closed") && !await forum.SetLocked(admin, forumProject, forumId, true), "Closed project allowed forum mutation.");
+Check((await forum.Topics(admin, forumProject, forumId)).Single().Body == forumBody && (await forum.Replies(admin, forumProject, forumId)).Single().Body == "Odgovor čćž 🚀", "Closing project lost forum data.");
+Check(snapshots == 0, "Forum loaded whole workspace.");
+Console.WriteLine("PASS: Oracle forum preserves topics, ordered replies and authors; topic locking, independent-topic progress, scoped moderation, queued revocation and closed-project rules hold.");

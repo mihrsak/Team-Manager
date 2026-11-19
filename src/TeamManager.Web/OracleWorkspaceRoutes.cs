@@ -30,6 +30,7 @@ internal static class OracleWorkspaceRoutes
         "/ProjectNews",
         "/ProjectDocuments",
         "/Wiki",
+        "/Forum",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",

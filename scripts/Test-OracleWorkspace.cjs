@@ -145,6 +145,31 @@ async function run() {
             assert.ok(decodeNumericEntities(await duplicate.text()).includes(language === 'en' ? 'A page with that title already exists in the project.' : 'Stranica s tim naslovom već postoji u projektu.'));
         }
         console.log('PASS: Oracle wiki create/edit, inherited authority, immutable history/compare, project isolation and HR/EN stale/duplicate messages.');
+        const forumPath = '/Forum?projectId=' + child;
+        const forumCreated = await post(reader, forumPath + '&handler=Create', { title: 'Oracle forum ' + suffix, body: 'Tema <b>čćž 🚀</b>' });
+        const topicId = new URL(forumCreated.url()).searchParams.get('topicId');
+        assert.ok(Number(topicId) > 0);
+        const topicPath = forumPath + '&topicId=' + topicId;
+        const forumReplied = await post(reader, topicPath + '&handler=Reply', { body: 'Odgovor <script> čćž 🚀' });
+        assert.ok((await forumReplied.text()).includes('&lt;script&gt;'));
+        const deniedModeration = await post(reader, topicPath + '&handler=Lock', { locked: 'true' });
+        assert.equal(new URL(deniedModeration.url()).pathname, '/Denied');
+        await checkStatus(admin, '/Forum?projectId=' + wrongProject + '&topicId=' + topicId, 404);
+        for (const language of ['en', 'hr']) {
+            await post(admin, '/Profile?handler=Language', { language });
+            await admin.goto(topicPath);
+            assert.ok(await admin.getByRole('heading', { name: language === 'en' ? 'Project forum' : 'Projektni forum', exact: true }).isVisible());
+            const invalidReply = await post(admin, topicPath + '&handler=Reply', { body: '' });
+            assert.ok(decodeNumericEntities(await invalidReply.text()).includes(language === 'en' ? 'Enter a reply up to 4,000 characters.' : 'Unesi odgovor do 4000 znakova.'));
+            await post(admin, topicPath + '&handler=Lock', { locked: 'true' });
+            await admin.goto(forumPath);
+            const topicRow = admin.getByRole('listitem').filter({ hasText: 'Oracle forum ' + suffix });
+            assert.ok((await topicRow.textContent()).includes(language === 'en' ? 'Locked' : 'Zaključano'));
+            const blockedReply = await post(reader, topicPath + '&handler=Reply', { body: 'Locked reply must fail' });
+            assert.equal(new URL(blockedReply.url()).pathname, '/Denied');
+            await post(admin, topicPath + '&handler=Lock', { locked: 'false' });
+        }
+        console.log('PASS: Oracle forum inherited create/reply, moderation separation, locking, project isolation, HTML escaping and HR/EN validation/status.');
 
         // Both writes carry the same revision. Oracle must commit one edit and reject the other.
         const fields = {
@@ -203,6 +228,7 @@ async function run() {
         await checkStatus(reader, articlePath, 404);
         await checkStatus(reader, documentDownload, 404);
         await checkStatus(reader, wikiArticle + "&revision=1", 404);
+        await checkStatus(reader, topicPath, 404);
         console.log('PASS: membership revocation protects direct issue and attachment URLs immediately.');
 
         const guard = await post(admin, '/Roles', {
@@ -272,7 +298,8 @@ async function run() {
         await checkStatus(admin, '/AdministrationAudit', 200);
         await checkStatus(admin, '/ProjectDocuments?projectId=' + parent, 200);
         await checkStatus(admin, '/Wiki?projectId=' + parent, 200);
-        await checkStatus(admin, '/Forum?projectId=' + parent, 503);
+        await checkStatus(admin, '/Forum?projectId=' + parent, 200);
+        await checkStatus(admin, '/Repositories?projectId=' + parent, 503);
         console.log('READY: ' + baseURL + '/Projects');
     } finally {
         await browser.close();

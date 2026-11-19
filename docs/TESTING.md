@@ -165,3 +165,12 @@ Relacijski testovi provjeravaju dugačak Unicode NCLOB, autore i stare revizije,
 
 
 Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, dugačak Unicode sadržaj i očuvanje povijesti, konkurentne izmjene i opoziv ovlasti, Oracle preglednički tokovi, HR/EN poruke i 30 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-wiki-final radi na https://localhost:7572; readiness vraća 200.
+
+## DB-02: projektni forum na Oracleu
+
+Relacijski testovi provjeravaju Unicode teme i odgovore, veze autora, popis bez tijela, privatni pristup i granice projekta. Korisnik s `forum.post` ne smije moderirati. Odgovor koji čeka zaključavanje teme mora ponovno provjeriti `IsLocked`; nepovezana tema ostaje dostupna za upis. Opoziv uloge tijekom čekanja sprječava i odgovor i moderiranje bez djelomičnog spremanja. Zatvoren projekt zadržava sadržaj, a odbija novu temu, odgovor i zaključavanje. Migracijski testovi uključuju obje tablice foruma među 51 relacijskom tablicom.
+
+`Test-OracleWorkspace.cjs` pokriva naslijeđeno stvaranje i odgovaranje, HTML escaping, odvajanje objavljivanja od moderiranja, zaključavanje/otključavanje, pogrešan projekt, HR/EN validaciju i oznaku zaključavanja te opoziv pristupa temi. `Test-Browser.cjs` dodaje popis, zaključanu temu s odgovorom i otvorenu temu s obrascem odgovora: ukupno 36 HR/EN WCAG A/AA skeniranja. Oracle testove koji pišu u istu shemu pokretati slijedno.
+
+
+Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, teme/odgovori/autori, konkurentno zaključavanje i opozivi prava, Oracle preglednički tokovi, HR/EN validacija i 36 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-forum-final radi na https://localhost:7572; readiness vraća 200.

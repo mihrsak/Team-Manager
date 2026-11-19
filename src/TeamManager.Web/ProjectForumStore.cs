@@ -6,12 +6,13 @@ namespace TeamManager.Web;
 public sealed record ForumTopic(int Id, string Title, string Body, string Author, DateTime At, bool IsLocked);
 public sealed record ForumReply(string Body, string Author, DateTime At);
 
-public sealed class ProjectForumStore(IConfiguration config)
+public sealed class ProjectForumStore(IConfiguration config, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
-    public async Task<List<ForumTopic>> Topics(int project, int? topic)
+    public async Task<List<ForumTopic>> Topics(int user, int project, int? topic)
     {
+        if (oracle.Enabled) return await oracle.ForumTopicsRead(user, project, topic);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -24,12 +25,13 @@ public sealed class ProjectForumStore(IConfiguration config)
         await using var reader = await command.ExecuteReaderAsync();
         var items = new List<ForumTopic>();
         while (await reader.ReadAsync())
-            items.Add(new(reader.GetInt32(0),reader.GetString(1),reader.GetString(2),reader.GetString(3),reader.GetDateTime(4),reader.GetBoolean(5)));
+            items.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetDateTime(4), reader.GetBoolean(5)));
         return items;
     }
 
-    public async Task<List<ForumReply>> Replies(int project, int topic)
+    public async Task<List<ForumReply>> Replies(int user, int project, int topic)
     {
+        if (oracle.Enabled) return await oracle.ForumRepliesRead(user, project, topic);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -41,12 +43,13 @@ public sealed class ProjectForumStore(IConfiguration config)
         command.Parameters.AddRange([P("@project", project), P("@topic", topic)]);
         await using var reader = await command.ExecuteReaderAsync();
         var replies = new List<ForumReply>();
-        while (await reader.ReadAsync()) replies.Add(new(reader.GetString(0),reader.GetString(1),reader.GetDateTime(2)));
+        while (await reader.ReadAsync()) replies.Add(new(reader.GetString(0), reader.GetString(1), reader.GetDateTime(2)));
         return replies;
     }
 
     public async Task<int?> Create(int actor, int project, string title, string body)
     {
+        if (oracle.Enabled) return await oracle.CreateForumTopic(actor, project, title, body);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -59,15 +62,15 @@ public sealed class ProjectForumStore(IConfiguration config)
     }
 
     public Task<bool> Reply(int actor, int project, int topic, string body)
-        => Change("""
+        => oracle.Enabled ? oracle.ReplyForum(actor, project, topic, body) : Change("""
             INSERT dbo.ForumReplies(TopicId,AuthorId,Body)
             SELECT t.Id,@actor,@body FROM dbo.ForumTopics t WITH(UPDLOCK,HOLDLOCK)
             JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=t.ProjectId
             WHERE t.Id=@topic AND t.ProjectId=@project AND t.IsLocked=0 AND p.State='Active'
             """, P("@actor", actor), P("@project", project), P("@topic", topic), P("@body", body));
 
-    public Task<bool> SetLocked(int project, int topic, bool locked)
-        => Change("""
+    public Task<bool> SetLocked(int actor, int project, int topic, bool locked)
+        => oracle.Enabled ? oracle.LockForum(actor, project, topic, locked) : Change("""
             UPDATE t SET IsLocked=@locked FROM dbo.ForumTopics t
             JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=t.ProjectId
             WHERE t.Id=@topic AND t.ProjectId=@project AND p.State='Active'

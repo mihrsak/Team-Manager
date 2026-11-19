@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, Permissions permissions) : PageModel
+public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, Permissions permissions, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<ForumTopic> Topics { get; private set; } = [];
@@ -22,12 +22,12 @@ public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, P
         if (project is null) return NotFound();
         Project = project;
 
-        Topics = await forum.Topics(projectId, topicId);
+        Topics = await forum.Topics(UserId, projectId, topicId);
         if (topicId is int id)
         {
             Selected = Topics.SingleOrDefault();
             if (Selected is null) return NotFound();
-            Replies = await forum.Replies(projectId, id);
+            Replies = await forum.Replies(UserId, projectId, id);
         }
 
         if (project.Input.State == "Active")
@@ -68,13 +68,13 @@ public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, P
         if (locked is null) return BadRequest();
         var result = await OnGetAsync(projectId, topicId);
         if (result is not PageResult) return result;
-        if (!CanModerate || !await forum.SetLocked(projectId, topicId, locked.Value)) return Forbid();
+        if (!CanModerate || !await forum.SetLocked(UserId, projectId, topicId, locked.Value)) return Forbid();
         return RedirectToPage(new { projectId, topicId });
     }
 
     private IActionResult Invalid(string message)
     {
-        ModelState.AddModelError("", message);
+        ModelState.AddModelError("", text[message]);
         return Page();
     }
 }
