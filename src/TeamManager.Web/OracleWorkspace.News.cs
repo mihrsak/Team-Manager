@@ -4,14 +4,14 @@ namespace TeamManager.Web;
 
 public sealed partial class OracleWorkspace
 {
-    private static readonly string NewsVisibilitySql = $"{ActiveViewer} AND (p.\"IsPublic\"=1 OR {HasRight("'issues.view'")} OR {HasRight("'projects.manage'")})";
+    private static readonly string ProjectContentVisibilitySql = $"{ActiveViewer} AND (p.\"IsPublic\"=1 OR {HasRight("'issues.view'")} OR {HasRight("'projects.manage'")})";
 
     internal Task<List<ProjectNewsItem>> NewsList(int user, int project, int? news)
         => Query("ProjectNews", SecuritySql + $"""
             SELECT n."Id",n."Title",CASE WHEN :news IS NULL THEN TO_NCLOB('') ELSE n."Body" END,u."DisplayName",n."CreatedAt"
             FROM "TMR_ProjectNews" n JOIN "TMR_Projects" p ON p."Id"=n."ProjectId"
             JOIN "TMR_AppUsers" u ON u."Id"=n."AuthorId"
-            WHERE p."Id"=:scope AND (:news IS NULL OR n."Id"=:news) AND {NewsVisibilitySql}
+            WHERE p."Id"=:scope AND (:news IS NULL OR n."Id"=:news) AND {ProjectContentVisibilitySql}
             ORDER BY n."Id" DESC
             """, c => { Viewer(c, user, project); AddQueryParameter(c, "news", news); },
             r => new ProjectNewsItem(r.GetInt32(0), r.GetString(1), r.IsDBNull(2) ? "" : r.GetString(2), r.GetString(3), r.GetDateTime(4)));
@@ -21,7 +21,7 @@ public sealed partial class OracleWorkspace
             SELECT c."Body",u."DisplayName",c."CreatedAt" FROM "TMR_ProjectNewsComments" c
             JOIN "TMR_ProjectNews" n ON n."Id"=c."NewsId" JOIN "TMR_Projects" p ON p."Id"=n."ProjectId"
             JOIN "TMR_AppUsers" u ON u."Id"=c."AuthorId"
-            WHERE p."Id"=:scope AND n."Id"=:news AND {NewsVisibilitySql} ORDER BY c."Id"
+            WHERE p."Id"=:scope AND n."Id"=:news AND {ProjectContentVisibilitySql} ORDER BY c."Id"
             """, c => { Viewer(c, user, project); AddQueryParameter(c, "news", news); },
             r => new ProjectNewsComment(r.GetString(0), r.GetString(1), r.GetDateTime(2)));
 

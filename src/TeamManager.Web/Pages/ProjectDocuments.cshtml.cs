@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocumentStore documents) : PageModel
+public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocumentStore documents, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<ProjectDocument> Documents { get; private set; } = [];
@@ -21,14 +21,14 @@ public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocument
         if (project is null) return NotFound();
         Project = project;
         CanEdit = project.Input.State == "Active" && await projects.CanManage(UserId, projectId);
-        Documents = await documents.List(projectId);
+        Documents = await documents.List(UserId, projectId);
         return Page();
     }
 
     public async Task<IActionResult> OnGetDownloadAsync(int projectId, int documentId)
     {
         if (documentId <= 0 || await VisibleProject(projectId) is null) return NotFound();
-        var document = await documents.Download(projectId, documentId);
+        var document = await documents.Download(UserId, projectId, documentId);
         if (document is null) return NotFound();
         Response.Headers.CacheControl = "private, no-store";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -73,7 +73,7 @@ public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocument
 
     private IActionResult Invalid(string message)
     {
-        ModelState.AddModelError("", message);
+        ModelState.AddModelError("", text[message]);
         return Page();
     }
 }

@@ -28,6 +28,7 @@ internal static class OracleWorkspaceRoutes
         "/Search",
         "/Roadmap",
         "/ProjectNews",
+        "/ProjectDocuments",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",

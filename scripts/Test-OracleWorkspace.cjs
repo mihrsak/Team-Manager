@@ -98,6 +98,30 @@ async function run() {
                 : 'Unesi naslov do 150 znakova i tekst do 4000 znakova.'));
         }
         console.log('PASS: Oracle news publish/comment, inherited access, project isolation, HTML escaping and HR/EN validation.');
+        const documentsPath = '/ProjectDocuments?projectId=' + child;
+        const documentBytes = Buffer.from(Array.from({ length: 262144 }, (_, i) => i % 256));
+        const documentForm = await admin.request.get(documentsPath);
+        const documentToken = (await documentForm.text()).match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)?.[1];
+        const uploadedDocument = await admin.request.post(documentsPath + '&handler=Add', { multipart: {
+            __RequestVerificationToken: documentToken, title: 'Oracle document ' + suffix,
+            description: 'Opis <b>čćž 🚀</b>', attachment: { name: 'oracle-document.bin', mimeType: 'application/octet-stream', buffer: documentBytes }
+        } });
+        assert.equal(uploadedDocument.status(), 200);
+        await reader.goto(documentsPath);
+        const documentDownload = await reader.getByRole('link', { name: 'oracle-document.bin', exact: true }).getAttribute('href');
+        assert.deepEqual(await (await reader.request.get(documentDownload)).body(), documentBytes);
+        assert.ok((await reader.content()).includes('&lt;b&gt;'));
+        const documentId = new URL(documentDownload, baseURL).searchParams.get('documentId');
+        await checkStatus(admin, '/ProjectDocuments?projectId=' + wrongProject + '&handler=Download&documentId=' + documentId, 404);
+        for (const language of ['en', 'hr']) {
+            await post(admin, '/Profile?handler=Language', { language });
+            await admin.goto(documentsPath);
+            assert.ok(await admin.getByRole('heading', { name: language === 'en' ? 'Project documents' : 'Dokumenti projekta', exact: true }).isVisible());
+            const invalidDocument = await post(admin, documentsPath + '&handler=Add', { title: 'No file', description: '' });
+            assert.ok((await invalidDocument.text()).includes(language === 'en'
+                ? 'Select a file' : 'Odaberi datoteku'));
+        }
+        console.log('PASS: Oracle documents upload/download, inherited visibility, byte-identical BLOB, project boundary and HR/EN validation.');
 
         // Both writes carry the same revision. Oracle must commit one edit and reject the other.
         const fields = {
@@ -154,6 +178,7 @@ async function run() {
         await reader.goto('/Workflow');
         assert.equal(new URL(reader.url()).pathname, '/Denied');
         await checkStatus(reader, articlePath, 404);
+        await checkStatus(reader, documentDownload, 404);
         console.log('PASS: membership revocation protects direct issue and attachment URLs immediately.');
 
         const guard = await post(admin, '/Roles', {
@@ -163,6 +188,8 @@ async function run() {
         await admin.goto('/Roles');
         assert.equal(new URL(admin.url()).pathname, '/Roles');
         console.log('PASS: attempted removal of the last administrator rolls back.');
+        await post(admin, documentsPath + '&handler=Remove&documentId=' + documentId, {});
+        await checkStatus(admin, documentDownload, 404);
 
         await post(admin, '/Roadmap?projectId=' + child + '&handler=Save', {
             itemId: '0', revision: '0', kind: 'milestone',
@@ -219,7 +246,8 @@ async function run() {
         console.log('PASS: project custom field and issue move preserve related data and clear the source roadmap.');
 
         await checkStatus(admin, '/AdministrationAudit', 200);
-        await checkStatus(admin, '/ProjectDocuments?projectId=' + parent, 503);
+        await checkStatus(admin, '/ProjectDocuments?projectId=' + parent, 200);
+        await checkStatus(admin, '/Wiki?projectId=' + parent, 503);
         console.log('READY: ' + baseURL + '/Projects');
     } finally {
         await browser.close();

@@ -147,3 +147,12 @@ Oracle relacijski testovi sada obuhvaćaju objavljivanje i komentiranje uz nedos
 `Test-OracleWorkspace.cjs` provjerava i objavu, komentiranje s naslijeđenim pravima, HTML escaping, pogrešan projekt, neposredan opoziv pristupa te HR/EN naslove i validaciju. `Test-Browser.cjs` proširen je na 22 automatizirana WCAG A/AA skeniranja: popis novosti i detalji s obrascem komentara uključeni su za oba jezika. Za sve Oracle testove koristiti iste lokalne postavke i varijable opisane iznad; testove koji pišu u istu shemu pokretati slijedno.
 
 Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, Oracle preglednički tokovi novosti i zadataka, 22 HR/EN WCAG A/AA skeniranja te SQL regresije. Paket artifacts/oracle-news-final radi na https://localhost:7572; readiness vraća 200.
+
+## DB-02: projektni dokumenti na Oracleu
+
+Oracle relacijski testovi provjeravaju metapodatke i autora, čišćenje naziva, 256 KiB BLOB sa svim vrijednostima bajta i jednako preuzimanje nakon odbijenih promjena. Popis mora koristiti samo upit metapodataka, bez dohvaćanja radne cjeline. Provjeravaju se privatni pristup, granice projekta, prazna/prevelika datoteka i nevaljan naziv, opoziv ovlasti tijekom čekanja na dodavanje/brisanje, paralelan upis drugog projekta te zatvaranje i ponovno otvaranje projekta bez gubitka sadržaja.
+
+`Test-OracleWorkspace.cjs` obuhvaća dodavanje/preuzimanje, naslijeđene ovlasti, escaping opisa, HR/EN naslove i pogreške, pogrešan projekt, opoziv pristupa izravnom URL-u i brisanje dokumenta. `Test-Browser.cjs` uključuje popunjeni obrazac i zbirku dokumenata u oba jezika: ukupno 24 automatizirana WCAG A/AA skeniranja uz postojeće provjere tipkovnice i odjave. Oracle testove iste sheme pokretati slijedno; odvojena migracijska shema i SQL regresije mogu se provjeravati zasebno.
+
+
+Lokalno provjereno 19. 11. 2026.: Release build bez grešaka i upozorenja, obje Oracle testne sheme, opoziv ovlasti tijekom dodavanja i brisanja, binarni sadržaj od 256 KiB, Oracle preglednički tokovi, 24 HR/EN WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-documents-final radi na https://localhost:7572; readiness vraća 200.

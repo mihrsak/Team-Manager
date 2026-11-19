@@ -900,3 +900,60 @@ await permissions.ManageAccount(admin, newsUser, false, null);
 Check((await news.List(newsUser, newsProject, newsId)).Count == 0 && (await news.Comments(newsUser, newsProject, newsId)).Count == 0, "Inactive user read public news.");
 Check(snapshots == 0, "News loaded a whole workspace.");
 Console.WriteLine("PASS: Oracle news retains Unicode article/comment relationships, scoped reads, author names, private access and closed-project rules; queued revocation rejects writes while independent projects progress.");
+
+// Project documents retain their binary content and authorization without SQL Server.
+var documents = new ProjectDocumentStore(configuration, projects, workspace);
+var docProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle documents " + suffix });
+var docOther = await projects.Save(admin, null, new ProjectInput { Name = "Other documents " + suffix });
+var docBytes = Enumerable.Range(0, 262144).Select(i => (byte)(i % 256)).ToArray();
+Microsoft.AspNetCore.Http.IFormFile DocumentFile(byte[] bytes, string name = "../mapa/čćž.bin")
+    => new Microsoft.AspNetCore.Http.FormFile(new MemoryStream(bytes), 0, bytes.Length, "attachment", name);
+await documents.Add(admin, docProject, "Dokument / Document", "Opis čćž 🚀", DocumentFile(docBytes), CancellationToken.None);
+counts.Clear();
+var doc = (await documents.List(admin, docProject)).Single();
+Check(doc.Size == docBytes.Length && doc.FileName == "čćž.bin" && doc.Description == "Opis čćž 🚀" && doc.Author == (await users.Find("admin"))!.DisplayName, "Document metadata/author/name changed.");
+Check(counts.GetValueOrDefault("ProjectDocumentMetadata") == 1 && !counts.ContainsKey("ProjectDocuments"), "Document list loaded attachment rows instead of metadata.");
+Check((await documents.Download(admin, docProject, doc.Id))!.Content.SequenceEqual(docBytes), "Document BLOB changed.");
+Check(await documents.Download(admin, docOther, doc.Id) is null && !await documents.Remove(admin, docOther, doc.Id), "Document crossed project boundary.");
+try { await documents.Add(admin, docProject, "Empty", "", DocumentFile([]), CancellationToken.None); throw new Exception("Empty document accepted."); } catch (ArgumentException) { }
+try { await documents.Add(admin, docProject, "Invalid name", "", DocumentFile([1], ".."), CancellationToken.None); throw new Exception("Invalid filename accepted."); } catch (ArgumentException) { }
+try { await documents.Add(admin, docProject, "Oversized", "", new Microsoft.AspNetCore.Http.FormFile(new MemoryStream([1]), 0, 10 * 1024 * 1024 + 1, "attachment", "large.bin"), CancellationToken.None); throw new Exception("Oversized document accepted."); } catch (ArgumentException) { }
+var docRole = "docs" + suffix;
+await permissions.Save(admin, docRole, "Document test manager", ["projects.manage"], true);
+var docName = "docs" + suffix;
+await users.Create(docName, "Document manager", "", null, "SQL-test-password-2026", actorId: admin);
+var docUser = (await users.Find(docName))!.Id;
+Check((await documents.List(docUser, docProject)).Count == 0 && await documents.Download(docUser, docProject, doc.Id) is null, "Private document leaked.");
+await permissions.Assign(admin, docUser, docRole, false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + docUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = docUser;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = docRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = documents.Remove(docUser, docProject, doc.Id);
+    var queuedUpload = documents.Add(docUser, docProject, "Revoked upload", "", DocumentFile([9, 8, 7]), CancellationToken.None);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Document deletion ignored identity lock.");
+    await documents.Add(admin, docOther, "Independent", "", DocumentFile([1, 0, 255]), CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked manager deleted document."); } catch (UnauthorizedAccessException) { }
+    try { await queuedUpload; throw new Exception("Revoked manager uploaded document while queued."); } catch (UnauthorizedAccessException) { }
+}
+Check((await documents.Download(admin, docProject, doc.Id))!.Content.SequenceEqual(docBytes), "Rejected deletion changed content.");
+Check((await documents.List(admin, docProject)).Count == 1, "Rejected upload left metadata.");
+try { await documents.Add(docUser, docProject, "Unauthorized", "", DocumentFile([1]), CancellationToken.None); throw new Exception("Revoked manager uploaded."); } catch (UnauthorizedAccessException) { }
+var docInput = (await projects.List(admin)).Single(p => p.Id == docProject).Input;
+docInput.State = "Closed";
+await projects.Save(admin, docProject, docInput);
+Check(!await documents.Remove(admin, docProject, doc.Id), "Closed project allowed deletion.");
+try { await documents.Add(admin, docProject, "Closed", "", DocumentFile([1]), CancellationToken.None); throw new Exception("Closed project accepted upload."); } catch (UnauthorizedAccessException) { }
+Check((await documents.Download(admin, docProject, doc.Id))!.Content.SequenceEqual(docBytes), "Closed project lost document.");
+docInput = (await projects.List(admin)).Single(p => p.Id == docProject).Input;
+docInput.State = "Active";
+await projects.Save(admin, docProject, docInput);
+Check(await documents.Remove(admin, docProject, doc.Id) && !await documents.Remove(admin, docProject, doc.Id) && await documents.Download(admin, docProject, doc.Id) is null, "Document deletion was not scoped/idempotent.");
+Check(snapshots == 0, "Documents loaded a whole workspace.");
+Console.WriteLine("PASS: Oracle documents preserve metadata, author, sanitized filename and 256 KiB BLOB; private access, project boundaries, upload validation, queued revocation, independent writes and closed-project rules hold.");

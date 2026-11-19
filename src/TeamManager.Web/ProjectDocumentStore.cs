@@ -5,12 +5,13 @@ namespace TeamManager.Web;
 
 public sealed record ProjectDocument(int Id, string Title, string Description, string FileName, long Size, string Author, DateTime At);
 
-public sealed class ProjectDocumentStore(IConfiguration config, ProjectStore projects)
+public sealed class ProjectDocumentStore(IConfiguration config, ProjectStore projects, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
-    public async Task<List<ProjectDocument>> List(int project)
+    public async Task<List<ProjectDocument>> List(int user, int project)
     {
+        if (oracle.Enabled) return await oracle.DocumentsList(user, project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -22,13 +23,14 @@ public sealed class ProjectDocumentStore(IConfiguration config, ProjectStore pro
         await using var reader = await command.ExecuteReaderAsync();
         var documents = new List<ProjectDocument>();
         while (await reader.ReadAsync())
-            documents.Add(new(reader.GetInt32(0),reader.GetString(1),reader.GetString(2),reader.GetString(3),
-                reader.GetInt64(4),reader.GetString(5),reader.GetDateTime(6)));
+            documents.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
+                reader.GetInt64(4), reader.GetString(5), reader.GetDateTime(6)));
         return documents;
     }
 
-    public async Task<AttachmentDownload?> Download(int project, int document)
+    public async Task<AttachmentDownload?> Download(int user, int project, int document)
     {
+        if (oracle.Enabled) return await oracle.DocumentDownload(user, project, document);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -42,6 +44,7 @@ public sealed class ProjectDocumentStore(IConfiguration config, ProjectStore pro
     public async Task Add(int actor, int project, string title, string description, IFormFile? file,
         CancellationToken cancellationToken)
     {
+        if (oracle.Enabled) { await oracle.AddDocument(actor, project, title, description, file, cancellationToken); return; }
         if (!await projects.CanManage(actor, project)) throw new UnauthorizedAccessException();
         var upload = await UploadedFile.Read(file, cancellationToken);
         var affected = await Mutate("""
@@ -55,6 +58,7 @@ public sealed class ProjectDocumentStore(IConfiguration config, ProjectStore pro
 
     public async Task<bool> Remove(int actor, int project, int document)
     {
+        if (oracle.Enabled) return await oracle.RemoveDocument(actor, project, document);
         if (!await projects.CanManage(actor, project)) throw new UnauthorizedAccessException();
         return await Mutate("""
             DELETE d FROM dbo.ProjectDocuments d JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=d.ProjectId
