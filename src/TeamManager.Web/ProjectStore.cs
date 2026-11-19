@@ -42,7 +42,7 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions,O
     {
         if (oracle.Enabled)
         {
-            await oracle.Write(w =>
+            await oracle.WriteProjectMetadata(user,id,null,null,w =>
             {
                 if (!OracleWorkspace.Manage(w,user,id)) throw new UnauthorizedAccessException();
                 var p = w.Find("Projects",id) ?? throw new UnauthorizedAccessException();

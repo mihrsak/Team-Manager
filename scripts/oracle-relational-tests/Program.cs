@@ -526,9 +526,13 @@ if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase
     var fullRole = (string)(await Scalar("SELECT r.\"RoleName\" FROM \"TMR_UserRoles\" r JOIN \"TMR_RolePermissions\" p ON p.\"RoleName\"=r.\"RoleName\" WHERE r.\"UserId\"=" + admin + " AND p.\"Permission\"='*' FETCH FIRST 1 ROW ONLY"))!;
     await permissions.Assign(admin, targetA, fullRole, false);
     await permissions.Assign(admin, targetB, fullRole, false);
+    var activeBefore = new List<int>();
+    await using (var activeUsers = new OracleCommand($"SELECT \"Id\" FROM \"TMR_AppUsers\" WHERE \"IsActive\"=1 AND \"Id\" NOT IN ({targetA},{targetB})", connection))
+    await using (var activeRows = await activeUsers.ExecuteReaderAsync())
+        while (await activeRows.ReadAsync()) activeBefore.Add(activeRows.GetInt32(0));
     try
     {
-        await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=0 WHERE \"Id\"=:id", ("id", admin));
+        await FixtureSql($"UPDATE \"TMR_AppUsers\" SET \"IsActive\"=0 WHERE \"IsActive\"=1 AND \"Id\" NOT IN ({targetA},{targetB})");
         async Task<bool> RevokeSelf(int target)
         {
             try { await permissions.Assign(target, target, fullRole, true); return true; }
@@ -537,7 +541,7 @@ if (builder.UserID.Equals("TMR_MIGRATION_QA", StringComparison.OrdinalIgnoreCase
         var result = await Task.WhenAll(RevokeSelf(targetA), RevokeSelf(targetB));
         Check(result.Count(x => x) == 1, "Concurrent administrator revocations did not preserve one full administrator.");
     }
-    finally { await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", admin)); }
+    finally { foreach(var id in activeBefore) await FixtureSql("UPDATE \"TMR_AppUsers\" SET \"IsActive\"=1 WHERE \"Id\"=:id", ("id", id)); }
     Console.WriteLine("PASS: concurrent self-revocations in the isolated schema cannot remove the last active full administrator.");
 }
 var managerName = "sqlManager" + suffix;
@@ -570,54 +574,171 @@ Check((await Task.WhenAll(CreateDuplicate(duplicateName), CreateDuplicate(duplic
 await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => users.Authenticate(targetNameB, "incorrect-password")));
 Check(await Scalar($"SELECT \"LockoutUntil\" FROM \"TMR_AppUsers\" WHERE \"Id\"={targetB}") is not DBNull, "Concurrent login attempts bypassed account lockout.");
 Console.WriteLine("PASS: queued administrators recheck their own authority; parallel account creation preserves case-insensitive uniqueness and failed logins preserve lockout counters.");
-if(Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is {Length:>0} scopedHttpAddress)
+if (Environment.GetEnvironmentVariable("TEAM_MANAGER_ORACLE_URL") is { Length: > 0 } scopedHttpAddress)
 {
-    foreach(var language in new[]{"hr","en"})
+    foreach (var language in new[] { "hr", "en" })
     {
-        await permissions.Assign(admin,manager,managerRole,false);
-        await users.SetLanguage(manager,language);
-        using var http=new HttpClient(new HttpClientHandler{CookieContainer=new System.Net.CookieContainer()}){BaseAddress=new Uri(scopedHttpAddress)};
-        string Token403(string html)=>System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html,"name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
-        var login=await http.GetStringAsync("/Login");
-        using(var response=await http.PostAsync("/Login",new FormUrlEncodedContent(new Dictionary<string,string>{{"EmployeeNumber",managerName},{"Password","SQL-test-password-2026"},{"__RequestVerificationToken",Token403(login)}}))) response.EnsureSuccessStatusCode();
-        var form=await http.GetStringAsync("/Profile?id="+targetB);
-        await using var held=holder.BeginTransaction();
-        await Hold(held,"identity:"+manager,6);
-        await using(var revoke=new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role",holder){Transaction=held,BindByName=true})
+        await permissions.Assign(admin, manager, managerRole, false);
+        await users.SetLanguage(manager, language);
+        using var http = new HttpClient(new HttpClientHandler { CookieContainer = new System.Net.CookieContainer() }) { BaseAddress = new Uri(scopedHttpAddress) };
+        string Token403(string html) => System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value);
+        var login = await http.GetStringAsync("/Login");
+        using (var response = await http.PostAsync("/Login", new FormUrlEncodedContent(new Dictionary<string, string> { { "EmployeeNumber", managerName }, { "Password", "SQL-test-password-2026" }, { "__RequestVerificationToken", Token403(login) } }))) response.EnsureSuccessStatusCode();
+        var form = await http.GetStringAsync("/Profile?id=" + targetB);
+        await using var held = holder.BeginTransaction();
+        await Hold(held, "identity:" + manager, 6);
+        await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
         {
-            revoke.Parameters.Add("target",OracleDbType.Int32).Value=manager;
-            revoke.Parameters.Add("role",OracleDbType.NVarchar2).Value=managerRole;
+            revoke.Parameters.Add("target", OracleDbType.Int32).Value = manager;
+            revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = managerRole;
             await revoke.ExecuteNonQueryAsync();
         }
-        var queued=http.PostAsync("/Profile?id="+targetB+"&handler=GlobalRole",new FormUrlEncodedContent(new Dictionary<string,string>{{"role",readRole},{"remove","false"},{"__RequestVerificationToken",Token403(form)}}));
-        Check(await Task.WhenAny(queued,Task.Delay(1000))!=queued,"HTTP administrative write did not wait for actor lock.");
+        var queued = http.PostAsync("/Profile?id=" + targetB + "&handler=GlobalRole", new FormUrlEncodedContent(new Dictionary<string, string> { { "role", readRole }, { "remove", "false" }, { "__RequestVerificationToken", Token403(form) } }));
+        Check(await Task.WhenAny(queued, Task.Delay(1000)) != queued, "HTTP administrative write did not wait for actor lock.");
         await held.CommitAsync();
-        using var denied=await queued;
-        Check(denied.StatusCode==System.Net.HttpStatusCode.Forbidden,"Revoked HTTP administrative write did not return 403.");
-        Check(await denied.Content.ReadAsStringAsync()==(language=="hr"?"Nemaš ovlasti za ovu radnju.":"You do not have permission for this action."),"Revoked HTTP write lost its HR/EN response.");
+        using var denied = await queued;
+        Check(denied.StatusCode == System.Net.HttpStatusCode.Forbidden, "Revoked HTTP administrative write did not return 403.");
+        Check(await denied.Content.ReadAsStringAsync() == (language == "hr" ? "Nemaš ovlasti za ovu radnju." : "You do not have permission for this action."), "Revoked HTTP write lost its HR/EN response.");
     }
     Console.WriteLine("PASS: administrative authority revoked during HTTP waits returns HR/EN 403 without committing the change.");
 }
-var watcherName="sqlWatcher"+suffix;
-await users.Create(watcherName,"Scoped watcher "+suffix,"",null,"SQL-test-password-2026",actorId:admin);
-var watcher=(await users.Find(watcherName))!.Id;
-await permissions.Assign(admin,watcher,readRole,false);
-await issues.SetWatching(watcher,fineA,true);
-await FixtureSql("INSERT INTO \"TMR_EmailNotificationPreferences\" (\"UserId\",\"Address\",\"SendWatchedIssues\",\"SendDueReminders\") VALUES(:id,:address,1,0)",("id",watcher),("address","watcher@example.test"));
-await using(var held=holder.BeginTransaction())
+var watcherName = "sqlWatcher" + suffix;
+await users.Create(watcherName, "Scoped watcher " + suffix, "", null, "SQL-test-password-2026", actorId: admin);
+var watcher = (await users.Find(watcherName))!.Id;
+await permissions.Assign(admin, watcher, readRole, false);
+await issues.SetWatching(watcher, fineA, true);
+await FixtureSql("INSERT INTO \"TMR_EmailNotificationPreferences\" (\"UserId\",\"Address\",\"SendWatchedIssues\",\"SendDueReminders\") VALUES(:id,:address,1,0)", ("id", watcher), ("address", "watcher@example.test"));
+await using (var held = holder.BeginTransaction())
 {
-    await Hold(held,"identity:"+watcher,6);
-    await using(var revoke=new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role",holder){Transaction=held,BindByName=true})
+    await Hold(held, "identity:" + watcher, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:target AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
     {
-        revoke.Parameters.Add("target",OracleDbType.Int32).Value=watcher;
-        revoke.Parameters.Add("role",OracleDbType.NVarchar2).Value=readRole;
+        revoke.Parameters.Add("target", OracleDbType.Int32).Value = watcher;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = readRole;
         await revoke.ExecuteNonQueryAsync();
     }
-    var queued=issues.Comment(admin,fineA,"Recheck watched recipient");
-    await issues.Comment(admin,fineB,"Unrelated watcher scope").WaitAsync(TimeSpan.FromSeconds(5));
-    Check(!queued.IsCompleted,"Watched-recipient rights were not locked.");
+    var queued = issues.Comment(admin, fineA, "Recheck watched recipient");
+    await issues.Comment(admin, fineB, "Unrelated watcher scope").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!queued.IsCompleted, "Watched-recipient rights were not locked.");
     await held.CommitAsync();
     await queued;
 }
-Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueEmailQueue\" WHERE \"UserId\"={watcher}"))==0,"A revoked watcher was queued an email.");
+Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_IssueEmailQueue\" WHERE \"UserId\"={watcher}")) == 0, "A revoked watcher was queued an email.");
 Console.WriteLine("PASS: watcher access changes serialize with event creation; revoked recipients are not queued email while unrelated issues remain writable.");
+
+// Catalogue and hierarchy dependencies must exclude unrelated branches/roles.
+var catalogRoleA = "catA" + suffix;
+var catalogRoleB = "catB" + suffix;
+await permissions.Save(admin, catalogRoleA, "Scoped catalogue", ["issues.view", "issues.comment", "issues.edit"], true);
+await permissions.Save(admin, catalogRoleB, "Scoped catalogue", ["issues.view"], true);
+var catalogName = "sqlCatalog" + suffix;
+await users.Create(catalogName, "Catalogue reader", "", null, "SQL-test-password-2026", actorId: admin);
+var catalogUser = (await users.Find(catalogName))!.Id;
+await permissions.Assign(admin, catalogUser, catalogRoleA, false);
+var branchA = await projects.Save(admin, null, new ProjectInput { Name = "Branch A " + suffix });
+var branchB = await projects.Save(admin, null, new ProjectInput { Name = "Branch B " + suffix });
+var branchTaskA = await issues.Save(admin, branchA, null, new IssueInput { Title = "Branch catalogue A", IsPrivate = false });
+var branchTaskB = await issues.Save(admin, branchB, null, new IssueInput { Title = "Branch catalogue B", IsPrivate = false });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "role:" + catalogRoleA, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_RolePermissions\" WHERE \"RoleName\"=:role AND \"Permission\"='issues.comment'", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = catalogRoleA;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = issues.Comment(catalogUser, branchTaskA, "Must recheck role definition");
+    await permissions.Save(admin, catalogRoleB, "Independent catalogue update", ["issues.view"], false).WaitAsync(TimeSpan.FromSeconds(5));
+    await issues.Comment(admin, branchTaskB, "Independent branch and role").WaitAsync(TimeSpan.FromSeconds(5));
+    await users.Authenticate(targetNameB, "SQL-test-password-2026").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!queued.IsCompleted, "Role definition reader ignored its catalogue lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked catalogue permission was accepted."); } catch (UnauthorizedAccessException) { }
+}
+await permissions.Save(admin, catalogRoleA, "Restored fixture", ["issues.view", "issues.comment", "issues.edit"], false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "project:" + branchA, 6);
+    var revisionA = (await projects.List(admin)).Single(p => p.Id == branchA).Input.Revision;
+    var revisionB = (await projects.List(admin)).Single(p => p.Id == branchB).Input.Revision;
+    var blocked = projects.SetModules(admin, branchA, true, true, revisionA);
+    await projects.SetModules(admin, branchB, true, true, revisionB).WaitAsync(TimeSpan.FromSeconds(5));
+    await issues.Comment(admin, branchTaskB, "Unrelated project remains writable").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!blocked.IsCompleted, "Project metadata ignored its branch lock.");
+    await held.RollbackAsync();
+    await blocked.WaitAsync(TimeSpan.FromSeconds(5));
+}
+Console.WriteLine("PASS: role-definition and project metadata locks block dependent writes while unrelated catalogue edits, branches and login continue.");
+
+var typeA = "TypeA" + suffix;
+var typeB = "TypeB" + suffix;
+await workflow.AddValue(admin, "type", typeA, false);
+await workflow.AddValue(admin, "type", typeB, false);
+var typedA = await issues.Save(admin, branchA, null, new IssueInput { Title = "Typed A", Type = typeA, IsPrivate = false });
+var typedB = await issues.Save(admin, branchB, null, new IssueInput { Title = "Typed B", Type = typeB, IsPrivate = false });
+var typedAComment = await issues.Save(admin, branchA, null, new IssueInput { Title = "Typed A comment", Type = typeA, IsPrivate = false });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "workflow-type:" + typeA, 6);
+    var a = (await issues.Get(admin, typedA))!.Input; a.Title += " changed";
+    var b = (await issues.Get(admin, typedB))!.Input; b.Title += " changed";
+    var blocked = issues.Save(admin, branchA, typedA, a);
+    await issues.Save(admin, branchB, typedB, b).WaitAsync(TimeSpan.FromSeconds(5));
+    await workflow.Set(admin, new Transition(catalogRoleB, typeB, "Novo", "U tijeku"), false).WaitAsync(TimeSpan.FromSeconds(5));
+    await issues.Comment(admin, typedAComment, "Comment does not depend on workflow transitions").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!blocked.IsCompleted, "Issue edit ignored workflow type lock.");
+    await held.RollbackAsync(); await blocked.WaitAsync(TimeSpan.FromSeconds(5));
+}
+await workflow.Set(admin, new Transition(catalogRoleA, typeA, "Novo", "U tijeku"), false);
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "workflow-type:" + typeA, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_WorkflowTransitions\" WHERE \"RoleName\"=:role AND \"Type\"=:type", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = catalogRoleA;
+        revoke.Parameters.Add("type", OracleDbType.NVarchar2).Value = typeA;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var inputAfter = (await issues.Get(catalogUser, typedA))!.Input; inputAfter.Status = "U tijeku";
+    var queued = issues.Save(catalogUser, branchA, typedA, inputAfter);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Transition mutation was not isolated.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Removed workflow transition was accepted."); } catch (ArgumentException) { }
+}
+Check((await issues.Get(admin, typedA))!.Input.Status == "Novo", "Rejected workflow change partially committed.");
+Console.WriteLine("PASS: workflow changes are isolated by issue type; unrelated types and comments progress, and queued status edits recheck removed transitions.");
+
+var inheritedName = "sqlBranch" + suffix;
+await users.Create(inheritedName, "Branch reader", "", null, "SQL-test-password-2026", actorId: admin);
+var branchReader = (await users.Find(inheritedName))!.Id;
+await FixtureSql("INSERT INTO \"TMR_ProjectMembers\" (\"ProjectId\",\"UserId\",\"Role\") VALUES(:project,:userId,:role)", ("project", branchA), ("userId", branchReader), ("role", catalogRoleA));
+var movingChild = await projects.Save(admin, null, new ProjectInput { Name = "Moving child " + suffix, ParentId = branchA, InheritParentRoles = true });
+var movingTask = await issues.Save(admin, movingChild, null, new IssueInput { Title = "Moving inherited task", IsPrivate = false });
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "project:" + movingChild, 6);
+    await using (var move = new OracleCommand("UPDATE \"TMR_Projects\" SET \"ParentId\"=:parent,\"Revision\"=\"Revision\"+1 WHERE \"Id\"=:child", holder) { Transaction = held, BindByName = true })
+    {
+        move.Parameters.Add("parent", OracleDbType.Int32).Value = branchB;
+        move.Parameters.Add("child", OracleDbType.Int32).Value = movingChild;
+        await move.ExecuteNonQueryAsync();
+    }
+    var queued = issues.Comment(branchReader, movingTask, "Must not retain old ancestor rights");
+    await issues.Comment(admin, branchTaskB, "Independent hierarchy branch").WaitAsync(TimeSpan.FromSeconds(5));
+    Check(!queued.IsCompleted, "Hierarchy reader ignored project lock.");
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Old ancestor authority survived reparenting."); } catch (UnauthorizedAccessException) { }
+}
+var cycleA = await projects.Save(admin, null, new ProjectInput { Name = "Cycle A " + suffix });
+var cycleB = await projects.Save(admin, null, new ProjectInput { Name = "Cycle B " + suffix });
+var inputCycleA = (await projects.List(admin)).Single(p => p.Id == cycleA).Input; inputCycleA.ParentId = cycleB;
+var inputCycleB = (await projects.List(admin)).Single(p => p.Id == cycleB).Input; inputCycleB.ParentId = cycleA;
+async Task<bool> MoveAttempt(int id, ProjectInput input)
+{
+    try { await projects.Save(admin, id, input); return true; }
+    catch (ArgumentException) { return false; }
+    catch (InvalidOperationException error) when (error.Message.StartsWith("Projekt je")) { return false; }
+}
+var cycleResults = await Task.WhenAll(MoveAttempt(cycleA, inputCycleA), MoveAttempt(cycleB, inputCycleB));
+Check(cycleResults.Count(x => x) == 1, "Concurrent reparenting introduced a cycle or rejected both valid first moves.");
+Console.WriteLine("PASS: hierarchy paths are rediscovered after waiting; stale inherited authority is rejected and reversed concurrent moves cannot create cycles.");

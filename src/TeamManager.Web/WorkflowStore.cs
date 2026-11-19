@@ -16,7 +16,7 @@ public sealed class WorkflowStore(IConfiguration configuration,OracleWorkspace o
         var table=kind switch{"type"=>"IssueTypes","status"=>"IssueStatuses","priority"=>"IssuePriorities",_=>throw new ArgumentException()};
         var maxLength = kind switch { "priority" => 20, "type" => 50, _ => 30 };
         if(string.IsNullOrWhiteSpace(name)||name.Length>maxLength)throw new ArgumentException("Neispravan naziv.");
-        if(oracle.Enabled){await oracle.Write(w=>{
+        if(oracle.Enabled){await oracle.WriteCatalog(actor,[],["value:"+table+":"+name.Trim()],w=>{
             if(!OracleWorkspace.Right(w,actor,"workflow.manage"))throw new UnauthorizedAccessException();
             if(w.Rows(table).Any(r=>OracleWorkspace.Workspace.Text(r,"Name")==name.Trim()))throw new ArgumentException("Neispravan naziv.");
             var r=w.Add(table,("Name",name.Trim()));
@@ -37,7 +37,7 @@ public sealed class WorkflowStore(IConfiguration configuration,OracleWorkspace o
     }
     public async Task Set(int actor,Transition value,bool remove)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{
+        if(oracle.Enabled){await oracle.WriteCatalog(actor,["role:"+value.Role,"value:IssueTypes:"+value.Type,"value:IssueStatuses:"+value.From,"value:IssueStatuses:"+value.To],["workflow-type:"+value.Type],w=>{
             if(!OracleWorkspace.Right(w,actor,"workflow.manage"))throw new UnauthorizedAccessException();
             bool Match(System.Text.Json.Nodes.JsonObject r)=>OracleWorkspace.Workspace.Text(r,"RoleName")==value.Role&&
                 OracleWorkspace.Workspace.Text(r,"Type")==value.Type&&OracleWorkspace.Workspace.Text(r,"FromStatus")==value.From&&

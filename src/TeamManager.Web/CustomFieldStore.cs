@@ -84,7 +84,7 @@ public sealed class CustomFieldStore(IConfiguration config, ProjectStore project
 
     public async Task Create(int actor, string scope, string name)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{
+        if(oracle.Enabled){await oracle.WriteNamedAdministration(actor,$"custom-field-name:{scope}:{name.Trim().ToUpperInvariant()}",w=>{
             if(!OracleWorkspace.Rights(w,actor).Contains("*"))throw new UnauthorizedAccessException();
             if(w.Rows("CustomFields").Any(r=>OracleWorkspace.Workspace.Text(r,"Scope")==scope&&OracleWorkspace.Workspace.Text(r,"Name")==name))
                 throw new ArgumentException("Taj naziv već postoji.");

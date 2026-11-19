@@ -37,7 +37,7 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     public async Task Create(int user, int project, string name, bool managersOnly)
     {
-        if(oracle.Enabled){await oracle.Write(w=>{
+        if(oracle.Enabled){await oracle.WriteProjectData(user,project,"issue-field-name:"+name.Trim().ToUpperInvariant(),w=>{
             if(!OracleWorkspace.Manage(w,user,project)||w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")throw new UnauthorizedAccessException();
             if(w.Rows("ProjectIssueFields").Any(f=>OracleWorkspace.Workspace.Int(f,"ProjectId")==project&&OracleWorkspace.Workspace.Text(f,"Name")==name))throw new ArgumentException("Taj naziv već postoji.");
             w.Add("ProjectIssueFields",("Id",w.Next("ProjectIssueFields")),("ProjectId",project),("Name",name),("ManagersOnly",managersOnly));
@@ -55,7 +55,7 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     public async Task<bool> SetVisibility(int user, int project, int field, bool managersOnly)
     {
-        if(oracle.Enabled)return await oracle.Write(w=>{
+        if(oracle.Enabled)return await oracle.WriteProjectMetadata(user,project,null,null,w=>{
             if(!OracleWorkspace.Manage(w,user,project)||w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")throw new UnauthorizedAccessException();
             var f=w.Find("ProjectIssueFields",field);
             if(f is null||OracleWorkspace.Workspace.Int(f,"ProjectId")!=project)return false;

@@ -80,7 +80,7 @@ public sealed partial class OracleWorkspace
     internal static AppUser Account(JsonObject r) => new(Id(r), Text(r, "EmployeeNumber"), Text(r, "DisplayName"), Text(r, "JobTitle"), OptionalInt(r, "OrganizationUnitId"), Text(r, "PasswordHash"), Flag(r, "IsAdministrator"), Flag(r, "IsActive"), Int(r, "SessionVersion"));
     internal Task<List<string>> Effective(int user, string? kind, int? scope) => EffectiveSql(user, kind, scope);
     internal Task<List<AccessRole>> AccessRoles() => Read(w => w.Rows("Roles").OrderBy(r => Text(r, "Name")).Select(r => new AccessRole(Text(r, "Name"), Text(r, "Description"), w.Rows("RolePermissions").Where(p => Text(p, "RoleName") == Text(r, "Name")).Select(p => Text(p, "Permission")).ToList())).ToList());
-    internal Task<int> SaveProject(int user, int? id, ProjectInput input) => Write(w =>
+    internal Task<int> SaveProject(int user, int? id, ProjectInput input) => WriteProjectMetadata(user,id,input.ParentId,input.Name,w =>
     {
         if (!Manage(w, user, id))
             throw new UnauthorizedAccessException();

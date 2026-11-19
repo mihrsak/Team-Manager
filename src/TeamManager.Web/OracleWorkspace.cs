@@ -71,11 +71,21 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
     internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
     private async Task<T> Run<T>(Func<Workspace, T> action, bool write, WriteScope? scope = null)
     {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try { return await RunOnce(action, write, scope); }
+            catch (OracleScopeChangedException) when (attempt < 2) { }
+            catch (OracleScopeChangedException) { throw new OracleWriteBusyException(); }
+        }
+        throw new OracleWriteBusyException();
+    }
+    private async Task<T> RunOnce<T>(Func<Workspace, T> action, bool write, WriteScope? scope)
+    {
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
         await using var state = RelationalCommand(connection, transaction,
-            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=2)");
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=3)");
         var version = await state.ExecuteScalarAsync();
         if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
             throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");

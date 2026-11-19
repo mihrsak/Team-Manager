@@ -86,10 +86,10 @@ public sealed partial class OracleWorkspace
 
         Audit(w, actor, removeMember ? "membership.remove" : removeRole ? "membership.role.remove" : replace ? "membership.role.replace" : "membership.role.add", $"#{user}", $"{kind} #{scope}: {role}");
         return true;
-    });
+    },role,kind=="project"?scope:null);
     private static void GuardAdmin(Workspace w) => w.PreserveAdministrator = true;
 
-    internal Task SaveRole(int actor, string name, string description, string[] rights, bool create) => Write(w =>
+    internal Task SaveRole(int actor, string name, string description, string[] rights, bool create) => WriteCatalog(actor,[],["role:"+name],w =>
     {
         if (!Right(w, actor, "roles.manage"))
             throw new UnauthorizedAccessException();
@@ -117,7 +117,7 @@ public sealed partial class OracleWorkspace
         GuardAdmin(w);
         Audit(w, actor, remove ? "role.revoke" : "role.assign", $"#{user}", role);
         return true;
-    });
+    },role);
     internal Task ManageAccount(int actor, int user, bool? active, string? hash) => WriteAccount(actor,user,w =>
     {
         if (actor == user || !Rights(w, actor).Contains("*"))

@@ -113,7 +113,7 @@ public sealed partial class OracleWorkspace
         WHERE EXISTS (SELECT 1 FROM "TMR_ProjectMembers" m WHERE m."ProjectId"=:project AND m."UserId"=u."Id")
         ORDER BY u."DisplayName"
         """, c => AddQueryParameter(c, "project", project), r => new Team(r.GetInt32(0), r.GetString(1)));
-    internal async Task<bool> ReadySql() => (await Query("Readiness", "SELECT 1 FROM TMR_WORKSPACE WHERE ID=1 AND SCHEMA_VERSION=8 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=2) AND EXISTS (SELECT 1 FROM \"TMR_AppUsers\")", _ => { }, r => 1)).Count == 1;
+    internal async Task<bool> ReadySql() => (await Query("Readiness", "SELECT 1 FROM TMR_WORKSPACE WHERE ID=1 AND SCHEMA_VERSION=9 AND EXISTS (SELECT 1 FROM TMR_RUNTIME_FEATURES WHERE NAME='fine-writes' AND VERSION=3) AND EXISTS (SELECT 1 FROM \"TMR_AppUsers\")", _ => { }, r => 1)).Count == 1;
     private static async Task RequireAdministrator(OracleConnection connection, OracleTransaction transaction)
     {
         await using var command = RelationalCommand(connection, transaction, """

@@ -71,8 +71,8 @@ public sealed partial class OracleWorkspace
         return Id(row);
     }
 
-    internal Task<int> SaveIssue(int user, int project, int? id, IssueInput input) => WriteIssues(user,id is int existing ? [existing] : [], w => SaveIssue(w, user, project, id, input),input.AssigneeId is int assigned ? [assigned] : []);
-    internal Task Bulk(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority) => WriteIssues(user,revisions.Keys, w =>
+    internal Task<int> SaveIssue(int user,int project,int? id,IssueInput input) => WriteIssueChanges(user,id is int existing?[existing]:[],w=>SaveIssue(w,user,project,id,input),project,input);
+    internal Task Bulk(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority) => WriteIssueChanges(user,revisions.Keys, w =>
     {
         if (revisions.Count is < 1 or > 100 || status is null && priority is null)
             throw new ArgumentException("Odaberi od 1 do 100 zadataka i barem jednu promjenu.");
@@ -87,8 +87,8 @@ public sealed partial class OracleWorkspace
         }
 
         return true;
-    });
-    internal Task<int> Transfer(int user, int id, int revision, int destination, bool move) => WriteIssues(user,[id], w =>
+    },catalogs: [..status is null?Array.Empty<string>():["value:IssueStatuses:"+status],..priority is null?Array.Empty<string>():["value:IssuePriorities:"+priority]]);
+    internal Task<int> Transfer(int user, int id, int revision, int destination, bool move) => WriteIssueChanges(user,[id], w =>
     {
         var row = RequireIssue(w, user, id);
         var source = Int(row, "ProjectId");
@@ -114,7 +114,7 @@ public sealed partial class OracleWorkspace
             Set(row, "AssigneeId", null);
         Event(w, id, user, "moved", JsonSerializer.Serialize(new { FromProjectId = source, ToProjectId = destination }));
         return id;
-    });
+    },destination,catalogs:["value:IssueStatuses:Novo"]);
     internal Task Comment(int user, int id, string text) => WriteIssues(user,[id], w =>
     {
         RequireIssue(w, user, id, "issues.comment");
