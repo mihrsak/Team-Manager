@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
 
 public sealed class RepositoryHistoryModel(ProjectStore projects, ProjectRepositoryStore repositories,
-    Permissions permissions, RepositoryHistory history) : PageModel
+    Permissions permissions, RepositoryHistory history, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public int ProjectId { get; private set; }
     public ProjectRepository Repository { get; private set; } = null!;
@@ -22,7 +22,7 @@ public sealed class RepositoryHistoryModel(ProjectStore projects, ProjectReposit
         var rights = await permissions.Effective(user, "project", projectId);
         if (!rights.Contains("*") && !rights.Contains("repositories.view")) return Forbid();
 
-        var repository = (await repositories.List(projectId)).Find(item => item.Id == repositoryId);
+        var repository = await repositories.ForHistory(user, projectId, repositoryId);
         if (repository is null || !history.IsConfigured(repositoryId)) return NotFound();
 
         ProjectId = projectId;
@@ -40,7 +40,7 @@ public sealed class RepositoryHistoryModel(ProjectStore projects, ProjectReposit
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
-            ModelState.AddModelError("", "Povijest repozitorija trenutačno nije dostupna.");
+            ModelState.AddModelError("", text["Povijest repozitorija trenutačno nije dostupna."]);
             Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         }
         return Page();

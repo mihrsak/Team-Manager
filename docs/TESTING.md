@@ -174,3 +174,14 @@ Relacijski testovi provjeravaju Unicode teme i odgovore, veze autora, popis bez 
 
 
 Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, teme/odgovori/autori, konkurentno zaključavanje i opozivi prava, Oracle preglednički tokovi, HR/EN validacija i 36 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-forum-final radi na https://localhost:7572; readiness vraća 200.
+
+## DB-02: Git repozitoriji na Oracleu
+
+Relacijski testovi provjeravaju nazive i adrese, granice projekta, privatni pristup, odvojeno pravo `repositories.view`, neovlaštene promjene, duplikate, nedopuštene URL-ove, opoziv upravljačkih prava tijekom čekanja i rad drugog projekta. Dodavanje i uklanjanje moraju ostaviti točno pripadajući audit zapis; odbijene i ponovljene promjene ne smiju ga dodati. Zatvaranje projekta čuva veze i autorizirani dohvat za povijest. Lokalni `RepositoryHistory` mora vratiti stvarne commitove i tekst razlike.
+
+Za pripremu pregledničkog Git demo primjera postaviti `TEAM_MANAGER_REPOSITORY_FIXTURE_OUT` na ignoriranu JSON datoteku tijekom relacijskog testa glavne lokalne sheme. Test dodaje demo vezu na projektu 1 i zapisuje ProjectId, RepositoryId i lokalnu mapu. U ignoriranim postavkama web paketa konfigurirati `RepositoryHistory:Paths:<RepositoryId>` na tu mapu prije pokretanja servera. Istu varijablu postaviti za Node testove kako bi provjerili stvarni pregled povijesti i razlika. Odvojena migracijska shema ne treba tu varijablu.
+
+`Test-OracleWorkspace.cjs` provjerava naslijeđeni pregled poveznice, zabranu uklanjanja bez upravljačkog prava i povijesti bez dodatnog prava, izolaciju projekta, HR/EN validaciju i duplikate te konfigurirane Git commitove i razlike. `Test-Browser.cjs` uključuje popis repozitorija i, uz demo konfiguraciju, povijest i razliku: ukupno 42 HR/EN WCAG A/AA skeniranja (38 bez Git demo mape). Testove iste Oracle sheme pokretati slijedno.
+
+
+Lokalno provjereno 19. 11. 2026.: Release build bez upozorenja i grešaka, obje Oracle testne sheme, veze repozitorija i atomski audit, zasebna prava pregleda povijesti, opoziv tijekom čekanja, stvarni lokalni commitovi/razlike, HR/EN preglednički tokovi i 42 WCAG A/AA skeniranja te SQL integracijske regresije. Paket artifacts/oracle-repositories-final radi na https://localhost:7572; readiness vraća 200.

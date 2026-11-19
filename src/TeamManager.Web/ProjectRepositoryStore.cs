@@ -5,12 +5,13 @@ namespace TeamManager.Web;
 
 public sealed record ProjectRepository(int Id, string Name, string Url);
 
-public sealed class ProjectRepositoryStore(IConfiguration configuration, ProjectStore projects)
+public sealed class ProjectRepositoryStore(IConfiguration configuration, ProjectStore projects, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
-    public async Task<List<ProjectRepository>> List(int project)
+    public async Task<List<ProjectRepository>> List(int user, int project)
     {
+        if (oracle.Enabled) return await oracle.RepositoriesRead(user, project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
@@ -19,16 +20,21 @@ public sealed class ProjectRepositoryStore(IConfiguration configuration, Project
         var repositories = new List<ProjectRepository>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
-            repositories.Add(new(reader.GetInt32(0),reader.GetString(1),reader.GetString(2)));
+            repositories.Add(new(reader.GetInt32(0), reader.GetString(1), reader.GetString(2)));
         return repositories;
     }
 
+    public async Task<ProjectRepository?> ForHistory(int user, int project, int id)
+        => oracle.Enabled ? (await oracle.RepositoriesRead(user, project, id, history: true)).SingleOrDefault()
+            : (await List(user, project)).Find(r => r.Id == id);
+
     public async Task<bool> Add(int actor, int project, string name, Uri uri)
     {
+        if (oracle.Enabled) return await oracle.AddRepository(actor, project, name, uri);
         if (!await projects.CanManage(actor, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         return await AdministrationAuditStore.Execute(connection,
-            new(actor,"project.repository.add",name,$"#{project}"),"""
+            new(actor, "project.repository.add", name, $"#{project}"), """
             INSERT dbo.ProjectRepositories(ProjectId,Name,Url)
             SELECT Id,@name,@url FROM dbo.Projects WITH(HOLDLOCK) WHERE Id=@project AND State='Active'
             """, P("@project", project), P("@name", name), P("@url", uri.AbsoluteUri)) == 1;
@@ -36,12 +42,13 @@ public sealed class ProjectRepositoryStore(IConfiguration configuration, Project
 
     public async Task<bool> Remove(int actor, int project, int id)
     {
+        if (oracle.Enabled) return await oracle.RemoveRepository(actor, project, id);
         if (!await projects.CanManage(actor, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         return await AdministrationAuditStore.Execute(connection,
-            new(actor,"project.repository.remove",$"#{id}",$"#{project}"),"""
+            new(actor, "project.repository.remove", $"#{id}", $"#{project}"), """
             DELETE r FROM dbo.ProjectRepositories r JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=r.ProjectId
             WHERE r.Id=@id AND r.ProjectId=@project AND p.State='Active'
-            """, P("@id",id), P("@project",project)) == 1;
+            """, P("@id", id), P("@project", project)) == 1;
     }
 }

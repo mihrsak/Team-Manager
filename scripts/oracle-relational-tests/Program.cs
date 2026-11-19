@@ -1061,3 +1061,64 @@ Check(await forum.Create(admin, forumProject, "Closed", "No") is null && !await 
 Check((await forum.Topics(admin, forumProject, forumId)).Single().Body == forumBody && (await forum.Replies(admin, forumProject, forumId)).Single().Body == "Odgovor čćž 🚀", "Closing project lost forum data.");
 Check(snapshots == 0, "Forum loaded whole workspace.");
 Console.WriteLine("PASS: Oracle forum preserves topics, ordered replies and authors; topic locking, independent-topic progress, scoped moderation, queued revocation and closed-project rules hold.");
+
+var repositories = new ProjectRepositoryStore(configuration, projects, workspace);
+var repoProject = await projects.Save(admin, null, new ProjectInput { Name = "Oracle repositories " + suffix });
+var repoOther = await projects.Save(admin, null, new ProjectInput { Name = "Other repositories " + suffix });
+Check(await repositories.Add(admin, repoProject, "Repo čćž", new Uri("https://example.test/project.git")), "Repository add failed.");
+var repo = (await repositories.List(admin, repoProject)).Single();
+Check(repo.Name == "Repo čćž" && repo.Url == "https://example.test/project.git", "Repository metadata changed.");
+Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_AdministrationAudit\" WHERE \"Action\"='project.repository.add' AND \"Subject\"='Repo čćž' AND \"Details\"='#{repoProject}'")) == 1, "Repository add audit missing.");
+try { await repositories.Add(admin, repoProject, "REPO ČĆŽ", new Uri("https://example.test/other.git")); throw new Exception("Duplicate repository name accepted."); } catch (InvalidOperationException error) when (error.Message == "Taj naziv već postoji.") { }
+foreach (var badUrl in new[] { "http://example.test/repo", "https://user:secret@example.test/repo", "https://example.test/repo?token=secret", "https://example.test/repo#fragment" })
+    try { await repositories.Add(admin, repoProject, "Invalid", new Uri(badUrl)); throw new Exception("Unsafe URL accepted."); } catch (ArgumentException) { }
+Check(!await repositories.Remove(admin, repoOther, repo.Id) && await repositories.ForHistory(admin, repoOther, repo.Id) is null, "Repository crossed project boundary.");
+var repoRole = "repo" + suffix;
+await permissions.Save(admin, repoRole, "Repository viewer", ["issues.view"], true);
+var repoName = "repo" + suffix;
+await users.Create(repoName, "Repository viewer", "", null, "SQL-test-password-2026", actorId: admin);
+var repoUser = (await users.Find(repoName))!.Id;
+Check((await repositories.List(repoUser, repoProject)).Count == 0, "Private repository leaked.");
+await permissions.Assign(admin, repoUser, repoRole, false);
+Check((await repositories.List(repoUser, repoProject)).Count == 1 && await repositories.ForHistory(repoUser, repoProject, repo.Id) is null, "Project view granted Git history permission.");
+try { await repositories.Remove(repoUser, repoProject, repo.Id); throw new Exception("Viewer removed repository."); } catch (UnauthorizedAccessException) { }
+await permissions.Save(admin, repoRole, "Repository manager", ["issues.view", "projects.manage", "repositories.view"], false);
+Check((await repositories.ForHistory(repoUser, repoProject, repo.Id))?.Id == repo.Id, "Repository history right ignored.");
+var gitConfiguration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { [$"RepositoryHistory:Paths:{repo.Id}"] = Directory.GetCurrentDirectory() }).Build();
+var gitHistory = new RepositoryHistory(gitConfiguration);
+var gitCommits = await gitHistory.Recent(repo.Id, CancellationToken.None);
+Check(gitCommits.Count > 0 && (await gitHistory.Diff(repo.Id, gitCommits[0], CancellationToken.None)).Text.Length > 0, "Local Git history/diff missing.");
+await using (var held = holder.BeginTransaction())
+{
+    await Hold(held, "identity:" + repoUser, 6);
+    await using (var revoke = new OracleCommand("DELETE FROM \"TMR_UserRoles\" WHERE \"UserId\"=:userId AND \"RoleName\"=:role", holder) { Transaction = held, BindByName = true })
+    {
+        revoke.Parameters.Add("userId", OracleDbType.Int32).Value = repoUser;
+        revoke.Parameters.Add("role", OracleDbType.NVarchar2).Value = repoRole;
+        await revoke.ExecuteNonQueryAsync();
+    }
+    var queued = repositories.Remove(repoUser, repoProject, repo.Id);
+    Check(await Task.WhenAny(queued, Task.Delay(200)) != queued, "Repository mutation ignored identity lock.");
+    await repositories.Add(admin, repoOther, "Independent", new Uri("https://example.test/independent.git")).WaitAsync(TimeSpan.FromSeconds(5));
+    await held.CommitAsync();
+    try { await queued; throw new Exception("Revoked manager removed repository."); } catch (UnauthorizedAccessException) { }
+}
+Check((await repositories.List(admin, repoProject)).Single().Id == repo.Id && await repositories.ForHistory(repoUser, repoProject, repo.Id) is null, "Revocation lost repository or exposed history.");
+var repoInput = (await projects.List(admin)).Single(p => p.Id == repoProject).Input;
+repoInput.State = "Closed";
+await projects.Save(admin, repoProject, repoInput);
+Check(!await repositories.Add(admin, repoProject, "Closed", new Uri("https://example.test/closed.git")) && !await repositories.Remove(admin, repoProject, repo.Id), "Closed project mutated repositories.");
+Check((await repositories.ForHistory(admin, repoProject, repo.Id))?.Id == repo.Id, "Closed project lost history binding.");
+repoInput = (await projects.List(admin)).Single(p => p.Id == repoProject).Input; repoInput.State = "Active";
+await projects.Save(admin, repoProject, repoInput);
+Check(await repositories.Remove(admin, repoProject, repo.Id) && !await repositories.Remove(admin, repoProject, repo.Id), "Repository removal not scoped/idempotent.");
+Check(Convert.ToInt32(await Scalar($"SELECT COUNT(*) FROM \"TMR_AdministrationAudit\" WHERE \"Action\"='project.repository.remove' AND \"Subject\"='#{repo.Id}'")) == 1, "Repository removal audit not atomic.");
+if (Environment.GetEnvironmentVariable("TEAM_MANAGER_REPOSITORY_FIXTURE_OUT") is { Length: > 0 } repoFixtureOut)
+{
+    var demoName = "Oracle Git demo " + suffix;
+    await repositories.Add(admin, 1, demoName, new Uri("https://example.test/team-manager.git"));
+    var demoRepo = (await repositories.List(admin, 1)).Single(r => r.Name == demoName);
+    await File.WriteAllTextAsync(repoFixtureOut, System.Text.Json.JsonSerializer.Serialize(new { ProjectId = 1, RepositoryId = demoRepo.Id, Path = Directory.GetCurrentDirectory() }));
+}
+Check(snapshots == 0, "Repositories loaded whole workspace.");
+Console.WriteLine("PASS: Oracle repositories preserve URLs, project bindings and atomic audit; history rights, local Git commits/diff, queued revocation, validation and closed-project rules hold.");

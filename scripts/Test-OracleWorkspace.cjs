@@ -170,6 +170,39 @@ async function run() {
             await post(admin, topicPath + '&handler=Lock', { locked: 'false' });
         }
         console.log('PASS: Oracle forum inherited create/reply, moderation separation, locking, project isolation, HTML escaping and HR/EN validation/status.');
+        const repositoriesPath = '/Repositories?projectId=' + child;
+        const repositoryName = 'Oracle repo ' + suffix;
+        await post(admin, repositoriesPath + '&handler=Add', { name: repositoryName, url: 'https://example.test/' + suffix + '.git' });
+        await admin.goto(repositoriesPath);
+        const repositoryRow = admin.getByRole('listitem').filter({ hasText: repositoryName });
+        const removeRepositoryPath = await repositoryRow.locator('form').getAttribute('action');
+        const repositoryId = new URL(removeRepositoryPath, baseURL).searchParams.get('repositoryId');
+        assert.ok(Number(repositoryId) > 0);
+        await reader.goto(repositoriesPath);
+        assert.ok(await reader.getByRole('link', { name: repositoryName, exact: true }).isVisible());
+        const forbiddenRemoval = await post(reader, removeRepositoryPath, {});
+        assert.equal(new URL(forbiddenRemoval.url()).pathname, '/Denied');
+        const forbiddenHistory = await reader.request.get('/RepositoryHistory?projectId=' + child + '&repositoryId=' + repositoryId);
+        assert.equal(new URL(forbiddenHistory.url()).pathname, '/Denied');
+        await checkStatus(admin, '/RepositoryHistory?projectId=' + wrongProject + '&repositoryId=' + repositoryId, 404);
+        for (const language of ['en', 'hr']) {
+            await post(admin, '/Profile?handler=Language', { language });
+            const invalidRepo = await post(admin, repositoriesPath + '&handler=Add', { name: 'Invalid', url: 'http://example.test/repo' });
+            assert.ok(decodeNumericEntities(await invalidRepo.text()).includes(language === 'en' ? 'Enter a name up to 80 characters' : 'Unesi naziv do 80 znakova'));
+            const duplicateRepo = await post(admin, repositoriesPath + '&handler=Add', { name: repositoryName, url: 'https://example.test/duplicate.git' });
+            assert.ok(decodeNumericEntities(await duplicateRepo.text()).includes(language === 'en' ? 'That name already exists.' : 'Taj naziv već postoji.'));
+            if (process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT) {
+                const fixture = require('node:fs').readFileSync(process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT, 'utf8');
+                const demo = JSON.parse(fixture);
+                const historyPath = '/RepositoryHistory?projectId=' + demo.ProjectId + '&repositoryId=' + demo.RepositoryId;
+                await admin.goto(historyPath);
+                const diffPath = await admin.locator('tbody a').first().getAttribute('href');
+                assert.ok(diffPath.includes('commit='));
+                await admin.goto(diffPath);
+                assert.ok((await admin.locator('pre').textContent()).includes('diff --git'));
+            }
+        }
+        console.log('PASS: Oracle repository metadata, inherited visibility, separate history/manage rights, HR/EN validation and configured local commits/diff.');
 
         // Both writes carry the same revision. Oracle must commit one edit and reject the other.
         const fields = {
@@ -229,6 +262,7 @@ async function run() {
         await checkStatus(reader, documentDownload, 404);
         await checkStatus(reader, wikiArticle + "&revision=1", 404);
         await checkStatus(reader, topicPath, 404);
+        await checkStatus(reader, repositoriesPath, 404);
         console.log('PASS: membership revocation protects direct issue and attachment URLs immediately.');
 
         const guard = await post(admin, '/Roles', {
@@ -238,6 +272,7 @@ async function run() {
         await admin.goto('/Roles');
         assert.equal(new URL(admin.url()).pathname, '/Roles');
         console.log('PASS: attempted removal of the last administrator rolls back.');
+        await post(admin, removeRepositoryPath, {});
         await post(admin, documentsPath + '&handler=Remove&documentId=' + documentId, {});
         await checkStatus(admin, documentDownload, 404);
 
@@ -299,7 +334,8 @@ async function run() {
         await checkStatus(admin, '/ProjectDocuments?projectId=' + parent, 200);
         await checkStatus(admin, '/Wiki?projectId=' + parent, 200);
         await checkStatus(admin, '/Forum?projectId=' + parent, 200);
-        await checkStatus(admin, '/Repositories?projectId=' + parent, 503);
+        await checkStatus(admin, '/Repositories?projectId=' + parent, 200);
+        await checkStatus(admin, '/MailIntake?projectId=' + parent, 503);
         console.log('READY: ' + baseURL + '/Projects');
     } finally {
         await browser.close();

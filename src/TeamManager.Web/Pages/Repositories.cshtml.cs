@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
-public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositoryStore repositories, Permissions permissions, RepositoryHistory history) : PageModel
+public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositoryStore repositories, Permissions permissions, RepositoryHistory history, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<ProjectRepository> Repositories { get; private set; } = [];
@@ -23,7 +23,7 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
         Response.Headers.CacheControl = "private, no-store";
         Project = project;
         CanEdit = project.Input.State == "Active" && await projects.CanManage(UserId, projectId);
-        Repositories = await repositories.List(projectId);
+        Repositories = await repositories.List(UserId, projectId);
         var rights = await permissions.Effective(UserId, "project", projectId);
         if (rights.Contains("*") || rights.Contains("repositories.view"))
             Browsable = Repositories.Where(repo => history.IsConfigured(repo.Id)).Select(repo => repo.Id).ToHashSet();
@@ -44,7 +44,7 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
             uri.UserInfo.Length != 0 || uri.Query.Length != 0 || uri.Fragment.Length != 0 ||
             uri.AbsoluteUri.Length > 500)
         {
-            ModelState.AddModelError("", "Unesi naziv do 80 znakova i HTTPS adresu repozitorija bez vjerodajnica, parametara ili fragmenta.");
+            ModelState.AddModelError("", text["Unesi naziv do 80 znakova i HTTPS adresu repozitorija bez vjerodajnica, parametara ili fragmenta."]);
             return Page();
         }
 
@@ -53,9 +53,10 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
             if (!await repositories.Add(UserId, projectId, name, uri)) return Forbid();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (RepositoryNameConflictException ex) { ModelState.AddModelError("", text[ex.Message]); return Page(); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {
-            ModelState.AddModelError("", "Taj naziv već postoji.");
+            ModelState.AddModelError("", text["Taj naziv već postoji."]);
             return Page();
         }
         return RedirectToPage(new { projectId });

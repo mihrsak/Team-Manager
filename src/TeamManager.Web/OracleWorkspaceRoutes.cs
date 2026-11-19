@@ -31,6 +31,8 @@ internal static class OracleWorkspaceRoutes
         "/ProjectDocuments",
         "/Wiki",
         "/Forum",
+        "/Repositories",
+        "/RepositoryHistory",
         "/IssueFields",
         "/CustomFields",
         "/Notifications",

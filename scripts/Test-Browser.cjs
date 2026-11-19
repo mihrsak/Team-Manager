@@ -162,12 +162,25 @@ async function run() {
         await forumForm.locator('[name=body]').fill('Open topic čćž');
         await forumForm.locator('button').click();
         const forumOpen = new URL(page.url()).pathname + new URL(page.url()).search;
+        await page.goto('/Repositories?projectId=1');
+        const repositoryForm = page.locator('form[action*="handler=Add"]');
+        await repositoryForm.locator('[name=name]').fill('Browser Git ' + suffix);
+        await repositoryForm.locator('[name=url]').fill('https://example.test/browser.git');
+        await repositoryForm.locator('button').click();
+        const repositoryRoutes = ['/Repositories?projectId=1'];
+        if (process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT) {
+            const fixture = JSON.parse(require('node:fs').readFileSync(process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT, 'utf8'));
+            const historyPath = '/RepositoryHistory?projectId=' + fixture.ProjectId + '&repositoryId=' + fixture.RepositoryId;
+            await page.goto(historyPath);
+            const diffPath = await page.locator('tbody a').first().getAttribute('href');
+            repositoryRoutes.push(historyPath, diffPath);
+        }
         for (const language of ['hr', 'en']) {
             await page.goto('/Profile');
             const form = page.locator('form[action*="handler=Language"]');
             await form.locator('[name=language]').selectOption(language);
             await form.locator('button').click();
-            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1', '/Wiki?projectId=1', wikiArticle, wikiArticle + '&revision=2&compare=1', '/Forum?projectId=1', forumLocked, forumOpen]) {
+            for (const route of ['/Dashboard', '/Projects', '/Issues', issue, '/Search', '/Calendar', '/TimeReport', '/Profile', '/ProjectNews?projectId=1', newsArticle, '/ProjectDocuments?projectId=1', '/Wiki?projectId=1', wikiArticle, wikiArticle + '&revision=2&compare=1', '/Forum?projectId=1', forumLocked, forumOpen, ...repositoryRoutes]) {
                 await audit(page, route, language);
             }
             await page.goto('/Search');
@@ -191,7 +204,7 @@ async function run() {
         await page.goto('/Issues');
         assert.equal(new URL(page.url()).pathname, '/Login');
         assert.deepEqual(violations, []);
-        console.log('PASS: 36 WCAG A/AA scans, keyboard skip link, locale switching and logout.');
+        console.log('PASS: ' + (process.env.TEAM_MANAGER_REPOSITORY_FIXTURE_OUT ? 42 : 38) + ' WCAG A/AA scans, keyboard skip link, locale switching and logout.');
     } finally {
         if (violations.length) console.error(JSON.stringify(violations, null, 2));
         await browser.close();
