@@ -143,11 +143,17 @@ builder.Services.AddAuthorization();
 var healthChecks = builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddScoped<OracleOverviewStore>();
 builder.Services.AddScoped<OracleProjectImport>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<OracleWorkspace>();
 if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
 
+if (args.Contains("--migrate-oracle-workspace"))
+{
+    await new OracleWorkspace(builder.Configuration).MigrateRelational();
+    return;
+}
 if (args.Contains("--import-oracle-workspace"))
 {
     await new OracleWorkspace(builder.Configuration).Import();

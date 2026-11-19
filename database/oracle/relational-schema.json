@@ -1,0 +1,4180 @@
+{
+  "version": 6,
+  "tables": [
+    {
+      "name": "AdministrationAudit",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "bigint",
+          "length": 8,
+          "precision": 19,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ActorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ActorEmployeeNumber",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Action",
+          "type": "varchar",
+          "length": 40,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Subject",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "Details",
+          "type": "nvarchar",
+          "length": 4000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'')"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_AdministrationAudit_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "ApiTokens",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 160,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TokenHash",
+          "type": "binary",
+          "length": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "SessionVersion",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "ExpiresAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ApiTokens_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_ApiTokens_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "TokenHash"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ApiTokens_0",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "AppUsers",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "EmployeeNumber",
+          "type": "varchar",
+          "length": 30,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "DisplayName",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "JobTitle",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'')"
+        },
+        {
+          "name": "OrganizationUnitId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "PasswordHash",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IsAdministrator",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "FailedAttempts",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "LockoutUntil",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "IsActive",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        },
+        {
+          "name": "SessionVersion",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "DisplayTheme",
+          "type": "varchar",
+          "length": 6,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('light')"
+        },
+        {
+          "name": "UiLanguage",
+          "type": "varchar",
+          "length": 2,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('hr')"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_AppUsers_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_AppUsers_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "EmployeeNumber"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_AppUsers_0",
+          "columns": [
+            "OrganizationUnitId"
+          ],
+          "referencedTable": "OrganizationUnits",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([DisplayTheme]='system' OR [DisplayTheme]='dark' OR [DisplayTheme]='light')",
+        "([UiLanguage]='en' OR [UiLanguage]='hr')"
+      ]
+    },
+    {
+      "name": "CustomFields",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Scope",
+          "type": "varchar",
+          "length": 8,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_CustomFields_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_CustomFields_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Scope",
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_CustomFields_2",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Scope",
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": [
+        "([Scope]='time' OR [Scope]='project' OR [Scope]='user')"
+      ]
+    },
+    {
+      "name": "EmailNotificationPreferences",
+      "columns": [
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Address",
+          "type": "nvarchar",
+          "length": 508,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "SendWatchedIssues",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "SendDueReminders",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_EmailNotificationPreferences_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "UserId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_EmailNotificationPreferences_0",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([SendWatchedIssues]=(0) OR [Address] IS NOT NULL)",
+        "([SendDueReminders]=(0) OR [Address] IS NOT NULL)"
+      ]
+    },
+    {
+      "name": "ForumReplies",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TopicId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ForumReplies_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ForumReplies_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ForumReplies_1",
+          "columns": [
+            "TopicId"
+          ],
+          "referencedTable": "ForumTopics",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ForumTopics",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 300,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IsLocked",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ForumTopics_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ForumTopics_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ForumTopics_1",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssueAttachments",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FileName",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Content",
+          "type": "varbinary",
+          "length": -1,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueAttachments_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueAttachments_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueAttachments_1",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "(datalength([Content])>=(1) AND datalength([Content])<=(10485760))"
+      ]
+    },
+    {
+      "name": "IssueEmailQueue",
+      "columns": [
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "EventId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "QueuedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "Attempts",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "AvailableAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "LeaseId",
+          "type": "uniqueidentifier",
+          "length": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "CompletedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": true,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueEmailQueue_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "UserId",
+            "EventId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueEmailQueue_0",
+          "columns": [
+            "UserId",
+            "EventId"
+          ],
+          "referencedTable": "IssueNotifications",
+          "referencedColumns": [
+            "UserId",
+            "EventId"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssueEvents",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Kind",
+          "type": "varchar",
+          "length": 20,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": -1,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueEvents_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueEvents_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueEvents_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssueFieldValues",
+      "columns": [
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FieldId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Value",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueFieldValues_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "IssueId",
+            "FieldId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueFieldValues_0",
+          "columns": [
+            "FieldId"
+          ],
+          "referencedTable": "ProjectIssueFields",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueFieldValues_1",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssueLinks",
+      "columns": [
+        {
+          "name": "SourceId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TargetId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Kind",
+          "type": "varchar",
+          "length": 12,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueLinks_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "SourceId",
+            "TargetId",
+            "Kind"
+          ]
+        },
+        {
+          "name": "TMR_K_IssueLinks_1",
+          "primary": false,
+          "filter": "([Kind]='parent')",
+          "columns": [
+            "TargetId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueLinks_0",
+          "columns": [
+            "SourceId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueLinks_1",
+          "columns": [
+            "TargetId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([SourceId]<>[TargetId] AND (NOT ([Kind]='duplicate' OR [Kind]='related') OR [SourceId]<[TargetId]))",
+        "([Kind]='parent' OR [Kind]='blocks' OR [Kind]='duplicate' OR [Kind]='related')"
+      ]
+    },
+    {
+      "name": "IssueNotifications",
+      "columns": [
+        {
+          "name": "EventId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IsRead",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueNotifications_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "UserId",
+            "EventId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueNotifications_0",
+          "columns": [
+            "EventId"
+          ],
+          "referencedTable": "IssueEvents",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueNotifications_1",
+          "columns": [
+            "IssueId",
+            "UserId"
+          ],
+          "referencedTable": "IssueWatchers",
+          "referencedColumns": [
+            "IssueId",
+            "UserId"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssuePriorities",
+      "columns": [
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 40,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssuePriorities_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "IssuePrivateNotes",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssuePrivateNotes_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssuePrivateNotes_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssuePrivateNotes_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "IssueReminderQueue",
+      "columns": [
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "DueDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Attempts",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "AvailableAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "LeaseId",
+          "type": "uniqueidentifier",
+          "length": 16,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "CompletedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": true,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueReminderQueue_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "UserId",
+            "IssueId",
+            "DueDate"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueReminderQueue_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueReminderQueue_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "Issues",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Description",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'')"
+        },
+        {
+          "name": "Type",
+          "type": "nvarchar",
+          "length": 100,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Priority",
+          "type": "nvarchar",
+          "length": 40,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Status",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AssigneeId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "DueDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedBy",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        },
+        {
+          "name": "StartDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "RoadmapItemId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "IsPrivate",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_Issues_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_Issues_0",
+          "columns": [
+            "AssigneeId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_1",
+          "columns": [
+            "CreatedBy"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_2",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_3",
+          "columns": [
+            "Priority"
+          ],
+          "referencedTable": "IssuePriorities",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_4",
+          "columns": [
+            "Status"
+          ],
+          "referencedTable": "IssueStatuses",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_5",
+          "columns": [
+            "Type"
+          ],
+          "referencedTable": "IssueTypes",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_Issues_6",
+          "columns": [
+            "ProjectId",
+            "RoadmapItemId"
+          ],
+          "referencedTable": "ProjectMilestones",
+          "referencedColumns": [
+            "ProjectId",
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([StartDate] IS NULL OR [DueDate] IS NULL OR [StartDate]<=[DueDate])"
+      ]
+    },
+    {
+      "name": "IssueStatuses",
+      "columns": [
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IsClosed",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueStatuses_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "IssueTypes",
+      "columns": [
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 100,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueTypes_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "IssueWatchers",
+      "columns": [
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_IssueWatchers_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "IssueId",
+            "UserId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_IssueWatchers_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_IssueWatchers_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "Members",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TeamId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Role",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'Član')"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_Members_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_Members_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "TeamId",
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_K_Members_2",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "TeamId",
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_Members_3",
+          "primary": false,
+          "filter": "([UserId] IS NOT NULL)",
+          "columns": [
+            "TeamId",
+            "UserId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_Members_0",
+          "columns": [
+            "TeamId"
+          ],
+          "referencedTable": "Teams",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_Members_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_Members_2",
+          "columns": [
+            "Role"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "OrganizationUnits",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_OrganizationUnits_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_OrganizationUnits_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "ProjectDocuments",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 300,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Description",
+          "type": "nvarchar",
+          "length": 4000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FileName",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Content",
+          "type": "varbinary",
+          "length": -1,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectDocuments_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectDocuments_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectDocuments_1",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "(datalength([Content])>=(1) AND datalength([Content])<=(10485760))"
+      ]
+    },
+    {
+      "name": "ProjectFieldValues",
+      "columns": [
+        {
+          "name": "EntityId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FieldId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Scope",
+          "type": "varchar",
+          "length": 8,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('project')"
+        },
+        {
+          "name": "Value",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectFieldValues_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "EntityId",
+            "FieldId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectFieldValues_0",
+          "columns": [
+            "EntityId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectFieldValues_1",
+          "columns": [
+            "Scope",
+            "FieldId"
+          ],
+          "referencedTable": "CustomFields",
+          "referencedColumns": [
+            "Scope",
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Scope]='project')"
+      ]
+    },
+    {
+      "name": "ProjectIssueFields",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ManagersOnly",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectIssueFields_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_ProjectIssueFields_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectIssueFields_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectMemberRoles",
+      "columns": [
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectMemberRoles_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "UserId",
+            "RoleName"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectMemberRoles_0",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectMemberRoles_1",
+          "columns": [
+            "ProjectId",
+            "UserId"
+          ],
+          "referencedTable": "ProjectMembers",
+          "referencedColumns": [
+            "ProjectId",
+            "UserId"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectMembers",
+      "columns": [
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Role",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectMembers_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "UserId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectMembers_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectMembers_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectMembers_2",
+          "columns": [
+            "Role"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectMilestones",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Kind",
+          "type": "varchar",
+          "length": 12,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Description",
+          "type": "nvarchar",
+          "length": 2000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TargetDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "IsComplete",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectMilestones_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_ProjectMilestones_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "Kind",
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_K_ProjectMilestones_2",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectMilestones_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Kind]='milestone' OR [Kind]='version')"
+      ]
+    },
+    {
+      "name": "ProjectNews",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 300,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectNews_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectNews_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectNews_1",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectNewsComments",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "NewsId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": 4000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectNewsComments_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectNewsComments_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectNewsComments_1",
+          "columns": [
+            "NewsId"
+          ],
+          "referencedTable": "ProjectNews",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectRepositories",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 160,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Url",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectRepositories_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_ProjectRepositories_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectRepositories_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "Projects",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Description",
+          "type": "nvarchar",
+          "length": 8000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'')"
+        },
+        {
+          "name": "ParentId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "IsPublic",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        },
+        {
+          "name": "State",
+          "type": "varchar",
+          "length": 10,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('Active')"
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        },
+        {
+          "name": "IssuesEnabled",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        },
+        {
+          "name": "TimeEnabled",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        },
+        {
+          "name": "InheritParentRoles",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((0))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_Projects_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_Projects_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_Projects_0",
+          "columns": [
+            "ParentId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([ParentId]<>[Id])",
+        "([State]='Archived' OR [State]='Closed' OR [State]='Active')"
+      ]
+    },
+    {
+      "name": "ProjectWikiPages",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 240,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectWikiPages_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_ProjectWikiPages_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "Title"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectWikiPages_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ProjectWikiRevisions",
+      "columns": [
+        {
+          "name": "PageId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 240,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "type": "nvarchar",
+          "length": -1,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AuthorId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ProjectWikiRevisions_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "PageId",
+            "Revision"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ProjectWikiRevisions_0",
+          "columns": [
+            "AuthorId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ProjectWikiRevisions_1",
+          "columns": [
+            "PageId"
+          ],
+          "referencedTable": "ProjectWikiPages",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "ReceivedIssueMail",
+      "columns": [
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "MessageHash",
+          "type": "binary",
+          "length": 32,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ReceivedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_ReceivedIssueMail_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "ProjectId",
+            "MessageHash"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_ReceivedIssueMail_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_ReceivedIssueMail_1",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "RegistrationRequests",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "EmployeeNumber",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "DisplayName",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "PasswordHash",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_RegistrationRequests_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_RegistrationRequests_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "EmployeeNumber"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "RolePermissions",
+      "columns": [
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Permission",
+          "type": "varchar",
+          "length": 50,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_RolePermissions_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "RoleName",
+            "Permission"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_RolePermissions_0",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "Roles",
+      "columns": [
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Description",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'')"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_Roles_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "SavedIssueQueries",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 160,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ProjectId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Status",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "SearchText",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "SortOrder",
+          "type": "varchar",
+          "length": 20,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "GroupBy",
+          "type": "varchar",
+          "length": 20,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Columns",
+          "type": "varchar",
+          "length": 100,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_SavedIssueQueries_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_SavedIssueQueries_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "UserId",
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_SavedIssueQueries_0",
+          "columns": [
+            "ProjectId"
+          ],
+          "referencedTable": "Projects",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_SavedIssueQueries_1",
+          "columns": [
+            "Status"
+          ],
+          "referencedTable": "IssueStatuses",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_SavedIssueQueries_2",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "SchemaVersions",
+      "columns": [
+        {
+          "name": "Version",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AppliedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_SchemaVersions_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Version"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "TeamMemberRoles",
+      "columns": [
+        {
+          "name": "MemberId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_TeamMemberRoles_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "MemberId",
+            "RoleName"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_TeamMemberRoles_0",
+          "columns": [
+            "MemberId"
+          ],
+          "referencedTable": "Members",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_TeamMemberRoles_1",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "Teams",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_Teams_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_Teams_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "TimeEntries",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "IssueId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "WorkDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Hours",
+          "type": "decimal",
+          "length": 5,
+          "precision": 6,
+          "scale": 2,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Note",
+          "type": "nvarchar",
+          "length": 2000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        },
+        {
+          "name": "Activity",
+          "type": "nvarchar",
+          "length": 120,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'Općenito')"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_TimeEntries_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_TimeEntries_0",
+          "columns": [
+            "IssueId"
+          ],
+          "referencedTable": "Issues",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_TimeEntries_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Hours]>(0) AND [Hours]<=(24))"
+      ]
+    },
+    {
+      "name": "TimeFieldValues",
+      "columns": [
+        {
+          "name": "EntityId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FieldId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Scope",
+          "type": "varchar",
+          "length": 8,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('time')"
+        },
+        {
+          "name": "Value",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_TimeFieldValues_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "EntityId",
+            "FieldId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_TimeFieldValues_0",
+          "columns": [
+            "EntityId"
+          ],
+          "referencedTable": "TimeEntries",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_TimeFieldValues_1",
+          "columns": [
+            "Scope",
+            "FieldId"
+          ],
+          "referencedTable": "CustomFields",
+          "referencedColumns": [
+            "Scope",
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Scope]='time')"
+      ]
+    },
+    {
+      "name": "UserFieldValues",
+      "columns": [
+        {
+          "name": "EntityId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FieldId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Scope",
+          "type": "varchar",
+          "length": 8,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "('user')"
+        },
+        {
+          "name": "Value",
+          "type": "nvarchar",
+          "length": 1000,
+          "precision": 0,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Revision",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_UserFieldValues_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "EntityId",
+            "FieldId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_UserFieldValues_0",
+          "columns": [
+            "EntityId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_UserFieldValues_1",
+          "columns": [
+            "Scope",
+            "FieldId"
+          ],
+          "referencedTable": "CustomFields",
+          "referencedColumns": [
+            "Scope",
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Scope]='user')"
+      ]
+    },
+    {
+      "name": "UserGroupMembers",
+      "columns": [
+        {
+          "name": "GroupId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_UserGroupMembers_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "GroupId",
+            "UserId"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_UserGroupMembers_0",
+          "columns": [
+            "GroupId"
+          ],
+          "referencedTable": "UserGroups",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_UserGroupMembers_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "UserGroupRoles",
+      "columns": [
+        {
+          "name": "GroupId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_UserGroupRoles_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "GroupId",
+            "RoleName"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_UserGroupRoles_0",
+          "columns": [
+            "GroupId"
+          ],
+          "referencedTable": "UserGroups",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_UserGroupRoles_1",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "UserGroups",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Name",
+          "type": "nvarchar",
+          "length": 200,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_UserGroups_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_K_UserGroups_1",
+          "primary": false,
+          "filter": null,
+          "columns": [
+            "Name"
+          ]
+        }
+      ],
+      "foreignKeys": [],
+      "checks": []
+    },
+    {
+      "name": "UserRoles",
+      "columns": [
+        {
+          "name": "UserId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_UserRoles_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "UserId",
+            "RoleName"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_UserRoles_0",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_UserRoles_1",
+          "columns": [
+            "UserId"
+          ],
+          "referencedTable": "AppUsers",
+          "referencedColumns": [
+            "Id"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "WorkflowTransitions",
+      "columns": [
+        {
+          "name": "RoleName",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Type",
+          "type": "nvarchar",
+          "length": 100,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "FromStatus",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "ToStatus",
+          "type": "nvarchar",
+          "length": 60,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_WorkflowTransitions_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "RoleName",
+            "Type",
+            "FromStatus",
+            "ToStatus"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_WorkflowTransitions_0",
+          "columns": [
+            "FromStatus"
+          ],
+          "referencedTable": "IssueStatuses",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_WorkflowTransitions_1",
+          "columns": [
+            "RoleName"
+          ],
+          "referencedTable": "Roles",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_WorkflowTransitions_2",
+          "columns": [
+            "ToStatus"
+          ],
+          "referencedTable": "IssueStatuses",
+          "referencedColumns": [
+            "Name"
+          ]
+        },
+        {
+          "name": "TMR_F_WorkflowTransitions_3",
+          "columns": [
+            "Type"
+          ],
+          "referencedTable": "IssueTypes",
+          "referencedColumns": [
+            "Name"
+          ]
+        }
+      ],
+      "checks": []
+    },
+    {
+      "name": "WorkItems",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "TeamId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "AssigneeId",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "Title",
+          "type": "nvarchar",
+          "length": 400,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": null
+        },
+        {
+          "name": "Status",
+          "type": "nvarchar",
+          "length": 40,
+          "precision": 0,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "(N'Novo')"
+        },
+        {
+          "name": "DueDate",
+          "type": "date",
+          "length": 3,
+          "precision": 10,
+          "scale": 0,
+          "nullable": true,
+          "defaultValue": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "datetime2",
+          "length": 8,
+          "precision": 27,
+          "scale": 7,
+          "nullable": false,
+          "defaultValue": "(sysutcdatetime())"
+        }
+      ],
+      "keys": [
+        {
+          "name": "TMR_K_WorkItems_0",
+          "primary": true,
+          "filter": null,
+          "columns": [
+            "Id"
+          ]
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "TMR_F_WorkItems_0",
+          "columns": [
+            "TeamId"
+          ],
+          "referencedTable": "Teams",
+          "referencedColumns": [
+            "Id"
+          ]
+        },
+        {
+          "name": "TMR_F_WorkItems_1",
+          "columns": [
+            "TeamId",
+            "AssigneeId"
+          ],
+          "referencedTable": "Members",
+          "referencedColumns": [
+            "TeamId",
+            "Id"
+          ]
+        }
+      ],
+      "checks": [
+        "([Status]=N'Završeno' OR [Status]=N'U tijeku' OR [Status]=N'Novo')"
+      ]
+    }
+  ]
+}

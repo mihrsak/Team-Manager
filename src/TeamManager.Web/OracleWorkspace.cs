@@ -6,10 +6,11 @@ using Microsoft.Data.SqlClient;
 using Oracle.ManagedDataAccess.Client;
 
 namespace TeamManager.Web;
-// One versioned document holds a consistent workspace, including binary attachments.
+// Relational Oracle tables persist typed rows, including binary attachments.
 // Oracle owns the write lock and commit boundary, including authorization and history.
-public sealed partial class OracleWorkspace(IConfiguration configuration)
+public sealed partial class OracleWorkspace(IConfiguration configuration, IHttpContextAccessor? contextAccessor = null)
 {
+    private static readonly object RequestSnapshotKey = new();
     public bool Enabled => configuration["Database:Provider"]?.Equals("Oracle", StringComparison.OrdinalIgnoreCase) == true;
 
     private OracleConnection Connect() => new(configuration.GetConnectionString("TeamManagerOracle") ?? throw new InvalidOperationException("Configure ConnectionStrings:TeamManagerOracle."));
@@ -64,39 +65,40 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         // Import is deliberately insert-only. A second import cannot overwrite active Oracle changes.
         await insert.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
+        await MigrateRelational();
     }
 
     internal async Task<T> Read<T>(Func<Workspace, T> action) => await Run(action, false);
     internal async Task<T> Write<T>(Func<Workspace, T> action) => await Run(action, true);
     private async Task<T> Run<T>(Func<Workspace, T> action, bool write)
     {
+        var items = contextAccessor?.HttpContext?.Items;
+        if (!write && items?[RequestSnapshotKey] is JsonObject snapshot)
+            return action(new Workspace((JsonObject)snapshot.DeepClone()));
         await using var connection = Connect();
         await connection.OpenAsync();
-        await using var transaction = connection.BeginTransaction();
-        await using var select = new OracleCommand("SELECT CONTENT FROM TM_ACTIVE_WORKSPACE WHERE ID=1" + (write ? " FOR UPDATE WAIT 10" : ""), connection)
-        {
-            Transaction = transaction,
-            CommandTimeout = 15
-        };
-        var value = await select.ExecuteScalarAsync();
-        if (value is null or DBNull)
-            throw new InvalidOperationException("Import the Oracle workspace first.");
-        var workspace = new Workspace(JsonNode.Parse(Convert.ToString(value, CultureInfo.InvariantCulture)!)!.AsObject());
-        workspace.InitializeSequences();
+        await using var transaction = connection.BeginTransaction(write ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable);
+        await using var state = RelationalCommand(connection, transaction,
+            "SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1" + (write ? " FOR UPDATE WAIT 10" : ""));
+        var version = await state.ExecuteScalarAsync();
+        if (version is null or DBNull || Convert.ToInt32(version) != Schema.Value.Version)
+            throw new InvalidOperationException("Apply --migrate-oracle-workspace before starting the Oracle application.");
+        var before = await LoadRelational(connection, transaction);
+        var workspace = new Workspace((JsonObject)before.DeepClone());
         var result = action(workspace);
         if (write)
         {
-            await using var update = new OracleCommand("UPDATE TM_ACTIVE_WORKSPACE SET CONTENT=:content, REVISION=REVISION+1 WHERE ID=1", connection)
-            {
-                Transaction = transaction,
-                BindByName = true,
-                CommandTimeout = 15
-            };
-            update.Parameters.Add("content", OracleDbType.Clob).Value = workspace.Document.ToJsonString();
+            var after = NormalizeDocument(workspace.Document);
+            await PersistChanges(connection, transaction, before, after);
+            await using var update = RelationalCommand(connection, transaction,
+                "UPDATE TMR_WORKSPACE SET REVISION=REVISION+1 WHERE ID=1");
             await update.ExecuteNonQueryAsync();
+            await using var constraints = RelationalCommand(connection, transaction, "SET CONSTRAINTS ALL IMMEDIATE");
+            await constraints.ExecuteNonQueryAsync();
         }
-
         await transaction.CommitAsync();
+        if (write) items?.Remove(RequestSnapshotKey);
+        else if (items is not null) items[RequestSnapshotKey] = before;
         return result;
     }
 
@@ -110,11 +112,11 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         internal void InitializeSequences()
         {
             var sequences = Document["_Sequences"] as JsonObject ?? new JsonObject();
-            foreach (var(name, value)in Document.ToArray())
+            foreach (var (name, value) in Document.ToArray())
             {
                 if (value is not JsonArray rows || sequences[name] is not null)
                     continue;
-                var ids = rows.OfType<JsonObject>().Select(r => r["Id"] is JsonValue id && long.TryParse(id.ToJsonString(),out var number) ? number : 0L);
+                var ids = rows.OfType<JsonObject>().Select(r => r["Id"] is JsonValue id && long.TryParse(id.ToJsonString(), out var number) ? number : 0L);
                 sequences[name] = ids.DefaultIfEmpty().Max();
             }
 
@@ -125,7 +127,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         internal long NextLong(string table)
         {
             var sequences = Document["_Sequences"]!.AsObject();
-            var next = checked((sequences[table] is {} value ? long.Parse(value.ToJsonString(),CultureInfo.InvariantCulture) : 0L) + 1);
+            var next = checked((sequences[table] is { } value ? long.Parse(value.ToJsonString(), CultureInfo.InvariantCulture) : 0L) + 1);
             sequences[table] = next;
             return next;
         }
@@ -133,7 +135,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         internal JsonObject Add(string table, params (string Name, object? Value)[] fields)
         {
             var row = new JsonObject();
-            foreach (var(name, value)in fields)
+            foreach (var (name, value) in fields)
                 row[name] = JsonSerializer.SerializeToNode(value);
             Table(table).Add(row);
             return row;
@@ -146,7 +148,7 @@ public sealed partial class OracleWorkspace(IConfiguration configuration)
         }
 
         internal static int Id(JsonObject row) => Int(row, "Id");
-        internal static long Long(JsonObject row,string key) => row[key] is {} value ? long.Parse(value.ToJsonString(),CultureInfo.InvariantCulture) : 0L;
+        internal static long Long(JsonObject row, string key) => row[key] is { } value ? long.Parse(value.ToJsonString(), CultureInfo.InvariantCulture) : 0L;
         internal static int Int(JsonObject row, string key) => row[key]?.GetValue<int>() ?? 0;
         internal static int? OptionalInt(JsonObject row, string key) => row[key]?.GetValue<int>();
         internal static string Text(JsonObject row, string key) => row[key]?.GetValue<string>() ?? "";

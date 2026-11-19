@@ -40,7 +40,8 @@ public class UsersModel(UserStore store,OracleWorkspace oracle):PageModel
                     if(!OracleWorkspace.Right(w,UserId,"organization.manage"))throw new UnauthorizedAccessException();
                     if(w.Rows(table).Any(r=>OracleWorkspace.Workspace.Text(r,"Name").Equals(name,StringComparison.OrdinalIgnoreCase)))
                         throw new ArgumentException("Taj naziv već postoji.");
-                    w.Add(table,("Id",w.Next(table)),("Name",name),("CreatedAt",DateTime.UtcNow));
+                    if(kind=="unit") w.Add(table,("Id",w.Next(table)),("Name",name));
+                    else w.Add(table,("Id",w.Next(table)),("Name",name),("CreatedAt",DateTime.UtcNow));
                     OracleWorkspace.Audit(w,UserId,$"organization.{kind}.create",name);
                     return true;
                 });

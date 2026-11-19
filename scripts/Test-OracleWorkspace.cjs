@@ -55,6 +55,8 @@ async function run() {
     const browser = await chromium.launch({ channel: 'msedge' });
     try {
         const admin = await login(browser, 'admin', process.env.TEAM_MANAGER_QA_PASSWORD || 'admin');
+        await post(admin, '/Users?handler=Scope', { kind: 'unit', name: 'Oracle unit ' + suffix });
+        await post(admin, '/Users?handler=Scope', { kind: 'team', name: 'Oracle team ' + suffix });
         const employee = 'ora' + suffix;
         await post(admin, '/Users?handler=Create', {
             employee, name: employee, password, job: 'Oracle tester'
