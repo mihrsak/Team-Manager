@@ -41,6 +41,7 @@ public sealed class RoadmapModel(ProjectStore projects, RoadmapStore roadmap, Is
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Invalid("Taj naziv već postoji za odabranu vrstu."); }
         catch (InvalidOperationException ex) { return Invalid(ex.Message); }
+        catch (ArgumentException ex) { return Invalid(ex.Message); }
         return RedirectToPage(new { projectId });
     }
 

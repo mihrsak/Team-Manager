@@ -124,6 +124,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         {
             return await InvalidQuery("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan.");
         }
+        catch (ArgumentException) { return await InvalidQuery("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan."); }
         TempData["Notice"] = "Upit je spremljen.";
         return RedirectToPage(IssueRoute);
     }

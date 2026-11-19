@@ -7,12 +7,13 @@ namespace TeamManager.Web;
 public sealed record PrivateIssueNote(string Body, DateTime CreatedAt);
 public sealed record IssueNotification(int EventId, int IssueId, string Title, string Project, string Kind, DateTime At, bool IsRead);
 
-public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
+public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues,OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
     public async Task<List<PrivateIssueNote>> Notes(int user, int issue, int project)
     {
+        if(oracle.Enabled)return await oracle.Notes(user,issue,project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -32,6 +33,7 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
 
     public async Task<bool> CanAddNote(int project)
     {
+        if(oracle.Enabled)return await oracle.Read(w=>w.Find("Projects",project)is {} p&&OracleWorkspace.Workspace.Text(p,"State")=="Active"&&OracleWorkspace.Workspace.Flag(p,"IssuesEnabled"));
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
@@ -42,6 +44,7 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
 
     public async Task AddNote(int user, int id, string? text)
     {
+        if(oracle.Enabled){await oracle.AddNote(user,id,text);return;}
         var issue = await issues.Get(user, id) ?? throw new UnauthorizedAccessException();
         text = text?.Trim();
         if (text is null or { Length: 0 or > 4000 })
@@ -61,6 +64,7 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
 
     public async Task<List<IssueNotification>> Notifications(int user)
     {
+        if(oracle.Enabled)return await oracle.Notifications(user);
         var allowed = await issues.Projects(user);
         if (allowed.Count == 0) return [];
         await using var connection = Connect();
@@ -88,6 +92,11 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues)
 
     public async Task<bool> MarkRead(int user, int eventId)
     {
+        if(oracle.Enabled)return await oracle.Write(w=>{
+            var n=w.Rows("IssueNotifications").FirstOrDefault(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user&&OracleWorkspace.Workspace.Int(r,"EventId")==eventId);
+            if(n is null||w.Find("Issues",OracleWorkspace.Workspace.Int(n,"IssueId"))is not {} issue||!OracleWorkspace.Visible(w,user,issue))return false;
+            OracleWorkspace.Workspace.Set(n,"IsRead",true);return true;
+        });
         var allowed = await issues.Projects(user);
         if (allowed.Count == 0) return false;
         await using var connection = Connect();

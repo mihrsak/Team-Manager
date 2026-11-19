@@ -1336,4 +1336,5 @@
   <data name="Uvezeni projekti u Oracleu" xml:space="preserve"><value>Imported Oracle projects</value></data>
   <data name="Pregled kopije podataka iz zadnjeg uvoza." xml:space="preserve"><value>View data from the latest import.</value></data>
   <data name="Prikaži zadatke" xml:space="preserve"><value>Show issues</value></data>
+  <data name="Ovaj modul još nije dostupan u Oracle načinu rada." xml:space="preserve"><value>This module is not yet available in Oracle mode.</value></data>
 </root>

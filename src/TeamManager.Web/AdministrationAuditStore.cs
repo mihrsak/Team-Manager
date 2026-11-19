@@ -5,7 +5,7 @@ namespace TeamManager.Web;
 public sealed record AdministrationAuditEntry(DateTime At, string Actor, string Action, string Subject, string Details);
 public sealed record AuditChange(int ActorId, string Action, string Subject, string Details = "");
 
-public sealed class AdministrationAuditStore(IConfiguration config)
+public sealed class AdministrationAuditStore(IConfiguration config,OracleWorkspace oracle)
 {
     internal static async Task Write(SqlConnection connection, SqlTransaction transaction, AuditChange change)
     {
@@ -34,6 +34,10 @@ public sealed class AdministrationAuditStore(IConfiguration config)
 
     public async Task<List<AdministrationAuditEntry>> Recent()
     {
+        if(oracle.Enabled)return await oracle.Read(w=>w.Rows("AdministrationAudit").OrderByDescending(r=>OracleWorkspace.Workspace.Long(r,"Id")).Take(100)
+            .Select(r=>new AdministrationAuditEntry(OracleWorkspace.Workspace.Date(r,"CreatedAt")!.Value,
+                OracleWorkspace.Workspace.Text(r,"ActorEmployeeNumber"),OracleWorkspace.Workspace.Text(r,"Action"),
+                OracleWorkspace.Workspace.Text(r,"Subject"),OracleWorkspace.Workspace.Text(r,"Details"))).ToList());
         await using var connection = new SqlConnection(config.GetConnectionString("TeamManager"));
         await connection.OpenAsync();
         await using var command = new SqlCommand("""

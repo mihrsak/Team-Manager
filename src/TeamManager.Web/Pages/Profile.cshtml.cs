@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web.Pages;
-public class ProfileModel(UserStore store,Permissions permissions, Microsoft.AspNetCore.Identity.IPasswordHasher<AppUser> hasher):PageModel
+public class ProfileModel(UserStore store,Permissions permissions, Microsoft.AspNetCore.Identity.IPasswordHasher<AppUser> hasher, OracleWorkspace oracle):PageModel
 {
     public IActionResult OnPost()=>BadRequest();
     public AppUser? Person {get;set;}
@@ -39,6 +39,19 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         name=name?.Trim();job=job?.Trim()??"";
         if(!ModelState.IsValid||string.IsNullOrWhiteSpace(name)||name.Length>100||job.Length>100)return Invalid("Unesi ime i funkciju do 100 znakova.");
         if(!User.IsInRole("users.manage"))unit=Person.OrganizationUnitId;
+        if(oracle.Enabled)
+        {
+            await oracle.Write(w=>{
+                if(UserId!=id&&!OracleWorkspace.Right(w,UserId,"users.manage"))throw new UnauthorizedAccessException();
+                if(unit is not null&&w.Find("OrganizationUnits",unit.Value)is null)throw new ArgumentException("Organizacijska jedinica nije valjana.");
+                var row=w.Find("AppUsers",id)??throw new UnauthorizedAccessException();
+                OracleWorkspace.Workspace.Set(row,"DisplayName",name);
+                OracleWorkspace.Workspace.Set(row,"JobTitle",job);
+                OracleWorkspace.Workspace.Set(row,"OrganizationUnitId",unit);
+                OracleWorkspace.Audit(w,UserId,"account.update",Person.EmployeeNumber);return true;
+            });
+            return Success(id,"Podaci su spremljeni.");
+        }
         const string sql = "UPDATE dbo.AppUsers SET DisplayName=@n,JobTitle=@j,OrganizationUnitId=@o WHERE Id=@id";
         SqlParameter[] parameters = [P("@n",name),P("@j",job),P("@o",unit),P("@id",id)];
         try
@@ -68,6 +81,11 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         // Scope managers cannot delegate permissions they do not possess in that scope.
         var effective=await permissions.Effective(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),kind,scopeId);
         if(!effective.Contains("*")&&Roles.Single(x=>x.Name==role).Permissions.Any(x=>!effective.Contains(x)))return Forbid();
+        if(oracle.Enabled)
+        {
+            await oracle.Membership(UserId,id,kind,scopeId,role,removeRole,replacePrimary,false);
+            return Success(id,"Članstvo i uloga su spremljeni.");
+        }
         var sql = kind == "team"
             ? """
               SET XACT_ABORT ON;
@@ -113,6 +131,11 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
     {
         if(kind is not ("team" or "project")||!await permissions.CanManageMembers(User,kind,scopeId))return Forbid();await OnGetAsync(id);if(Person is null)return NotFound();
         if(kind is not ("team" or "project"))return BadRequest();
+        if(oracle.Enabled)
+        {
+            await oracle.Membership(UserId,id,kind,scopeId,null,false,false,true);
+            return Success(id,"Članstvo je uklonjeno.");
+        }
         try{await store.ExecuteAudited(new(UserId,"membership.remove",Person.EmployeeNumber,$"{kind} #{scopeId}"),kind=="team"?"DELETE dbo.Members WHERE TeamId=@s AND UserId=@u":"DELETE dbo.ProjectMembers WHERE ProjectId=@s AND UserId=@u",P("@s",scopeId),P("@u",id));}
         catch(SqlException ex) when(ex.Number==547){return Invalid("Član ima dodijeljene zadatke. Najprije ih preraspodijeli.");}
         return Success(id,"Članstvo je uklonjeno.");
@@ -134,6 +157,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         try { await permissions.ManageAccount(actorId, id, active, hash); }
         catch (SqlException ex) when (ex.Number == 51002) { return Forbid(); }
         catch (SqlException ex) when (ex.Number == 51001) { return Invalid("Mora ostati barem jedan aktivan puni administrator."); }
+        catch (InvalidOperationException ex) { return Invalid(ex.Message); }
         return Success(id, "Radnja je izvršena. Prethodne sesije su opozvane.");
     }
 
@@ -144,6 +168,7 @@ public class ProfileModel(UserStore store,Permissions permissions, Microsoft.Asp
         if(!Roles.Any(x=>x.Name==role))return Invalid("Nepostojeća rola.");
         try{await permissions.Assign(UserId,id,role,remove);}
         catch(SqlException ex) when(ex.Number==51001){return Invalid("Mora ostati barem jedan puni administrator.");}
+        catch(InvalidOperationException ex){return Invalid(ex.Message);}
         return Success(id,"Globalne role su spremljene.");
     }
     public async Task<IActionResult> OnPostLanguageAsync(string? language)

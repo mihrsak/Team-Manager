@@ -42,6 +42,7 @@ public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
 
         try { await fields.Create(UserId, Scope, name); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Invalid("Taj naziv već postoji."); }
+        catch (ArgumentException) { return Invalid("Taj naziv već postoji."); }
         return RedirectToPage(new { scope = Scope });
     }
 

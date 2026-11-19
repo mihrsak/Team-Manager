@@ -6,12 +6,13 @@ namespace TeamManager.Web;
 public sealed record AttachmentInfo(int Id, string Name, long Size);
 public sealed record AttachmentDownload(string Name, byte[] Content);
 
-public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStore issues)
+public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStore issues,OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
     public async Task<List<AttachmentInfo>> List(int user, int issue, int project)
     {
+        if(oracle.Enabled)return await oracle.Attachments(user,issue,project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -32,6 +33,7 @@ public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStor
 
     public async Task<AttachmentDownload?> Download(int user, int issue, int attachment)
     {
+        if(oracle.Enabled)return await oracle.Download(user,issue,attachment);
         var visible = await issues.Get(user, issue);
         if (visible is null) return null;
         await using var connection = Connect();
@@ -50,6 +52,7 @@ public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStor
 
     public async Task Add(int user, int issue, IFormFile? file, CancellationToken cancellationToken)
     {
+        if(oracle.Enabled){await oracle.Upload(user,issue,file,cancellationToken);return;}
         var project = await EditableProject(user, issue);
         var upload = await UploadedFile.Read(file, cancellationToken);
         await Mutate(user, project, issue, """
@@ -60,6 +63,7 @@ public sealed class IssueAttachmentStore(IConfiguration configuration, IssueStor
 
     public async Task<bool> Remove(int user, int issue, int attachment)
     {
+        if(oracle.Enabled)return await oracle.RemoveAttachment(user,issue,attachment);
         var project = await EditableProject(user, issue);
         return await Mutate(user, project, issue,
             "DELETE dbo.IssueAttachments WHERE Id=@attachment AND IssueId=@issue", P("@attachment", attachment)) == 1;

@@ -6,12 +6,15 @@ namespace TeamManager.Web;
 public sealed record SavedIssueQuery(int Id, string Name, int? ProjectId, string? Status, string? SearchText,
     string? SortOrder, string? GroupBy, string? Columns);
 
-public sealed class SavedIssueQueryStore(IConfiguration configuration)
+public sealed class SavedIssueQueryStore(IConfiguration configuration,OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
     public async Task<List<SavedIssueQuery>> List(int user)
     {
+        if(oracle.Enabled)return await oracle.Read(w=>w.Rows("SavedIssueQueries").Where(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user)
+            .Select(r=>new SavedIssueQuery(OracleWorkspace.Workspace.Id(r),OracleWorkspace.Workspace.Text(r,"Name"),OracleWorkspace.Workspace.OptionalInt(r,"ProjectId"),
+                r["Status"]?.GetValue<string>(),r["SearchText"]?.GetValue<string>(),r["SortOrder"]?.GetValue<string>(),r["GroupBy"]?.GetValue<string>(),r["Columns"]?.GetValue<string>())).ToList());
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -33,6 +36,12 @@ public sealed class SavedIssueQueryStore(IConfiguration configuration)
 
     public async Task Create(int user, string name, int? project, string? status, string? search, string? sortOrder, string? groupBy, string? columns)
     {
+        if(oracle.Enabled){await oracle.Write(w=>{
+            if(w.Rows("SavedIssueQueries").Any(r=>OracleWorkspace.Workspace.Int(r,"UserId")==user&&OracleWorkspace.Workspace.Text(r,"Name")==name))
+                throw new ArgumentException("Upit s tim nazivom već postoji ili odabrani filtar više nije dostupan.");
+            w.Add("SavedIssueQueries",("Id",w.Next("SavedIssueQueries")),("UserId",user),("Name",name),("ProjectId",project),
+                ("Status",status),("SearchText",search),("SortOrder",sortOrder),("GroupBy",groupBy),("Columns",columns));return true;
+        });return;}
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -46,6 +55,8 @@ public sealed class SavedIssueQueryStore(IConfiguration configuration)
 
     public async Task<bool> Delete(int user, int id)
     {
+        if(oracle.Enabled)return await oracle.Write(w=>{var row=w.Find("SavedIssueQueries",id);
+            if(row is null||OracleWorkspace.Workspace.Int(row,"UserId")!=user)return false;w.Table("SavedIssueQueries").Remove(row);return true;});
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(

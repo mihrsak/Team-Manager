@@ -3,11 +3,15 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace TeamManager.Web;
 
-public sealed class DatabaseHealthCheck(IConfiguration configuration) : IHealthCheck
+public sealed class DatabaseHealthCheck(IConfiguration configuration,OracleWorkspace oracle) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context, CancellationToken cancellationToken = default)
     {
+        if(oracle.Enabled)
+        {
+            return await oracle.Read(w=>w.Rows("AppUsers").Any()?HealthCheckResult.Healthy():HealthCheckResult.Unhealthy("No imported users."));
+        }
         var settings = new SqlConnectionStringBuilder(configuration.GetConnectionString("TeamManager"))
         {
             ConnectTimeout = 3

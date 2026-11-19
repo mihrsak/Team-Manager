@@ -11,6 +11,11 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
+if (!databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase) &&
+    !databaseProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException("Database:Provider must be SqlServer or Oracle.");
+var oracleMode = databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase);
 var proxy = builder.Configuration.GetSection("ReverseProxy");
 var trustedProxyNetwork = proxy["TrustedNetwork"];
 if (!string.IsNullOrWhiteSpace(trustedProxyNetwork))
@@ -66,7 +71,7 @@ builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<IssuePersonalStore>();
 builder.Services.AddScoped<EmailNotificationStore>();
 builder.Services.AddScoped<EmailDispatchStore>();
-builder.Services.AddHostedService<SmtpNotificationWorker>();
+if (!oracleMode) builder.Services.AddHostedService<SmtpNotificationWorker>();
 builder.Services.AddScoped<IssueAttachmentStore>();
 builder.Services.AddScoped<IssueFieldStore>();
 builder.Services.AddScoped<CustomFieldStore>();
@@ -85,7 +90,7 @@ builder.Services.AddSingleton<LdapDirectory>();
 builder.Services.AddScoped<ApiTokenStore>();
 builder.Services.AddScoped<RegistrationStore>();
 builder.Services.AddSingleton<ImapImportMonitor>();
-builder.Services.AddHostedService<ImapIssueImporter>();
+if (!oracleMode) builder.Services.AddHostedService<ImapIssueImporter>();
 builder.Services.AddScoped<Permissions>();
 builder.Services.AddScoped<AdministrationAuditStore>();
 builder.Services.AddScoped<GroupStore>();
@@ -138,10 +143,17 @@ builder.Services.AddAuthorization();
 var healthChecks = builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddScoped<OracleOverviewStore>();
 builder.Services.AddScoped<OracleProjectImport>();
-if (OracleOverviewStore.Enabled(builder.Configuration))
+builder.Services.AddSingleton<OracleWorkspace>();
+if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
 
+if (args.Contains("--import-oracle-workspace"))
+{
+    await new OracleWorkspace(builder.Configuration).Import();
+    Console.WriteLine("Oracle active workspace imported.");
+    return;
+}
 if (args.Contains("--import-oracle-projects"))
 {
     var result = await new OracleProjectImport(builder.Configuration).Import();
@@ -214,6 +226,7 @@ app.Use(async (context, next) =>
     }
     finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
 });
+if (oracleMode) app.Use(OracleWorkspaceRoutes.Guard);
 app.UseAuthorization();
 app.UseRateLimiter();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();

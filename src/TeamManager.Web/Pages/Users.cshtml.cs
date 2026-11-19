@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 using static TeamManager.Web.UserStore;
 
 namespace TeamManager.Web.Pages;
-public class UsersModel(UserStore store):PageModel
+public class UsersModel(UserStore store,OracleWorkspace oracle):PageModel
 {
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public List<DirectoryEntry> Entries {get;set;}=[];
@@ -22,6 +22,7 @@ public class UsersModel(UserStore store):PageModel
             return await Invalid("Provjeri broj radnika, ime i lozinku (najmanje 7 znakova).");
         try{await store.Create(employee!,name,job,unit,password,actorId:UserId);}
         catch(SqlException ex) when(ex.Number is 2601 or 2627 or 547){return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana.");}
+        catch(ArgumentException){return await Invalid("Broj radnika već postoji ili organizacijska jedinica nije valjana.");}
         return RedirectToPage();
     }
     public async Task<IActionResult> OnPostScopeAsync(string? kind,string? name)
@@ -29,6 +30,22 @@ public class UsersModel(UserStore store):PageModel
         if(!User.IsInRole("organization.manage"))return Forbid();
         name=name?.Trim();var table=kind switch {"unit"=>"OrganizationUnits","team"=>"Teams","project"=>"Projects",_=>null};
         if(table is null||string.IsNullOrWhiteSpace(name)||name.Length>100)return await Invalid("Unesi valjan naziv do 100 znakova.");
+        if(oracle.Enabled)
+        {
+            if(kind=="project")
+                await oracle.SaveProject(UserId,null,new ProjectInput{Name=name});
+            else
+                await oracle.Write(w=>
+                {
+                    if(!OracleWorkspace.Right(w,UserId,"organization.manage"))throw new UnauthorizedAccessException();
+                    if(w.Rows(table).Any(r=>OracleWorkspace.Workspace.Text(r,"Name").Equals(name,StringComparison.OrdinalIgnoreCase)))
+                        throw new ArgumentException("Taj naziv već postoji.");
+                    w.Add(table,("Id",w.Next(table)),("Name",name),("CreatedAt",DateTime.UtcNow));
+                    OracleWorkspace.Audit(w,UserId,$"organization.{kind}.create",name);
+                    return true;
+                });
+            return RedirectToPage();
+        }
         try{await store.ExecuteAudited(new(UserId,$"organization.{kind}.create",name),$"INSERT dbo.{table}(Name) VALUES(@name)",P("@name",name));}
         catch(SqlException ex) when(ex.Number is 2601 or 2627){return await Invalid("Taj naziv već postoji.");}
         return RedirectToPage();

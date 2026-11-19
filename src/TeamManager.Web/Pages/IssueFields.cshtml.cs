@@ -54,6 +54,7 @@ public sealed class IssueFieldsModel(ProjectStore projects, IssueFieldStore fiel
             ModelState.AddModelError("", "Taj naziv već postoji.");
             return Page();
         }
+        catch (ArgumentException) { ModelState.AddModelError("", "Taj naziv već postoji."); return Page(); }
         return RedirectToPage(new { projectId });
     }
 }

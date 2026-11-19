@@ -5,12 +5,13 @@ namespace TeamManager.Web;
 
 public sealed record IssueLink(int OtherId, string Title, string Kind, bool Outgoing, bool CanEdit);
 
-public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
+public sealed class IssueLinkStore(IConfiguration config, IssueStore issues,OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
 
     public async Task<List<IssueLink>> List(int user, int id, int project)
     {
+        if(oracle.Enabled)return await oracle.Links(user,id,project);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -48,6 +49,13 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
 
     public async Task<ILookup<int, int>> Dependencies(int user, IEnumerable<int> visibleIds)
     {
+        if(oracle.Enabled)return await oracle.Read(w=>{
+            var ids=visibleIds.ToHashSet();
+            return w.Rows("IssueLinks").Where(l=>OracleWorkspace.Workspace.Text(l,"Kind")=="blocks"&&ids.Contains(OracleWorkspace.Workspace.Int(l,"SourceId"))&&
+                ids.Contains(OracleWorkspace.Workspace.Int(l,"TargetId"))&&w.Find("Issues",OracleWorkspace.Workspace.Int(l,"SourceId"))is {} source&&OracleWorkspace.Visible(w,user,source)&&
+                w.Find("Issues",OracleWorkspace.Workspace.Int(l,"TargetId"))is {} target&&OracleWorkspace.Visible(w,user,target))
+                .ToLookup(l=>OracleWorkspace.Workspace.Int(l,"TargetId"),l=>OracleWorkspace.Workspace.Int(l,"SourceId"));
+        });
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -74,6 +82,7 @@ public sealed class IssueLinkStore(IConfiguration config, IssueStore issues)
 
     public async Task Set(int user, int id, int otherId, string kind, bool outgoing, bool remove)
     {
+        if(oracle.Enabled){await oracle.SetLink(user,id,otherId,kind,outgoing,remove);return;}
         if (id == otherId || kind is not ("related" or "duplicate" or "blocks" or "parent"))
             throw new ArgumentException("Odaberi drugi zadatak i valjanu vrstu veze.");
 

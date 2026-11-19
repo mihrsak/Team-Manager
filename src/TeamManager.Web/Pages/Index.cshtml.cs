@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace TeamManager.Web.Pages;
 
-public class IndexModel(TeamStore store, ILogger<IndexModel> logger) : PageModel
+public class IndexModel(TeamStore store, ILogger<IndexModel> logger,OracleWorkspace oracle) : PageModel
 {
     public int Teams { get; private set; }
     public int Members { get; private set; }
@@ -10,6 +10,7 @@ public class IndexModel(TeamStore store, ILogger<IndexModel> logger) : PageModel
     public string? Error { get; private set; }
     public async Task OnGetAsync()
     {
+        if(oracle.Enabled){Response.Redirect("/Projects");return;}
         try
         {
             var data = await store.Load();

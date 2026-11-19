@@ -4,7 +4,7 @@ using static TeamManager.Web.UserStore;
 namespace TeamManager.Web;
 
 public record AccessRole(string Name,string Description,List<string> Permissions);
-public sealed class Permissions(IConfiguration config)
+public sealed class Permissions(IConfiguration config,OracleWorkspace oracle)
 {
     public static readonly Dictionary<string,string> Catalog=new(){["*"]="Plna administracija",["users.manage"]="Kreiranje i uređivanje korisnika",["organization.manage"]="Kreiranje jedinica, timova i projekata",["roles.manage"]="Uređivanje rola i dodjela globalnih ovlasti",["members.manage"]="Upravljanje članovima timova i projekata"};
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
@@ -25,16 +25,20 @@ public sealed class Permissions(IConfiguration config)
     }
     public async Task<List<AccessRole>> Roles()
     {
+        if (oracle.Enabled) return await oracle.AccessRoles();
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT r.Name,r.Description,p.Permission FROM dbo.Roles r LEFT JOIN dbo.RolePermissions p ON p.RoleName=r.Name ORDER BY r.Name",c);
         await using var reader=await cmd.ExecuteReaderAsync();var roles=new Dictionary<string,AccessRole>();
         while(await reader.ReadAsync()){var name=reader.GetString(0);if(!roles.ContainsKey(name))roles[name]=new(name,reader.GetString(1),[]);if(!reader.IsDBNull(2))roles[name].Permissions.Add(reader.GetString(2));}return roles.Values.ToList();
     }
     public async Task<List<string>> GlobalRoles(int userId)
     {
+        if (oracle.Enabled) return await oracle.Read(w => w.Rows("UserRoles").Where(r => OracleWorkspace.Workspace.Int(r,"UserId")==userId)
+            .Select(r => OracleWorkspace.Workspace.Text(r,"RoleName")).ToList());
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT RoleName FROM dbo.UserRoles WHERE UserId=@id",c);cmd.Parameters.Add(P("@id",userId));await using var r=await cmd.ExecuteReaderAsync();var result=new List<string>();while(await r.ReadAsync())result.Add(r.GetString(0));return result;
     }
     public async Task<List<string>> Effective(int userId,string? kind=null,int? scope=null)
     {
+        if (oracle.Enabled) return await oracle.Effective(userId,kind,scope);
         await using var c=Connect();await c.OpenAsync();var sql="SELECT DISTINCT p.Permission FROM dbo.RolePermissions p JOIN dbo.EffectiveUserRoles u ON u.RoleName=p.RoleName WHERE u.UserId=@id";
         if(kind=="team")sql+=" UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.Members m ON m.Role=p.RoleName WHERE m.UserId=@id AND m.TeamId=@scope UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.TeamMemberRoles r ON r.RoleName=p.RoleName JOIN dbo.Members m ON m.Id=r.MemberId WHERE m.UserId=@id AND m.TeamId=@scope";
         if(kind=="project")sql+=" UNION SELECT p.Permission FROM dbo.RolePermissions p JOIN dbo.EffectiveProjectRoles(@scope,@id) r ON r.RoleName=p.RoleName OPTION (MAXRECURSION 0)";
@@ -53,7 +57,7 @@ public sealed class Permissions(IConfiguration config)
         await using var guard=new SqlCommand("IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles u JOIN dbo.RolePermissions p ON p.RoleName=u.RoleName JOIN dbo.AppUsers a ON a.Id=u.UserId WHERE p.Permission='*' AND a.IsActive=1) THROW 51001,'At least one full administrator is required',1;",c,tx);await guard.ExecuteNonQueryAsync();await tx.CommitAsync();
     }
     public Task ManageAccount(int actorId, int targetId, bool? active, string? passwordHash)
-        => Mutate(async (connection, transaction) =>
+        => oracle.Enabled ? oracle.ManageAccount(actorId,targetId,active,passwordHash) : Mutate(async (connection, transaction) =>
         {
             const string sql = """
                 IF @actor=@target OR NOT EXISTS(
@@ -90,15 +94,20 @@ public sealed class Permissions(IConfiguration config)
 
     public async Task Save(int actorId,string name,string description,string[] rights,bool create)
     {
+        if(oracle.Enabled){await oracle.SaveRole(actorId,name,description,rights,create);return;}
         await Mutate(async(c,tx)=>{
             await using var cmd=new SqlCommand(create?"INSERT dbo.Roles(Name,Description) VALUES(@name,@description)":"UPDATE dbo.Roles SET Description=@description WHERE Name=@name; DELETE dbo.RolePermissions WHERE RoleName=@name",c,tx);cmd.Parameters.Add(P("@name",name));cmd.Parameters.Add(P("@description",description));await cmd.ExecuteNonQueryAsync();
             foreach(var right in rights.Distinct()){await using var add=new SqlCommand("INSERT dbo.RolePermissions VALUES(@name,@right)",c,tx);add.Parameters.Add(P("@name",name));add.Parameters.Add(P("@right",right));await add.ExecuteNonQueryAsync();}
             await AdministrationAuditStore.Write(c,tx,new(actorId,create?"role.create":"role.update",name,string.Join(", ",rights.Distinct().Order())));
         });
     }
-    public async Task Assign(int actorId,int userId,string role,bool remove)=>await Mutate(async(c,tx)=>{
+    public async Task Assign(int actorId,int userId,string role,bool remove)
+    {
+        if(oracle.Enabled){await oracle.AssignRole(actorId,userId,role,remove);return;}
+        await Mutate(async(c,tx)=>{
         await using var cmd=new SqlCommand(remove?"DELETE dbo.UserRoles WHERE UserId=@id AND RoleName=@role":"IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles WHERE UserId=@id AND RoleName=@role) INSERT dbo.UserRoles VALUES(@id,@role)",c,tx);cmd.Parameters.Add(P("@id",userId));cmd.Parameters.Add(P("@role",role));
         if(await cmd.ExecuteNonQueryAsync()>0)
             await AdministrationAuditStore.Write(c,tx,new(actorId,remove?"role.revoke":"role.assign",$"#{userId}",role));
-    });
+        });
+    }
 }

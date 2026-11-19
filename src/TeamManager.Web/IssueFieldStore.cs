@@ -5,7 +5,7 @@ namespace TeamManager.Web;
 
 public sealed record IssueField(int Id, string Name, string? Value, bool ManagersOnly);
 
-public sealed class IssueFieldStore(IConfiguration configuration, IssueStore issues, ProjectStore projects)
+public sealed class IssueFieldStore(IConfiguration configuration, IssueStore issues, ProjectStore projects,OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
 
@@ -16,6 +16,7 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     private async Task<List<IssueField>> List(int? viewer, int project, int? issue, bool canSeeRestricted)
     {
+        if(oracle.Enabled)return await oracle.IssueFields(viewer,project,issue,canSeeRestricted);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -36,6 +37,12 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     public async Task Create(int user, int project, string name, bool managersOnly)
     {
+        if(oracle.Enabled){await oracle.Write(w=>{
+            if(!OracleWorkspace.Manage(w,user,project)||w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")throw new UnauthorizedAccessException();
+            if(w.Rows("ProjectIssueFields").Any(f=>OracleWorkspace.Workspace.Int(f,"ProjectId")==project&&OracleWorkspace.Workspace.Text(f,"Name")==name))throw new ArgumentException("Taj naziv već postoji.");
+            w.Add("ProjectIssueFields",("Id",w.Next("ProjectIssueFields")),("ProjectId",project),("Name",name),("ManagersOnly",managersOnly));
+            OracleWorkspace.Audit(w,user,"project.issue-field.create",name);return true;
+        });return;}
         if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         var affected = await AdministrationAuditStore.Execute(connection,
@@ -48,6 +55,13 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     public async Task<bool> SetVisibility(int user, int project, int field, bool managersOnly)
     {
+        if(oracle.Enabled)return await oracle.Write(w=>{
+            if(!OracleWorkspace.Manage(w,user,project)||w.Find("Projects",project)is not {} p||OracleWorkspace.Workspace.Text(p,"State")!="Active")throw new UnauthorizedAccessException();
+            var f=w.Find("ProjectIssueFields",field);
+            if(f is null||OracleWorkspace.Workspace.Int(f,"ProjectId")!=project)return false;
+            OracleWorkspace.Workspace.Set(f,"ManagersOnly",managersOnly);
+            OracleWorkspace.Audit(w,user,managersOnly?"project.issue-field.restrict":"project.issue-field.share",$"#{field}");return true;
+        });
         if (!await projects.CanManage(user, project)) throw new UnauthorizedAccessException();
         await using var connection = Connect();
         var action = managersOnly ? "project.issue-field.restrict" : "project.issue-field.share";
@@ -62,6 +76,7 @@ public sealed class IssueFieldStore(IConfiguration configuration, IssueStore iss
 
     public async Task SetValue(int user, int id, int field, int revision, string? value)
     {
+        if(oracle.Enabled){await oracle.SetIssueField(user,id,field,revision,value);return;}
         var issue = await issues.Get(user, id);
         if (issue is null || !await issues.Can(user, issue.ProjectId, "issues.edit"))
             throw new UnauthorizedAccessException();

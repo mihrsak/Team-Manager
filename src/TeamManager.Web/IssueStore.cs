@@ -24,7 +24,7 @@ public record ActivityRow(int Id,int IssueId,string Title,string Project,string 
 public record IssueEvent(string Author,string Kind,string Body,DateTime At);
 public record TimeEntry(string Author,DateTime Date,decimal Hours,string Note,string Activity,int Id);
 public record TimeReportRow(string Project,string Person,string EmployeeNumber,string Activity,decimal Hours);
-public sealed class IssueStore(IConfiguration config,Permissions permissions,WorkflowStore workflow,ProjectStore projects)
+public sealed class IssueStore(IConfiguration config,Permissions permissions,WorkflowStore workflow,ProjectStore projects,OracleWorkspace oracle)
 {
     public static readonly string[] Types=["Zadatak","Greška","Zahtjev"];
     public static readonly string[] Priorities=["Nizak","Normalan","Visok","Hitno"];
@@ -32,6 +32,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     public async Task<bool> Can(int user,int project,string right)
     {
+        if (oracle.Enabled) return await oracle.Read(w => OracleWorkspace.Can(w,user,project,right));
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT IsPublic,State,IssuesEnabled,TimeEnabled FROM dbo.Projects WHERE Id=@p",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return false;
         if(!r.GetBoolean(2)||(right.StartsWith("time.")&&!r.GetBoolean(3)))return false;
         if(right=="time.view")right="issues.view";
@@ -47,23 +48,31 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task<List<Team>> Projects(int user,string right="issues.view")
     {
+        if (oracle.Enabled) return await oracle.Read(w => w.Rows("Projects")
+            .Where(p => OracleWorkspace.Can(w,user,OracleWorkspace.Workspace.Id(p),right))
+            .OrderBy(p => OracleWorkspace.Workspace.Text(p,"Name"))
+            .Select(p => new Team(OracleWorkspace.Workspace.Id(p),OracleWorkspace.Workspace.Text(p,"Name"))).ToList());
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name FROM dbo.Projects ORDER BY Name",c);await using var r=await cmd.ExecuteReaderAsync();var all=new List<Team>();while(await r.ReadAsync())all.Add(new(r.GetInt32(0),r.GetString(1)));
         var result=new List<Team>();foreach(var project in all)if(await Can(user,project.Id,right))result.Add(project);return result;
     }
     public async Task<List<IssueRow>> List(int user,int? project,string? status,string? query,DateTime? dueFrom=null,DateTime? dueTo=null,bool schedule=false,int? assigneeId=null,bool openOnly=false,bool watchedOnly=false)
     {
+        if (oracle.Enabled) return await oracle.IssueList(user,project,status,query,dueFrom,dueTo,schedule,assigneeId,openOnly,watchedOnly);
         var projects=(await Projects(user)).Select(x=>x.Id).ToHashSet();
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT i.Id,i.ProjectId,p.Name,i.Title,i.Status,i.Priority,u.DisplayName,i.DueDate,i.Revision,u.EmployeeNumber,i.StartDate FROM dbo.Issues i JOIN dbo.Projects p ON p.Id=i.ProjectId LEFT JOIN dbo.AppUsers u ON u.Id=i.AssigneeId WHERE EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId)) AND (@p IS NULL OR i.ProjectId=@p) AND (@watcher IS NULL OR EXISTS(SELECT 1 FROM dbo.IssueWatchers w WHERE w.IssueId=i.Id AND w.UserId=@watcher)) AND (@assignee IS NULL OR i.AssigneeId=@assignee) AND (@open=0 OR EXISTS(SELECT 1 FROM dbo.IssueStatuses st WHERE st.Name=i.Status AND st.IsClosed=0)) AND (@s='' OR i.Status=@s) AND (@q='' OR CHARINDEX(@q,i.Title)>0 OR CHARINDEX(@q,i.Description)>0) AND (@from IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.DueDate,i.StartDate) ELSE i.DueDate END)>=@from) AND (@to IS NULL OR (CASE WHEN @schedule=1 THEN COALESCE(i.StartDate,i.DueDate) ELSE i.DueDate END)<=@to) ORDER BY i.Id DESC OPTION(MAXRECURSION 0)",c);
         cmd.Parameters.AddRange([P("@p",project),P("@s",status??""),P("@q",query??""),new SqlParameter("@from",System.Data.SqlDbType.Date){Value=(object?)dueFrom??DBNull.Value},new SqlParameter("@to",System.Data.SqlDbType.Date){Value=(object?)dueTo??DBNull.Value},P("@schedule",schedule),P("@viewer",user),new SqlParameter("@assignee",System.Data.SqlDbType.Int){Value=(object?)assigneeId??DBNull.Value},P("@open",openOnly),new SqlParameter("@watcher",System.Data.SqlDbType.Int){Value=watchedOnly?user:DBNull.Value}]);await using var r=await cmd.ExecuteReaderAsync();var result=new List<IssueRow>();while(await r.ReadAsync())if(projects.Contains(r.GetInt32(1)))result.Add(new(r.GetInt32(0),r.GetInt32(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.IsDBNull(6)?null:r.GetString(6),r.IsDBNull(7)?null:r.GetDateTime(7),r.GetInt32(8),r.IsDBNull(9)?null:r.GetString(9),r.IsDBNull(10)?null:r.GetDateTime(10)));return result;
     }
     public async Task<IssueDetail?> Get(int user,int id)
     {
+        if (oracle.Enabled) return await oracle.Issue(user,id);
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,Revision,StartDate,RoadmapItemId,IsPrivate,CreatedBy FROM dbo.Issues WHERE Id=@id AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,ProjectId,IsPrivate,CreatedBy,AssigneeId)) OPTION(MAXRECURSION 0)",c);cmd.Parameters.AddRange([P("@id",id),P("@viewer",user)]);await using var r=await cmd.ExecuteReaderAsync();if(!await r.ReadAsync())return null;
         var project=r.GetInt32(0);if(!await Can(user,project,"issues.view"))return null;
         return new(id,project,new(){Title=r.GetString(1),Description=r.GetString(2),Type=r.GetString(3),Priority=r.GetString(4),Status=r.GetString(5),AssigneeId=r.IsDBNull(6)?null:r.GetInt32(6),DueDate=r.IsDBNull(7)?null:r.GetDateTime(7),Revision=r.GetInt32(8),StartDate=r.IsDBNull(9)?null:r.GetDateTime(9),RoadmapItemId=r.IsDBNull(10)?null:r.GetInt32(10),IsPrivate=r.GetBoolean(11)},r.GetInt32(12));
     }
     public async Task<bool> IsWatching(int user, int issue)
     {
+        if (oracle.Enabled) return await oracle.Read(w => w.Rows("IssueWatchers").Any(r =>
+            OracleWorkspace.Workspace.Int(r,"IssueId")==issue && OracleWorkspace.Workspace.Int(r,"UserId")==user));
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand(
@@ -74,6 +83,21 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
 
     public async Task SetWatching(int user, int id, bool watch)
     {
+        if (oracle.Enabled)
+        {
+            await oracle.Write(w =>
+            {
+                OracleWorkspace.RequireIssue(w,user,id);
+                w.Remove("IssueWatchers",r => OracleWorkspace.Workspace.Int(r,"IssueId")==id && OracleWorkspace.Workspace.Int(r,"UserId")==user);
+                if(watch) w.Add("IssueWatchers",("IssueId",id),("UserId",user));
+                else w.Remove("IssueNotifications",r => OracleWorkspace.Workspace.Int(r,"IssueId")==id && OracleWorkspace.Workspace.Int(r,"UserId")==user);
+                if(!watch)
+                    w.Remove("IssueEmailQueue",q => OracleWorkspace.Workspace.Int(q,"UserId")==user &&
+                        w.Find("IssueEvents",OracleWorkspace.Workspace.Int(q,"EventId")) is {} e && OracleWorkspace.Workspace.Int(e,"IssueId")==id);
+                return true;
+            });
+            return;
+        }
         var issue = await Get(user, id) ?? throw new UnauthorizedAccessException();
         await using var connection = Connect();
         await connection.OpenAsync();
@@ -98,10 +122,14 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
 
     public async Task<List<Team>> Assignees(int project)
     {
+        if (oracle.Enabled) return await oracle.Read(w => w.Rows("AppUsers").Where(u => w.Rows("ProjectMembers").Any(m =>
+            OracleWorkspace.Workspace.Int(m,"ProjectId")==project && OracleWorkspace.Workspace.Int(m,"UserId")==OracleWorkspace.Workspace.Id(u)))
+            .Select(u=>new Team(OracleWorkspace.Workspace.Id(u),OracleWorkspace.Workspace.Text(u,"DisplayName"))).ToList());
         await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.Id,u.DisplayName FROM dbo.AppUsers u JOIN dbo.ProjectMembers m ON m.UserId=u.Id WHERE m.ProjectId=@p ORDER BY u.DisplayName",c);cmd.Parameters.Add(P("@p",project));await using var r=await cmd.ExecuteReaderAsync();var list=new List<Team>();while(await r.ReadAsync())list.Add(new(r.GetInt32(0),r.GetString(1)));return list;
     }
     public async Task<int> Save(int user,int project,int? id,IssueInput input)
     {
+        if (oracle.Enabled) return await oracle.SaveIssue(user,project,id,input);
         if(!await Can(user,project,id is null?"issues.create":"issues.edit")||!await Can(user,project,"issues.view"))throw new UnauthorizedAccessException();
         if(string.IsNullOrWhiteSpace(input.Title)||input.Title.Length>200||(input.Description?.Length??0)>4000||!(await workflow.Values("type")).Contains(input.Type)||!(await workflow.Values("priority")).Contains(input.Priority)||!(await workflow.Values("status")).Contains(input.Status)||input.DueDate?.Year<1753)throw new ArgumentException("Provjeri polja zadatka.");
         if (input.StartDate?.Year < 1753 || input.StartDate?.Date > input.DueDate?.Date)
@@ -176,6 +204,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task UpdateMany(int user, IReadOnlyDictionary<int, int> revisions, string? status, string? priority)
     {
+        if (oracle.Enabled) { await oracle.Bulk(user,revisions,status,priority); return; }
         if (revisions.Count is < 1 or > 100 || (status is null && priority is null))
             throw new ArgumentException("Odaberi od 1 do 100 zadataka i barem jednu promjenu.");
         if ((status is not null && !(await workflow.Values("status")).Contains(status)) ||
@@ -208,6 +237,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
 
     public async Task<int> Transfer(int user, int id, int revision, int destination, bool move)
     {
+        if (oracle.Enabled) return await oracle.Transfer(user,id,revision,destination,move);
         var issue = await Get(user, id) ?? throw new UnauthorizedAccessException();
         var source = issue.ProjectId;
         if (!await Can(user, destination, "issues.view") || !await Can(user, destination, "issues.create") ||
@@ -296,11 +326,13 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
         """,c,tx);cmd.Parameters.AddRange([P("@id",id),P("@user",user),P("@kind",kind),P("@text",text)]);await cmd.ExecuteNonQueryAsync();}
     public async Task Comment(int user,int id,string text)
     {
+        if (oracle.Enabled) { await oracle.Comment(user,id,text); return; }
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"issues.comment"))throw new UnauthorizedAccessException();if(string.IsNullOrWhiteSpace(text)||text.Length>4000)throw new ArgumentException("Komentar mora imati 1–4000 znakova.");
         await using var c=Connect();await c.OpenAsync();await using var tx=(SqlTransaction)await c.BeginTransactionAsync();await RequireActive(c,tx,issue.ProjectId);await RequireIssueProject(c,tx,id,issue.ProjectId,user);await Event(c,tx,id,user,"comment",text.Trim());await tx.CommitAsync();
     }
     public async Task LogTime(int user,int id,DateTime date,decimal hours,string? note,string? activity=null)
     {
+        if (oracle.Enabled) { await oracle.LogTime(user,id,date,hours,note,activity); return; }
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();if(!await Can(user,issue.ProjectId,"time.log"))throw new UnauthorizedAccessException();if(hours<=0||hours>24||decimal.Round(hours,2)!=hours||date.Year<1753||(note?.Length??0)>1000)throw new ArgumentException("Unesi datum i sate od 0,01 do 24 (najviše dvije decimale).");
         activity = string.IsNullOrWhiteSpace(activity) ? "Općenito" : activity.Trim();
         if (activity.Length > 60) throw new ArgumentException("Aktivnost može imati najviše 60 znakova.");
@@ -308,12 +340,14 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
     }
     public async Task<(List<IssueEvent> Events,List<TimeEntry> Time)> Activity(int user,int id)
     {
+        if (oracle.Enabled) return await oracle.Activity(user,id);
         var issue=await Get(user,id)??throw new UnauthorizedAccessException();var showTime=await Can(user,issue.ProjectId,"time.view");await using var c=Connect();await c.OpenAsync();await using var cmd=new SqlCommand("SELECT u.DisplayName,e.Kind,e.Body,e.CreatedAt FROM dbo.IssueEvents e JOIN dbo.AppUsers u ON u.Id=e.UserId WHERE e.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))) AND (@showTime=1 OR e.Kind<>'time') ORDER BY e.Id DESC OPTION(MAXRECURSION 0); SELECT u.DisplayName,t.WorkDate,t.Hours,t.Note,t.Activity,t.Id FROM dbo.TimeEntries t JOIN dbo.AppUsers u ON u.Id=t.UserId WHERE t.IssueId=@id AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@id AND i.ProjectId=@project AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@viewer,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))) AND @showTime=1 ORDER BY t.WorkDate DESC OPTION(MAXRECURSION 0)",c);cmd.Parameters.Add(P("@id",id));cmd.Parameters.Add(P("@showTime",showTime));cmd.Parameters.AddRange([P("@project",issue.ProjectId),P("@viewer",user)]);await using var r=await cmd.ExecuteReaderAsync();var events=new List<IssueEvent>();var time=new List<TimeEntry>();while(await r.ReadAsync())events.Add(new(r.GetString(0),r.GetString(1),r.GetString(2),r.GetDateTime(3)));await r.NextResultAsync();while(await r.ReadAsync())time.Add(new(r.GetString(0),r.GetDateTime(1),r.GetDecimal(2),r.GetString(3),r.GetString(4),r.GetInt32(5)));return(events,time);
     }
 
     public async Task<List<TimeReportRow>> TimeReport(
         int user, IEnumerable<int> projectIds, DateTime? from, DateTime? to, string? person, string? activity)
     {
+        if(oracle.Enabled)return await oracle.TimeReport(user,projectIds,from,to,person,activity);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
@@ -350,6 +384,7 @@ public sealed class IssueStore(IConfiguration config,Permissions permissions,Wor
 
     public async Task<List<ActivityRow>> RecentActivity(int user, IEnumerable<int> projectIds)
     {
+        if(oracle.Enabled)return await oracle.RecentActivity(user,projectIds);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""

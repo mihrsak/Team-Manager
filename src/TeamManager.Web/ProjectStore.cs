@@ -16,16 +16,18 @@ public sealed class ProjectInput
     public bool TimeEnabled {get;set;}=true;
 }
 public record ProjectDetail(int Id,ProjectInput Input);
-public sealed class ProjectStore(IConfiguration config,Permissions permissions)
+public sealed class ProjectStore(IConfiguration config,Permissions permissions,OracleWorkspace oracle)
 {
     private SqlConnection Connect()=>new(config.GetConnectionString("TeamManager"));
     public async Task<bool> CanManage(int user,int? id)
     {
+        if (oracle.Enabled) return await oracle.Read(w => OracleWorkspace.Manage(w,user,id));
         var rights=await permissions.Effective(user,id is null?null:"project",id);
         return rights.Contains("*")||rights.Contains(id is null?"organization.manage":"projects.manage");
     }
     public async Task<List<ProjectDetail>> List(int user)
     {
+        if (oracle.Enabled) return await oracle.ProjectList(user);
         var all=new List<ProjectDetail>();
         await using(var c=Connect()){
             await c.OpenAsync();await using var cmd=new SqlCommand("SELECT Id,Name,Description,ParentId,IsPublic,State,Revision,IssuesEnabled,TimeEnabled,InheritParentRoles FROM dbo.Projects ORDER BY Name",c);
@@ -38,6 +40,21 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions)
     }
     public async Task SetModules(int user,int id,bool issues,bool time,int revision)
     {
+        if (oracle.Enabled)
+        {
+            await oracle.Write(w =>
+            {
+                if (!OracleWorkspace.Manage(w,user,id)) throw new UnauthorizedAccessException();
+                var p = w.Find("Projects",id) ?? throw new UnauthorizedAccessException();
+                OracleWorkspace.Workspace.Revision(p,revision,"Projekt je u međuvremenu izmijenjen. Ponovno otvori stranicu.");
+                OracleWorkspace.Workspace.Set(p,"IssuesEnabled",issues);
+                OracleWorkspace.Workspace.Set(p,"TimeEnabled",time);
+                OracleWorkspace.Workspace.Revise(p);
+                OracleWorkspace.Audit(w,user,"project.modules",$"#{id}");
+                return true;
+            });
+            return;
+        }
         if(!await CanManage(user,id))throw new UnauthorizedAccessException();
         await using var c=Connect();
         var rows=await AdministrationAuditStore.Execute(c,new(user,"project.modules",$"#{id}",$"Zadaci: {issues}; vrijeme: {time}"),
@@ -47,6 +64,7 @@ public sealed class ProjectStore(IConfiguration config,Permissions permissions)
     }
     public async Task<int> Save(int user,int? id,ProjectInput input)
     {
+        if (oracle.Enabled) return await oracle.SaveProject(user,id,input);
         if(!await CanManage(user,id))throw new UnauthorizedAccessException();
         if(string.IsNullOrWhiteSpace(input.Name)||input.Name.Length>100||(input.Description?.Length??0)>4000||!new[]{"Active","Closed","Archived"}.Contains(input.State))throw new ArgumentException("Provjeri naziv, opis i stanje projekta.");
         // Changing hierarchy requires authority over the destination parent as well.
