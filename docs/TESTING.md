@@ -210,3 +210,5 @@ U izdvojenoj `TMR_MIGRATION_QA` shemi test privremeno odgađa stare poslove i ga
 `Test-OracleEmail.cjs` koristi novi testni račun za osobne postavke i dva HR/EN axe skeniranja, bez izmjene administratorovih postavki. Oracle isporuka, lease provjere, UI i kompletne SQL integracijske regresije prošli su lokalno 19. 11. 2026. Paket artifacts/oracle-email-final vraća readiness 200 na https://localhost:7572.
 
 Završna Oracle regresija 19. 11. 2026.: svi glavni browser tokovi, HTTP gateway i 52 HR/EN WCAG A/AA skeniranja prošli su na protokolu 5, sa zadržanom zaštitnom listom ruta. Aktivni paket artifacts/oracle-complete-final vraća readiness 200 na https://localhost:7572.
+
+Završni prošireni Oracle browser paket sada provjerava 52 HR/EN WCAG A/AA skeniranja uključujući API tokene, grupe, zahtjeve za registraciju i postavke e-pošte. Svi glavni tokovi i HTTP gateway prošli su na protokolu 5; zaštita ruta zadržana je.

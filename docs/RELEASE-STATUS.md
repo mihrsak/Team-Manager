@@ -16,7 +16,7 @@ Provjereno lokalno 19. 11. 2026. SQL Server i Oracle podržavaju aktivne module:
 
 | Stavka | Stvarni status |
 |---|---|
-| DB-02 / Db2 LUW | U pripremi lokalnog okruženja; nije označeno dovršenim. Driver i službena Community slika dostupni su; rootless pokretanje nije podržalo potrebne mountove, pa se provjerava odvojeno rootful okruženje. |
+| DB-02 / Db2 LUW | Lokalni Db2 Community 12.1.5 pokrenut je u odvojenom rootful kontejneru s 3 GiB limita; službeni .NET 10 driver uspješno se povezuje i izvršava SQL. Provjerene su hijerarhija i aplikacijski lockovi. Runtime port aplikacije i migracijske integracije još nisu dovršeni. |
 | DB-02 / Db2 z/OS | Nije implementirano/provjereno na ciljnoj bazi; potreban je ciljni pristup i odgovarajuća Db2 Connect licenca. |
 | AUTH-06 | Lokalni Keycloak/OpenLDAP scenariji postoje; bankarski SSO/AD ostaje za ciljno okruženje. |
 | MAIL-01 | Lokalni gateway i TLS IMAP su provjereni; namjenski stvarni sandučić nije povezan/provjeren. |
