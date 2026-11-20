@@ -4,6 +4,8 @@ Provjereno lokalno 19. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivn
 
 ## Lokalna provjera
 
+**Revizija proizvoda 20. 11. 2026.:** pronađeno je 14 otvorenih dorada, uključujući P1 otkrivanje naziva privatnih projekata i članskih uloga kroz tuđi profil. Na Db2-u je potvrđeno da ograničeni korisnik te metapodatke vidi kroz profil, dok izravan pristup provjerenom privatnom zadatku ostaje HTTP 404. Prethodni prolaz regresija ne pokriva taj nalaz. Prije korisničkog pilota zatvoriti P1 stavke iz [revizije proizvoda](PRODUCT-REVIEW-2026-11-20.md).
+
 - Aktivni paket: `artifacts/oracle-complete-final`, Oracle shema 10 / protokol zaključavanja 5.
 - URL: https://localhost:7572/Projects; readiness 200.
 - Oracle integracije potvrđuju migracijski integritet 51 tablice, očuvanje podataka/povijesti, ovlasti, zaključavanja, paralelne upise, rollback, opozive i zaštitu zadnjeg administratora.

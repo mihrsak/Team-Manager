@@ -1,5 +1,13 @@
 # Backlog Team Manager
 
+## Otvorene dorade iz revizije proizvoda
+
+Revizija od 20. 11. 2026. dodaje 14 otvorenih stavki, odvojeno od implementiranog funkcionalnog opsega u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
+
+Prije korisničkog pilota predloženi su **REV-01** (privatni projektni metapodaci kroz profile), **REV-02** (nespremljene izmjene), **REV-03** (pristup rezultatima zadataka), **REV-04** (povratna informacija nakon greške) i **REV-12** (zasebni demo podaci). Ostale stavke REV-05–REV-11 i REV-13–REV-14 predložene su za sljedeću iteraciju. Nijedna od ovih dorada nije zatvorena samim pisanjem revizije.
+
+## Implementirani funkcionalni opseg i ciljne provjere
+
 Izvor: službeni Redmine vodič i dokumentacija, pregledani 2026-11-08:
 - https://www.redmine.org/projects/redmine/wiki/Guide
 - https://www.redmine.org/projects/redmine/wiki/Features
