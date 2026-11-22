@@ -9,10 +9,7 @@
         <label>@Text["Modul"]
             <select asp-for="Module">
                 <option value="">@Text["Svi moduli"]</option>
-                <option value="projects">@Text["Projekti"]</option>
-                <option value="issues">@Text["Zadaci"]</option>
-                <option value="roadmap">@Text["Verzije i prekretnice"]</option>
-                <option value="users">@Text["Korisnici"]</option>
+                @foreach(var module in TeamManager.Web.Pages.SearchModel.ModuleLabels){<option value="@module.Key">@Text[module.Value]</option>}
             </select>
         </label>
         <div><button>@Text["Pretraži"]</button></div>
@@ -37,10 +34,11 @@
                         <li><a href="@item.Url">@item.Title</a>@if (item.Detail.Length > 0) { <span> · @item.Detail</span> }</li>
                     }
                 </ul>
-                @if (group.Value.Count == 20)
+                @if (Model.More.Contains(group.Key))
                 {
-                    <p>@Text["Prikazano je najviše 20 rezultata po modulu."]</p>
+                    <p><a href="@Model.ResultsUrl(group.Key,Model.PageNumber+1)">@Text["Sljedeća stranica"]</a></p>
                 }
+                @if(Model.PageNumber>1){<p><a href="@Model.ResultsUrl(group.Key,Model.PageNumber-1)">@Text["Prethodna stranica"]</a></p>}
             </section>
         }
     }

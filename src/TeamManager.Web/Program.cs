@@ -67,6 +67,7 @@ builder.Services.AddRazorPages(options => {
 });
 builder.Services.AddScoped<TeamStore>();
 builder.Services.AddScoped<IssueStore>();
+builder.Services.AddScoped<ProjectContentSearchStore>();
 builder.Services.AddScoped<IssueLinkStore>();
 builder.Services.AddScoped<IssuePersonalStore>();
 builder.Services.AddScoped<EmailNotificationStore>();

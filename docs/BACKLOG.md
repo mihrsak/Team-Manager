@@ -10,6 +10,7 @@
 | REV-02 / REV-04 | Dovršeno 22. 11. 2026. | HR/EN ostanak/odustajanje, očuvanje izvornog zadatka, fokus na upozoravajući sažetak pogreške i automatizirana pristupačnost stanja greške; SQL Server, Oracle i Db2. |
 | REV-05 / REV-08 | Dovršeno 22. 11. 2026. | Prevedeni pronađeni sistemski tekstovi profila, povijesti, Git/LDAP oznaka; ograničenja 50/30/20 u obrascu i na poslužitelju. |
 | REV-03 / REV-06 / REV-07 / REV-11 | Dovršeno 22. 11. 2026. | Rezultati prije sekundarnih radnji, 50 redaka po stranici, pretraga projekata, potpuni CSV, validirani lokalni povratni URL-ovi, regionalni datumi, aktivna navigacija, naslovi kartica i odvojeni pregled/postavke projekta. SQL Server, Oracle i Db2; HR/EN. |
+| REV-10 | Dovršeno 22. 11. 2026. | Pretraga wiki sadržaja, metapodataka dokumenata, novosti te tema/odgovora foruma; nastavak rezultata i SQL provjera projektnih prava. HR/EN, Unicode i doslovni `%_`, SQL Server/Oracle/Db2 te opoziv članstva. Binarni sadržaj datoteka nije indeksiran. |
 
 REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Ostale stavke revizije ostaju otvorene.
 

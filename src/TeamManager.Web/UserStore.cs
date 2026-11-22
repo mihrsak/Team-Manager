@@ -65,19 +65,20 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         await using var cmd = new SqlCommand("SELECT u.Id,u.EmployeeNumber,u.DisplayName,u.JobTitle,u.OrganizationUnitId,u.PasswordHash,u.IsAdministrator,u.IsActive,u.SessionVersion,COALESCE(o.Name,N'—') FROM dbo.AppUsers u LEFT JOIN dbo.OrganizationUnits o ON o.Id=u.OrganizationUnitId ORDER BY u.DisplayName", c);
         await using var r = await cmd.ExecuteReaderAsync(); var result = new List<DirectoryEntry>(); while (await r.ReadAsync()) result.Add(new(Read(r), r.GetString(9))); return result;
     }
-    public async Task<List<UserMatch>> Search(string query)
+    public async Task<List<UserMatch>> Search(string query,int page=1,int take=20)
     {
-        if (oracle.Enabled) return await oracle.Read(async w => (await w.Rows("AppUsers")).Where(r => (Text(r, "DisplayName") + " " + Text(r, "EmployeeNumber") + " " + Text(r, "JobTitle")).Contains(query, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(r => Text(r, "DisplayName")).Take(20).Select(r => new UserMatch(Id(r), Text(r, "DisplayName"), Text(r, "EmployeeNumber"), Text(r, "JobTitle"))).ToList());
+        page=Math.Clamp(page,1,1000);take=Math.Clamp(take,1,21);
+        if (oracle.Enabled) return await oracle.DirectorySearch(query,(page-1)*20,take);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
-            SELECT TOP (20) Id,DisplayName,EmployeeNumber,JobTitle
+            SELECT Id,DisplayName,EmployeeNumber,JobTitle
             FROM dbo.AppUsers
             WHERE CHARINDEX(@query,DisplayName)>0 OR CHARINDEX(@query,EmployeeNumber)>0 OR CHARINDEX(@query,JobTitle)>0
-            ORDER BY DisplayName,EmployeeNumber
+            ORDER BY DisplayName,EmployeeNumber OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY
             """, connection);
         command.Parameters.Add(P("@query", query));
+        command.Parameters.AddRange([P("@offset",(page-1)*20),P("@take",take)]);
         var matches = new List<UserMatch>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())

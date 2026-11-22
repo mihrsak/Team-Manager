@@ -33,24 +33,26 @@ public sealed class RoadmapStore(IConfiguration configuration, ProjectStore proj
         return items;
     }
 
-    public async Task<List<RoadmapMatch>> Search(IEnumerable<int> visibleProjects, string query)
+    public async Task<List<RoadmapMatch>> Search(IEnumerable<int> visibleProjects, string query,int page=1,int take=20)
     {
-        if (oracle.Enabled) return await oracle.RoadmapSearchSql(visibleProjects, query);
+        page=Math.Clamp(page,1,1000);take=Math.Clamp(take,1,21);
+        if (oracle.Enabled) return await oracle.RoadmapSearchSql(visibleProjects, query,(page-1)*20,take);
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
-            SELECT TOP (20) m.ProjectId,p.Name,m.Id,m.Kind,m.Name
+            SELECT m.ProjectId,p.Name,m.Id,m.Kind,m.Name
             FROM dbo.ProjectMilestones m
             JOIN dbo.Projects p ON p.Id=m.ProjectId
             JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
             WHERE CHARINDEX(@query,m.Name)>0 OR CHARINDEX(@query,m.Description)>0
-            ORDER BY m.Name,p.Name,m.Id
+            ORDER BY m.Name,p.Name,m.Id OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY
             """, connection);
         command.Parameters.Add(new SqlParameter("@projects", System.Data.SqlDbType.NVarChar, -1)
         {
             Value = System.Text.Json.JsonSerializer.Serialize(visibleProjects)
         });
         command.Parameters.Add(P("@query", query));
+        command.Parameters.AddRange([P("@offset",(page-1)*20),P("@take",take)]);
         var matches = new List<RoadmapMatch>();
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())

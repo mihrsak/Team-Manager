@@ -66,11 +66,11 @@ public sealed partial class OracleWorkspace
                 var row = ReadTypedRow(Schema.Value.Tables.Single(t => t.Name == "AdministrationAudit"), r);
                 return new AdministrationAuditEntry(Workspace.Date(row, "CreatedAt")!.Value, Workspace.Text(row, "ActorEmployeeNumber"), Workspace.Text(row, "Action"), Workspace.Text(row, "Subject"), Workspace.Text(row, "Details"));
             });
-    internal Task<List<RoadmapMatch>> RoadmapSearchSql(IEnumerable<int> projects, string query)
+    internal Task<List<RoadmapMatch>> RoadmapSearchSql(IEnumerable<int> projects, string query,int offset=0,int take=20)
         => Query("RoadmapSearch", """
             SELECT m."ProjectId",p."Name",m."Id",m."Kind",m."Name" FROM "TMR_ProjectMilestones" m JOIN "TMR_Projects" p ON p."Id"=m."ProjectId"
             WHERE p."Id" IN (SELECT id FROM JSON_TABLE(:projects,'$[*]' COLUMNS(id NUMBER PATH '$')))
               AND (INSTR(UPPER(m."Name"),UPPER(:search))>0 OR INSTR(UPPER(m."Description"),UPPER(:search))>0)
-            ORDER BY m."Name",p."Name",m."Id" FETCH FIRST 20 ROWS ONLY
-            """, c => { c.Parameters.Add("projects", OracleDbType.Clob).Value = JsonSerializer.Serialize(projects.Distinct().ToArray()); AddQueryParameter(c, "search", query); }, r => new RoadmapMatch(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetString(3), r.GetString(4)));
+            ORDER BY m."Name",p."Name",m."Id" OFFSET :offset ROWS FETCH NEXT :take ROWS ONLY
+            """, c => { c.Parameters.Add("projects", OracleDbType.Clob).Value = JsonSerializer.Serialize(projects.Distinct().ToArray()); AddQueryParameter(c, "search", query);AddQueryParameter(c,"offset",offset);AddQueryParameter(c,"take",take); }, r => new RoadmapMatch(r.GetInt32(0), r.GetString(1), r.GetInt32(2), r.GetString(3), r.GetString(4)));
 }
