@@ -92,9 +92,27 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
         await using var c = Connect(); await c.OpenAsync(); await using var cmd = new SqlCommand($"SELECT Id,Name FROM dbo.{table} ORDER BY Name", c);
         await using var r = await cmd.ExecuteReaderAsync(); var result = new List<Team>(); while (await r.ReadAsync()) result.Add(new(r.GetInt32(0), r.GetString(1))); return result;
     }
-    public async Task<List<Membership>> Memberships(int id, bool team)
+    public async Task<List<Team>> MembershipProjects(int viewer)
     {
-        if (oracle.Enabled) return await oracle.Memberships(id, team);
+        if (oracle.Enabled) return await oracle.MembershipProjects(viewer);
+        await using var connection=Connect(); await connection.OpenAsync();
+        await using var command=new SqlCommand("""
+            SELECT p.Id,p.Name FROM dbo.Projects p
+            WHERE EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@viewer AND IsActive=1)
+              AND (EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles ur JOIN dbo.RolePermissions rp ON rp.RoleName=ur.RoleName
+                          WHERE ur.UserId=@viewer AND rp.Permission IN ('*','members.manage'))
+                OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@viewer) pr JOIN dbo.RolePermissions rp ON rp.RoleName=pr.RoleName
+                          WHERE rp.Permission IN ('*','members.manage')))
+            ORDER BY p.Name OPTION(MAXRECURSION 0)
+            """,connection);
+        command.Parameters.Add(P("@viewer",viewer));
+        await using var reader=await command.ExecuteReaderAsync(); var result=new List<Team>();
+        while(await reader.ReadAsync()) result.Add(new(reader.GetInt32(0),reader.GetString(1)));
+        return result;
+    }
+    public async Task<List<Membership>> Memberships(int viewer, int id, bool team)
+    {
+        if (oracle.Enabled) return await oracle.Memberships(viewer, id, team);
         var sql = team
             ? """
               SELECT t.Id,t.Name,r.RoleName,r.IsAdditional
@@ -112,9 +130,15 @@ public sealed class UserStore(IConfiguration config, IPasswordHasher<AppUser> ha
                   SELECT m.Role,0 UNION ALL
                   SELECT a.RoleName,1 FROM dbo.ProjectMemberRoles a WHERE a.ProjectId=m.ProjectId AND a.UserId=m.UserId
               ) r(RoleName,IsAdditional)
-              WHERE m.UserId=@id ORDER BY p.Name,r.IsAdditional,r.RoleName
+              WHERE m.UserId=@id AND EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@viewer AND IsActive=1)
+                AND (@viewer=@id OR p.IsPublic=1
+                  OR EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles ur JOIN dbo.RolePermissions rp ON rp.RoleName=ur.RoleName
+                            WHERE ur.UserId=@viewer AND rp.Permission IN ('*','users.manage','issues.view','projects.manage'))
+                  OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@viewer) pr JOIN dbo.RolePermissions rp ON rp.RoleName=pr.RoleName
+                            WHERE rp.Permission IN ('*','issues.view','projects.manage')))
+              ORDER BY p.Name,r.IsAdditional,r.RoleName OPTION(MAXRECURSION 0)
               """;
-        await using var c = Connect(); await c.OpenAsync(); await using var cmd = new SqlCommand(sql, c); cmd.Parameters.Add(P("@id", id));
+        await using var c = Connect(); await c.OpenAsync(); await using var cmd = new SqlCommand(sql, c); cmd.Parameters.Add(P("@id", id)); cmd.Parameters.Add(P("@viewer", viewer));
         await using var r = await cmd.ExecuteReaderAsync(); var result = new List<Membership>(); while (await r.ReadAsync()) result.Add(new(r.GetInt32(0), r.GetString(1), r.GetString(2), r.GetInt32(3) == 1)); return result;
     }
     public async Task Create(string employee, string name, string job, int? unit, string password, bool admin = false, int? actorId = null)

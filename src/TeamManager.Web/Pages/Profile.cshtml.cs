@@ -29,9 +29,9 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
         Person = (await store.Directory()).FirstOrDefault(x => x.User.Id == selected)?.User;
         if (Person is null) return NotFound();
         Roles = await permissions.Roles(); GlobalRoles = await permissions.GlobalRoles(selected);
-        Units = await store.Choices("unit"); TeamChoices = await store.Choices("team"); ProjectChoices = await store.Choices("project"); Teams = await store.Memberships(selected, true); Projects = await store.Memberships(selected, false);
+        Units = await store.Choices("unit"); TeamChoices = await store.Choices("team"); ProjectChoices = await store.MembershipProjects(UserId); Teams = await store.Memberships(UserId, selected, true); Projects = await store.Memberships(UserId, selected, false);
         foreach (var t in TeamChoices) if (await permissions.CanManageMembers(User, "team", t.Id)) ManageTeams.Add(t.Id);
-        foreach (var p in ProjectChoices) if (await permissions.CanManageMembers(User, "project", p.Id)) ManageProjects.Add(p.Id);
+        ManageProjects=ProjectChoices.Select(p=>p.Id).ToHashSet();
         return Page();
     }
     public async Task<IActionResult> OnPostSaveAsync(int id, string? name, string? job, int? unit)

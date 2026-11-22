@@ -28,7 +28,10 @@ public sealed partial class OracleWorkspace
         Set(row, "LockoutUntil", null);
         return account;
     });
-    internal Task<List<Membership>> Memberships(int user, bool team) => Read(async w =>
+    internal Task<List<Team>> MembershipProjects(int viewer) => Query("ProfileMembershipProjects", SecuritySql + $"""
+        SELECT p."Id",p."Name" FROM "TMR_Projects" p WHERE {ActiveViewer} AND {HasRight("'members.manage'")} ORDER BY p."Name"
+        """,c=>Viewer(c,viewer),r=>new Team(r.GetInt32(0),r.GetString(1)));
+    internal Task<List<Membership>> Memberships(int viewer, int user, bool team) => team ? Read(async w =>
     {
         var result = new List<Membership>();
         foreach (var m in (await w.By(team ? "Members" : "ProjectMembers", "UserId", user)))
@@ -40,7 +43,19 @@ public sealed partial class OracleWorkspace
         }
 
         return result.OrderBy(r => r.Scope).ThenBy(r => r.IsAdditional).ToList();
-    });
+    }) : Query("ProfileProjectMemberships", SecuritySql + $"""
+        SELECT p."Id",p."Name",r.role_name,r.additional FROM "TMR_ProjectMembers" m
+        JOIN "TMR_Projects" p ON p."Id"=m."ProjectId"
+        JOIN (
+            SELECT "ProjectId","UserId","Role" role_name,0 additional FROM "TMR_ProjectMembers"
+            UNION ALL SELECT "ProjectId","UserId","RoleName",1 FROM "TMR_ProjectMemberRoles"
+        ) r ON r."ProjectId"=m."ProjectId" AND r."UserId"=m."UserId"
+        WHERE m."UserId"=:subject AND {ActiveViewer} AND (:viewer=:subject OR p."IsPublic"=1
+            OR EXISTS(SELECT 1 FROM global_rights WHERE "Permission" IN ('*','users.manage'))
+            OR {HasRight("'issues.view'")} OR {HasRight("'projects.manage'")})
+        ORDER BY p."Name",r.additional,r.role_name
+        """, c => { Viewer(c,viewer); AddQueryParameter(c,"subject",user); },
+        r => new Membership(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetInt32(3)!=0));
     internal Task Membership(int actor, int user, string kind, int scope, string? role, bool removeRole, bool replace, bool removeMember) => WriteAccount(actor, user, async w =>
     {
         var rights = (await Rights(w, actor, kind, scope));

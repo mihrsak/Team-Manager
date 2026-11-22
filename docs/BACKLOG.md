@@ -2,6 +2,15 @@
 
 ## Otvorene dorade iz revizije proizvoda
 
+### Napredak implementacije
+
+| Stavka | Status | Provjera |
+|---|---|---|
+| REV-01 | Dovršeno 22. 11. 2026. | SQL Server, Oracle i Db2: HR/EN HTML ne sadrži privatno projektno članstvo neovlaštenog promatrača; očuvani javni, vlastiti, administratorski i naslijeđeni pristup; opoziv se primjenjuje odmah. |
+| REV-02 / REV-04 | U izradi | Zaštita nespremljenih obrazaca i pristupačna povratna informacija nakon greške. |
+
+REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Ostale stavke revizije ostaju otvorene.
+
 Revizija od 20. 11. 2026. dodaje 14 otvorenih stavki, odvojeno od implementiranog funkcionalnog opsega u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
 
 Prije korisničkog pilota predloženi su **REV-01** (privatni projektni metapodaci kroz profile), **REV-02** (nespremljene izmjene), **REV-03** (pristup rezultatima zadataka), **REV-04** (povratna informacija nakon greške) i **REV-12** (zasebni demo podaci). Ostale stavke REV-05–REV-11 i REV-13–REV-14 predložene su za sljedeću iteraciju. Nijedna od ovih dorada nije zatvorena samim pisanjem revizije.
