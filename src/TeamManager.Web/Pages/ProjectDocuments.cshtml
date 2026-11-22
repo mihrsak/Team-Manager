@@ -26,7 +26,7 @@
 {
     <article class="card">
         <h2>@document.Title</h2>
-        <p>@document.Author · @document.At.ToString("dd.MM.yyyy HH:mm") UTC</p>
+        <p>@document.Author · @document.At.ToString("g") UTC</p>
         @if (document.Description.Length > 0)
         {
             <p style="white-space:pre-wrap;overflow-wrap:anywhere">@document.Description</p>

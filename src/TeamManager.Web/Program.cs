@@ -223,10 +223,12 @@ if (string.IsNullOrWhiteSpace(trustedProxyNetwork))
     app.UseHttpsRedirection();
 else
     app.UseWhen(context => !context.Request.Path.StartsWithSegments("/health"), branch => branch.UseHttpsRedirection());
+app.UseStaticFiles();
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {
     var previous = System.Globalization.CultureInfo.CurrentUICulture;
+    var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
     var language = context.User.FindFirst(UserStore.LanguageClaim)?.Value;
     if (language is null)
     {
@@ -240,9 +242,10 @@ app.Use(async (context, next) =>
     try
     {
         System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(language);
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(builder.Configuration["Formatting:Culture"] ?? (language == "en" ? "en-GB" : "hr-HR"));
         await next(context);
     }
-    finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
+    finally { System.Globalization.CultureInfo.CurrentUICulture = previous; System.Globalization.CultureInfo.CurrentCulture=previousCulture; }
 });
 if (oracleMode)
 {

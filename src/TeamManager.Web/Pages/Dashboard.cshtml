@@ -30,7 +30,7 @@
                         <tr>
                             <td><a asp-page="/Issue" asp-route-id="@issue.Id">@issue.Title</a></td>
                             <td>@issue.Project</td><td>@issue.Status</td><td>@issue.Priority</td>
-                            <td>@(issue.DueDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                            <td>@(issue.DueDate?.ToString("d") ?? "—")</td>
                         </tr>
                     }
                 </tbody>

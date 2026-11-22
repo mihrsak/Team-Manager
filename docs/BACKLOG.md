@@ -7,7 +7,9 @@
 | Stavka | Status | Provjera |
 |---|---|---|
 | REV-01 | Dovršeno 22. 11. 2026. | SQL Server, Oracle i Db2: HR/EN HTML ne sadrži privatno projektno članstvo neovlaštenog promatrača; očuvani javni, vlastiti, administratorski i naslijeđeni pristup; opoziv se primjenjuje odmah. |
-| REV-02 / REV-04 | U izradi | Zaštita nespremljenih obrazaca i pristupačna povratna informacija nakon greške. |
+| REV-02 / REV-04 | Dovršeno 22. 11. 2026. | HR/EN ostanak/odustajanje, očuvanje izvornog zadatka, fokus na upozoravajući sažetak pogreške i automatizirana pristupačnost stanja greške; SQL Server, Oracle i Db2. |
+| REV-05 / REV-08 | Dovršeno 22. 11. 2026. | Prevedeni pronađeni sistemski tekstovi profila, povijesti, Git/LDAP oznaka; ograničenja 50/30/20 u obrascu i na poslužitelju. |
+| REV-06 | U izradi | Regionalno formatiranje HR/en-GB, uz neovisnu konfiguraciju `Formatting:Culture`; dovršava se prikaz popisa zadataka. |
 
 REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Ostale stavke revizije ostaju otvorene.
 

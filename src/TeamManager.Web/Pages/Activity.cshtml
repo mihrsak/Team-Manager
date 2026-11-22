@@ -36,7 +36,7 @@ else
                 @foreach (var entry in Model.Entries)
                 {
                     <tr>
-                        <td><time datetime="@entry.At.ToString("O")">@entry.At.ToString("dd.MM.yyyy HH:mm")</time></td>
+                        <td><time datetime="@entry.At.ToString("O")">@entry.At.ToString("g")</time></td>
                         <td>@Text[ActivityModel.KindLabel(entry.Kind)]</td>
                         <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a></td>
                         <td>@entry.Project</td><td>@entry.Author</td>

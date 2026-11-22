@@ -17,7 +17,7 @@ else
                 @foreach (var entry in Model.Entries)
                 {
                     <tr>
-                        <td>@entry.At.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                        <td>@entry.At.ToString("G")</td>
                         <td>@entry.Actor</td>
                         <td>@Text[AdministrationAuditModel.Label(entry.Action)]</td>
                         <td>@entry.Subject</td><td>@entry.Details</td>

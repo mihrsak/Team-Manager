@@ -10,7 +10,7 @@
     <p><a asp-page="/Forum" asp-route-projectId="@Model.Project.Id">@Text["Sve teme"]</a></p>
     <article class="card">
         <h2>@topic.Title</h2>
-        <p>@topic.Author · @topic.At.ToString("dd.MM.yyyy HH:mm") UTC</p>
+        <p>@topic.Author · @topic.At.ToString("g") UTC</p>
         <p style="white-space:pre-wrap;overflow-wrap:anywhere">@topic.Body</p>
         @if (topic.IsLocked) { <p>@Text["Tema je zaključana."]</p> }
         @if (Model.CanModerate)
@@ -25,7 +25,7 @@
         @foreach (var reply in Model.Replies)
         {
             <article>
-                <small>@reply.Author · @reply.At.ToString("dd.MM.yyyy HH:mm") UTC</small>
+                <small>@reply.Author · @reply.At.ToString("g") UTC</small>
                 <p style="white-space:pre-wrap;overflow-wrap:anywhere">@reply.Body</p>
             </article>
         }
@@ -61,7 +61,7 @@ else
             @foreach (var item in Model.Topics)
             {
                 <li><a asp-page="/Forum" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@item.Id">@item.Title</a>
-                    · @item.Author · @item.At.ToString("dd.MM.yyyy")
+                    · @item.Author · @item.At.ToString("d")
                     @if (item.IsLocked) { <span> · @Text["Zaključano"]</span> }
                 </li>
             }

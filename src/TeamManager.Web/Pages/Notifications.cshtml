@@ -19,7 +19,7 @@ else
                     <tr>
                         <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a> · @entry.Project</td>
                         <td>@Text[ActivityModel.KindLabel(entry.Kind)]</td>
-                        <td>@entry.At.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td>@entry.At.ToString("g")</td>
                         <td>
                             @if (entry.IsRead)
                             {

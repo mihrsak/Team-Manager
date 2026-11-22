@@ -30,7 +30,7 @@ html[data-theme="dark"] {
 .skip-link:focus{transform:none}
 .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 .validation-summary-valid{display:none}
-</style></head><body>
+</style><script src="~/js/forms.js" asp-append-version="true" defer></script></head><body data-unsaved-message="@Text["Imaš nespremljene izmjene. Želiš li napustiti stranicu i odbaciti ih?"]">
 <a class="skip-link" href="#main-content">@Text["Preskoči na glavni sadržaj"]</a>
 <nav><strong>TEAM MANAGER</strong>@if(User.Identity?.IsAuthenticated==true){<a asp-page="/Dashboard">@Text["Moji zadaci"]</a><a asp-page="/Search">@Text["Pretraga"]</a><a href="/Projects">@Text["Projekti"]</a><a href="/Issues">@Text["Zadaci"]</a><a asp-page="/Calendar">@Text["Kalendar"]</a><a asp-page="/Activity">@Text["Aktivnosti"]</a><a asp-page="/Notifications">@Text["Obavijesti"]</a><a asp-page="/TimeReport">@Text["Izvještaj o vremenu"]</a><a href="/Users">@Text["Korisnici"]</a><a href="/Profile">@Text["Moj profil"]</a><span>@User.Identity.Name</span><form method="post" asp-page="/Logout"><button>@Text["Odjava"]</button></form>}</nav>
 <main id="main-content" tabindex="-1">@if(User.IsInRole("roles.manage")){<a href="/Roles" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Role i ovlasti"]</a> @if(OracleOverviewStore.Enabled(Configuration)){<a asp-page="/OracleOverview">@Text["Oracle pregled zadataka"]</a>}} @if(User.IsInRole("workflow.manage")){<a href="/Workflow" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Tijek rada"]</a>} @RenderBody()</main></body></html>

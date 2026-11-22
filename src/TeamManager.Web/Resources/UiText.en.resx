@@ -1338,4 +1338,9 @@
   <data name="Prikaži zadatke" xml:space="preserve"><value>Show issues</value></data>
   <data name="Ovaj modul još nije dostupan u Oracle načinu rada." xml:space="preserve"><value>This module is not yet available in Oracle mode.</value></data>
   <data name="Spremanje je trenutačno zauzeto. Pokušaj ponovno." xml:space="preserve"><value>Saving is temporarily busy. Please try again.</value></data>
+  <data name="Imaš nespremljene izmjene. Želiš li napustiti stranicu i odbaciti ih?" xml:space="preserve"><value>You have unsaved changes. Leave this page and discard them?</value></data>
+  <data name="Autor" xml:space="preserve"><value>Author</value></data>
+  <data name="Natrag na prijavu" xml:space="preserve"><value>Back to sign in</value></data>
+  <data name="Unesi naziv od 1 do {0} znakova." xml:space="preserve"><value>Enter a name between 1 and {0} characters.</value></data>
+  <data name="Tip: 50 znakova; status: 30; prioritet: 20." xml:space="preserve"><value>Type: 50 characters; status: 30; priority: 20.</value></data>
 </root>
