@@ -14,6 +14,11 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     [BindProperty(SupportsGet=true)] public string? GroupBy { get; set; }
     [BindProperty(SupportsGet=true)] public string? Columns { get; set; }
     [BindProperty(SupportsGet=true)] public string[] Column { get; set; } = [];
+    [BindProperty(SupportsGet=true)] public int PageNumber {get;set;}=1;
+    public int TotalCount {get;private set;}
+    public int PageCount {get;private set;}=1;
+    public string CurrentListUrl => Url.Page("/Issues",IssueRoute)!;
+    public string PageUrl(int page) {var route=IssueRoute;route["PageNumber"]=page;return Url.Page("/Issues",route)!;}
 
     public static readonly Dictionary<string, string> ColumnLabels = new()
     {
@@ -35,7 +40,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     public Microsoft.AspNetCore.Routing.RouteValueDictionary IssueRoute => new()
     {
         ["ProjectId"] = ProjectId, ["Status"] = Status, ["Query"] = Query,
-        ["SortOrder"] = SortOrder, ["GroupBy"] = GroupBy, ["Columns"] = Columns
+        ["SortOrder"] = SortOrder, ["GroupBy"] = GroupBy, ["Columns"] = Columns,["PageNumber"]=PageNumber
     };
 
     public List<Team> Projects{get;set;}=[];
@@ -53,12 +58,14 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         Priorities = await workflow.Values("priority");
         Statuses = await workflow.Values("status");
         Projects = await store.Projects(UserId);
-        foreach (var project in Projects)
+        Items = Sort(await store.List(UserId, ProjectId, Status, Query)).ToList();
+        TotalCount=Items.Count;PageCount=Math.Max(1,(TotalCount+49)/50);PageNumber=Math.Clamp(PageNumber,1,PageCount);
+        Items=Items.Skip((PageNumber-1)*50).Take(50).ToList();
+        foreach (var project in Projects.Where(p=>p.Id==ProjectId || Items.Any(i=>i.ProjectId==p.Id)))
         {
             if (await store.Can(UserId, project.Id, "issues.create")) CanCreate.Add(project.Id);
             if (await store.Can(UserId, project.Id, "issues.edit")) CanEdit.Add(project.Id);
         }
-        Items = Sort(await store.List(UserId, ProjectId, Status, Query)).ToList();
     }
 
     private void NormalizeLayout()
@@ -96,7 +103,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         "status" => row.Status,
         "priority" => row.Priority,
         "assignee" => row.Assignee ?? "Nije dodijeljen",
-        "due" => row.DueDate?.ToString("dd.MM.yyyy"),
+        "due" => row.DueDate?.ToString("d"),
         _ => null
     };
 

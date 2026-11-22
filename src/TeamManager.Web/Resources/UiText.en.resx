@@ -1343,4 +1343,14 @@
   <data name="Natrag na prijavu" xml:space="preserve"><value>Back to sign in</value></data>
   <data name="Unesi naziv od 1 do {0} znakova." xml:space="preserve"><value>Enter a name between 1 and {0} characters.</value></data>
   <data name="Tip: 50 znakova; status: 30; prioritet: 20." xml:space="preserve"><value>Type: 50 characters; status: 30; priority: 20.</value></data>
+  <data name="Za novi zadatak odaberi projekt u filtru." xml:space="preserve"><value>Choose a project in the filter to create an issue.</value></data>
+  <data name="Stranice zadataka" xml:space="preserve"><value>Issue pages</value></data>
+  <data name="Stranice projekata" xml:space="preserve"><value>Project pages</value></data>
+  <data name="Prethodna stranica" xml:space="preserve"><value>Previous page</value></data>
+  <data name="Sljedeća stranica" xml:space="preserve"><value>Next page</value></data>
+  <data name="Stranica {0} od {1}" xml:space="preserve"><value>Page {0} of {1}</value></data>
+  <data name="Sva stanja" xml:space="preserve"><value>All states</value></data>
+  <data name="Administracija" xml:space="preserve"><value>Administration</value></data>
+  <data name="Pregled projekta" xml:space="preserve"><value>Project overview</value></data>
+  <data name="Postavke projekta" xml:space="preserve"><value>Project settings</value></data>
 </root>

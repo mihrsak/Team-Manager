@@ -4,6 +4,8 @@ Provjereno lokalno 19. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivn
 
 ## Lokalna provjera
 
+**REV-03/06/07/11, 22. 11. 2026.:** test s 52 zadatka potvrđuje 50+2 rezultata, izvoz svih 52 u CSV, povratak sa zadatka na iste filtre/stranicu i odbijanje vanjskog povratnog URL-a. Projekti imaju filtar, pregled i odvojene postavke; kartice imaju lokalizirane naslove i navigacija označava trenutačni odjeljak. SQL Server i Db2 provjere prošle su na paketu `rev-navigation-final`, Oracle i na završnom paketu s ciljanim dohvatom odredišta prijenosa (`rev-content-final`). Svaka izmjena zadatka i dalje ponovno provjerava prava unutar transakcije.
+
 **REV-02/04/05/08, 22. 11. 2026.:** uvedena je zaštita nespremljenih POST obrazaca, fokus i uloga upozorenja na serverskim greškama, dopunjeni pronađeni EN prijevodi i usklađena ograničenja šifrarnika. `Test-FormRevision.cjs` prolazi na SQL Serveru, Oracleu i Db2, uključujući HR/EN i axe provjeru stanja greške. To nije nova ručna NVDA potvrda. Regionalni format može se zadati neovisno od jezika kroz `Formatting:Culture` (zadano hr-HR/en-GB).
 
 **REV-01 dovršen 22. 11. 2026.:** dohvat projektnih članstava sada uključuje promatrača i primjenjuje serverske ovlasti. `Test-ProfilePrivacy.cjs` prošao je na privremenom SQL Serveru te izoliranim Oracle i Db2 shemama u HR/EN, uključujući javni, vlastiti, administratorski, naslijeđeni i opozvani pristup. Ostale revizijske dorade ostaju otvorene.

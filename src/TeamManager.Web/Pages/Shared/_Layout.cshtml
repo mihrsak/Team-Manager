@@ -1,6 +1,6 @@
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @inject IConfiguration Configuration
-<!doctype html><html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-theme="@(User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light")"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Team Manager</title>
+<!doctype html><html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-theme="@(User.FindFirst(UserStore.ThemeClaim)?.Value ?? "light")"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>@Text[PageLabels.For(ViewContext.RouteData.Values["page"]?.ToString())] · Team Manager</title>
 <style>
 html {
     color-scheme: light;
@@ -30,7 +30,10 @@ html[data-theme="dark"] {
 .skip-link:focus{transform:none}
 .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 .validation-summary-valid{display:none}
+.admin-links,.pagination{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:16px 0}
+nav a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px;font-weight:700}
+details>summary{cursor:pointer;padding:12px 0;font-weight:600}
 </style><script src="~/js/forms.js" asp-append-version="true" defer></script></head><body data-unsaved-message="@Text["Imaš nespremljene izmjene. Želiš li napustiti stranicu i odbaciti ih?"]">
 <a class="skip-link" href="#main-content">@Text["Preskoči na glavni sadržaj"]</a>
 <nav><strong>TEAM MANAGER</strong>@if(User.Identity?.IsAuthenticated==true){<a asp-page="/Dashboard">@Text["Moji zadaci"]</a><a asp-page="/Search">@Text["Pretraga"]</a><a href="/Projects">@Text["Projekti"]</a><a href="/Issues">@Text["Zadaci"]</a><a asp-page="/Calendar">@Text["Kalendar"]</a><a asp-page="/Activity">@Text["Aktivnosti"]</a><a asp-page="/Notifications">@Text["Obavijesti"]</a><a asp-page="/TimeReport">@Text["Izvještaj o vremenu"]</a><a href="/Users">@Text["Korisnici"]</a><a href="/Profile">@Text["Moj profil"]</a><span>@User.Identity.Name</span><form method="post" asp-page="/Logout"><button>@Text["Odjava"]</button></form>}</nav>
-<main id="main-content" tabindex="-1">@if(User.IsInRole("roles.manage")){<a href="/Roles" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Role i ovlasti"]</a> @if(OracleOverviewStore.Enabled(Configuration)){<a asp-page="/OracleOverview">@Text["Oracle pregled zadataka"]</a>}} @if(User.IsInRole("workflow.manage")){<a href="/Workflow" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Tijek rada"]</a>} @RenderBody()</main></body></html>
+<main id="main-content" tabindex="-1"><div class="admin-links" role="navigation" aria-label="@Text["Administracija"]">@if(User.IsInRole("roles.manage")){<a href="/Roles" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Role i ovlasti"]</a> @if(OracleOverviewStore.Enabled(Configuration)){<a asp-page="/OracleOverview">@Text["Oracle pregled zadataka"]</a>}} @if(User.IsInRole("workflow.manage")){<a href="/Workflow" lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName">@Text["Tijek rada"]</a>}</div> @RenderBody()</main></body></html>

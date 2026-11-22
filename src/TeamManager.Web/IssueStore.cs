@@ -24,6 +24,7 @@ public record ActivityRow(int Id, int IssueId, string Title, string Project, str
 public record IssueEvent(string Author, string Kind, string Body, DateTime At);
 public record TimeEntry(string Author, DateTime Date, decimal Hours, string Note, string Activity, int Id);
 public record TimeReportRow(string Project, string Person, string EmployeeNumber, string Activity, decimal Hours);
+public record TransferProject(int Id,string Name,bool CanMove);
 public sealed class IssueStore(IConfiguration config, Permissions permissions, WorkflowStore workflow, ProjectStore projects, OracleWorkspace oracle)
 {
     public static readonly string[] Types = ["Zadatak", "Greška", "Zahtjev"];
@@ -236,6 +237,26 @@ public sealed class IssueStore(IConfiguration config, Permissions permissions, W
 
     public Task<bool> CanMove(int user, int project)
         => projects.CanManage(user, project);
+
+    public async Task<List<TransferProject>> TransferProjects(int user)
+    {
+        if(oracle.Enabled)return await oracle.TransferProjects(user);
+        await using var connection=Connect();await connection.OpenAsync();
+        await using var command=new SqlCommand("""
+            SELECT p.Id,p.Name,CONVERT(bit,CASE WHEN EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE r.UserId=@user AND rp.Permission IN ('*','projects.manage'))
+                OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@user) r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE rp.Permission IN ('*','projects.manage')) THEN 1 ELSE 0 END)
+            FROM dbo.Projects p WHERE p.State='Active' AND p.IssuesEnabled=1
+             AND EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@user AND IsActive=1)
+             AND (EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE r.UserId=@user AND rp.Permission IN ('*','issues.create'))
+               OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@user) r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE rp.Permission IN ('*','issues.create')))
+             AND (p.IsPublic=1 OR EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE r.UserId=@user AND rp.Permission IN ('*','issues.view'))
+               OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@user) r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE rp.Permission IN ('*','issues.view')))
+            ORDER BY p.Name OPTION(MAXRECURSION 0)
+            """,connection);
+        command.Parameters.Add(P("@user",user));await using var reader=await command.ExecuteReaderAsync();var targets=new List<TransferProject>();
+        while(await reader.ReadAsync())targets.Add(new(reader.GetInt32(0),reader.GetString(1),reader.GetBoolean(2)));
+        return targets;
+    }
 
     public async Task<int> Transfer(int user, int id, int revision, int destination, bool move)
     {

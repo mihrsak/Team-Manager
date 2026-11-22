@@ -9,7 +9,7 @@
 | REV-01 | Dovršeno 22. 11. 2026. | SQL Server, Oracle i Db2: HR/EN HTML ne sadrži privatno projektno članstvo neovlaštenog promatrača; očuvani javni, vlastiti, administratorski i naslijeđeni pristup; opoziv se primjenjuje odmah. |
 | REV-02 / REV-04 | Dovršeno 22. 11. 2026. | HR/EN ostanak/odustajanje, očuvanje izvornog zadatka, fokus na upozoravajući sažetak pogreške i automatizirana pristupačnost stanja greške; SQL Server, Oracle i Db2. |
 | REV-05 / REV-08 | Dovršeno 22. 11. 2026. | Prevedeni pronađeni sistemski tekstovi profila, povijesti, Git/LDAP oznaka; ograničenja 50/30/20 u obrascu i na poslužitelju. |
-| REV-06 | U izradi | Regionalno formatiranje HR/en-GB, uz neovisnu konfiguraciju `Formatting:Culture`; dovršava se prikaz popisa zadataka. |
+| REV-03 / REV-06 / REV-07 / REV-11 | Dovršeno 22. 11. 2026. | Rezultati prije sekundarnih radnji, 50 redaka po stranici, pretraga projekata, potpuni CSV, validirani lokalni povratni URL-ovi, regionalni datumi, aktivna navigacija, naslovi kartica i odvojeni pregled/postavke projekta. SQL Server, Oracle i Db2; HR/EN. |
 
 REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Ostale stavke revizije ostaju otvorene.
 

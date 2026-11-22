@@ -14,7 +14,8 @@
         }
     </div>
 }
-<div class="card"><form method="post" asp-route-id="@Model.Id">
+@if(Model.Id is not null){<section class="card"><h2>@Text["Pregled projekta"]</h2><p style="white-space:pre-wrap">@Model.Input.Description</p><p>@Text["Vidljivost"]: @(Model.Input.IsPublic?Text["Javni"]:Text["Privatni"]) · @Text["Stanje"]: @Text[TeamManager.Web.Pages.ProjectsModel.StateName(Model.Input.State)]</p></section>}
+<details open="@(Model.Id is null || !ViewData.ModelState.IsValid)"><summary>@Text["Postavke projekta"]</summary><div class="card"><form method="post" asp-route-id="@Model.Id">
 <div asp-validation-summary="All"></div><input type="hidden" asp-for="Input.Revision">
 <fieldset disabled="@(!Model.CanEdit)">
 <label>@Text["Naziv"]<input asp-for="Input.Name" maxlength="100" required></label>
@@ -38,3 +39,4 @@
 @if(Model.CanEdit){<button>@Text["Spremi module"]</button>}
 </fieldset></form></section>
 }
+</details>

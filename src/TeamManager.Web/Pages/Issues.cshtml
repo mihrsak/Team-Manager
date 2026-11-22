@@ -27,35 +27,10 @@
     }
 </fieldset>
 <div><button>@Text["Primijeni"]</button> <button name="handler" value="Csv">@Text["Izvezi CSV"]</button> <a href="/Issues">@Text["Očisti"]</a></div></form></div>
-<div class="card"><h2>@Text["Projekti"]</h2>@foreach(var p in Model.Projects){<p><a asp-page="/Issues" asp-route-ProjectId="@p.Id">@p.Name</a> @if(Model.CanCreate.Contains(p.Id)){<a class="button" asp-page="/Issue" asp-route-projectId="@p.Id">@Text["Novi zadatak"]</a>}</p>}@if(Model.Projects.Count==0){<p>@Text["Nema dostupnih projekata. Administrator može kreirati projekt i dodijeliti članstvo."]</p>}</div>
+@if(Model.ProjectId is int selectedProject){var selected=Model.Projects.Find(p=>p.Id==selectedProject); if(selected is not null){<p><a asp-page="/Project" asp-route-id="@selectedProject">@selected.Name</a> @if(Model.CanCreate.Contains(selectedProject)){<a class="button" asp-page="/Issue" asp-route-projectId="@selectedProject" asp-route-returnUrl="@Model.CurrentListUrl">@Text["Novi zadatak"]</a>}</p>}}
+else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
 @if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}
 <div asp-validation-summary="All"></div>
-<section class="card">
-    <h2>@Text["Moji spremljeni upiti"]</h2>
-    @foreach (var saved in Model.SavedQueries)
-    {
-        <div class="actions">
-            <a asp-page-handler="Saved" asp-route-id="@saved.Id">@saved.Name</a>
-            <form method="post" asp-page-handler="DeleteQuery" asp-route-id="@saved.Id" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
-                <button aria-label="@Text["Ukloni upit {0}", saved.Name]">@Text["Ukloni"]</button>
-            </form>
-        </div>
-    }
-    <form method="post" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
-        <label>@Text["Naziv upita"]<input name="name" maxlength="80" required></label>
-        <button>@Text["Spremi filtre i prikaz"]</button>
-    </form>
-</section>
-@if (canSelect)
-{
-    <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns" class="card">
-        <h2>@Text["Skupno uređivanje"]</h2>
-        <p>@Text["Označi do 100 zadataka na popisu."]</p>
-        <label>@Text["Status"]<select name="bulkStatus"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var status in Model.Statuses){<option>@status</option>}</select></label>
-        <label>@Text["Prioritet"]<select name="bulkPriority"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var priority in Model.Priorities){<option>@priority</option>}</select></label>
-        <button>@Text["Spremi odabrane zadatke"]</button>
-    </form>
-}
 <div class="card table">
     @if (Model.Items.Count == 0)
     {
@@ -63,7 +38,7 @@
     }
     else
     {
-        <p>@Text["Ukupno zadataka"]: @Model.Items.Count</p>
+        <p>@Text["Ukupno zadataka"]: @Model.TotalCount</p>
         @foreach (var group in Model.Groups)
         {
             <table>
@@ -89,7 +64,7 @@
                                     }
                                 </td>
                             }
-                            <td><a asp-page="/Issue" asp-route-id="@item.Id">@item.Title</a></td>
+                            <td><a asp-page="/Issue" asp-route-id="@item.Id" asp-route-returnUrl="@Model.CurrentListUrl">@item.Title</a></td>
                             @foreach (var column in visibleColumns) { <td>@(column.Key == "assignee" && item.Assignee is null ? Text["Nije dodijeljen"].Value : IssuesModel.ColumnText(item, column.Key))</td> }
                         </tr>
                     }
@@ -97,4 +72,30 @@
             </table>
         }
     }
-</div>
+</div>@if(Model.PageCount>1){<div class="pagination" role="navigation" aria-label="@Text["Stranice zadataka"]">@if(Model.PageNumber>1){<a href="@Model.PageUrl(Model.PageNumber-1)">@Text["Prethodna stranica"]</a>} <span>@Text["Stranica {0} od {1}",Model.PageNumber,Model.PageCount]</span> @if(Model.PageNumber<Model.PageCount){<a href="@Model.PageUrl(Model.PageNumber+1)">@Text["Sljedeća stranica"]</a>}</div>}
+<section class="card">
+    <h2>@Text["Moji spremljeni upiti"]</h2>
+    @foreach (var saved in Model.SavedQueries)
+    {
+        <div class="actions">
+            <a asp-page-handler="Saved" asp-route-id="@saved.Id">@saved.Name</a>
+            <form method="post" asp-route-pageNumber="@Model.PageNumber" asp-page-handler="DeleteQuery" asp-route-id="@saved.Id" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
+                <button aria-label="@Text["Ukloni upit {0}", saved.Name]">@Text["Ukloni"]</button>
+            </form>
+        </div>
+    }
+    <form method="post" asp-route-pageNumber="@Model.PageNumber" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
+        <label>@Text["Naziv upita"]<input name="name" maxlength="80" required></label>
+        <button>@Text["Spremi filtre i prikaz"]</button>
+    </form>
+</section>
+@if (canSelect)
+{
+    <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns" class="card">
+        <h2>@Text["Skupno uređivanje"]</h2>
+        <p>@Text["Označi do 100 zadataka na popisu."]</p>
+        <label>@Text["Status"]<select name="bulkStatus"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var status in Model.Statuses){<option>@status</option>}</select></label>
+        <label>@Text["Prioritet"]<select name="bulkPriority"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var priority in Model.Priorities){<option>@priority</option>}</select></label>
+        <button>@Text["Spremi odabrane zadatke"]</button>
+    </form>
+}

@@ -5,6 +5,8 @@ namespace TeamManager.Web.Pages;
 public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments,IssueFieldStore fields):PageModel
 {
     [BindProperty]public IssueInput Input{get;set;}=new();
+    [BindProperty(SupportsGet=true)] public string? ReturnUrl {get;set;}
+    public string BackUrl => ReturnUrl is not null && Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : Url.Page("/Issues",new{ProjectId})!;
     public int? Id{get;set;}
     public int ProjectId{get;set;}
     public string ProjectName{get;set;}="";
@@ -30,6 +32,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     {
         Response.Headers.CacheControl = "private, no-store";
         Id=id;
+        if(ReturnUrl is not null && !Url.IsLocalUrl(ReturnUrl)) ReturnUrl=null;
         Types=await workflow.Values("type");Statuses=await workflow.Values("status");Priorities=await workflow.Values("priority");
         if (id is int selected)
         {
@@ -59,12 +62,11 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             IsWatching = await store.IsWatching(UserId, id.Value);
             Links = await links.List(UserId, id.Value, ProjectId);
             var canMove = CanEdit && await store.CanMove(UserId, ProjectId);
-            foreach (var target in await store.Projects(UserId, "issues.create"))
+            foreach (var target in await store.TransferProjects(UserId))
             {
-                if (!await store.Can(UserId, target.Id, "issues.view")) continue;
-                CopyProjects.Add(target);
-                if (canMove && target.Id != ProjectId && await store.CanMove(UserId, target.Id))
-                    MoveProjects.Add(target);
+                CopyProjects.Add(new(target.Id,target.Name));
+                if (canMove && target.Id != ProjectId && target.CanMove)
+                    MoveProjects.Add(new(target.Id,target.Name));
             }
         }
         return Page();
@@ -73,21 +75,21 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     {
         var submitted=Input;var result=await OnGetAsync(id,projectId);if(result is not PageResult)return result;Input=submitted;
         if(!CanEdit)return Forbid();if(!ModelState.IsValid)return Page();
-        try{var saved=await store.Save(UserId,ProjectId,id,Input);TempData["Notice"]="Zadatak je spremljen.";return RedirectToPage(new{id=saved});}
+        try{var saved=await store.Save(UserId,ProjectId,id,Input);TempData["Notice"]="Zadatak je spremljen.";return RedirectToPage(new{id=saved,returnUrl=ReturnUrl});}
         catch(UnauthorizedAccessException){return Forbid();}
         catch(Exception ex) when(ex is ArgumentException or InvalidOperationException){ModelState.AddModelError("",ex.Message);return Page();}
     }
     public async Task<IActionResult> OnPostCommentAsync(int id,string? text)
     {
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;
-        try{await store.Comment(UserId,id,text??"");return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
+        try{await store.Comment(UserId,id,text??"");return RedirectToPage(new{id,returnUrl=ReturnUrl});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
     }
     public async Task<IActionResult> OnPostTimeAsync(int id,DateTime? date,string? hours,string? note,string? activity)
     {
         var parsed=decimal.TryParse(hours?.Replace(',','.'),System.Globalization.NumberStyles.AllowDecimalPoint,System.Globalization.CultureInfo.InvariantCulture,out var value);
         var valid=date is not null&&parsed&&!ModelState.Any(x=>x.Key=="date" && x.Value!.Errors.Count>0);
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;if(!valid){ModelState.AddModelError("","Unesi valjan datum i broj sati.");return Page();}
-        try{await store.LogTime(UserId,id,date!.Value,value,note,activity);return RedirectToPage(new{id});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
+        try{await store.LogTime(UserId,id,date!.Value,value,note,activity);return RedirectToPage(new{id,returnUrl=ReturnUrl});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
     }
     public async Task<IActionResult> OnPostTransferAsync(int id, int? revision, int destination, bool move)
     {
@@ -98,7 +100,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         {
             var saved = await store.Transfer(UserId, id, revision.Value, destination, move);
             TempData["Notice"] = move ? "Zadatak je premješten." : "Zadatak je kopiran.";
-            return RedirectToPage(new { id = saved });
+            return RedirectToPage(new { id = saved, returnUrl=ReturnUrl });
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
@@ -125,7 +127,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         try
         {
             await links.Set(UserId, id, otherId, kind, outgoing, remove);
-            return RedirectToPage(new { id });
+            return RedirectToPage(new { id, returnUrl=ReturnUrl });
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (ArgumentException ex) { error = ex.Message; }
@@ -151,7 +153,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         if (id <= 0 || watch is null) return BadRequest();
         try { await store.SetWatching(UserId, id, watch.Value); }
         catch (UnauthorizedAccessException) { return Forbid(); }
-        return RedirectToPage(new { id });
+        return RedirectToPage(new { id, returnUrl=ReturnUrl });
     }
 
     public async Task<IActionResult> OnPostPrivateNoteAsync(int id, string? text)
@@ -167,7 +169,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             ModelState.AddModelError("", ex.Message);
             return Page();
         }
-        return RedirectToPage(new { id });
+        return RedirectToPage(new { id, returnUrl=ReturnUrl });
     }
 
     public async Task<IActionResult> OnGetAttachmentAsync(int id, int attachmentId)
@@ -193,7 +195,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             ModelState.AddModelError("", ex.Message);
             return Page();
         }
-        Response.Headers.Location = Url.Page("/Issue", new { id });
+        Response.Headers.Location = Url.Page("/Issue", new { id, returnUrl=ReturnUrl });
         return StatusCode(StatusCodes.Status303SeeOther);
     }
 
@@ -205,7 +207,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             if (!await attachments.Remove(UserId, id, attachmentId)) return NotFound();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
-        Response.Headers.Location = Url.Page("/Issue", new { id });
+        Response.Headers.Location = Url.Page("/Issue", new { id, returnUrl=ReturnUrl });
         return StatusCode(StatusCodes.Status303SeeOther);
     }
 
@@ -222,7 +224,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             ModelState.AddModelError("", ex.Message);
             return Page();
         }
-        return RedirectToPage(new { id });
+        return RedirectToPage(new { id, returnUrl=ReturnUrl });
     }
 
     public IActionResult OnPost()=>BadRequest();
