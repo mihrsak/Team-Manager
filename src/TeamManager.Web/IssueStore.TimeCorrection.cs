@@ -18,7 +18,16 @@ public sealed partial class IssueStore
         var detail=await Get(user,issue);if(detail is null||!await Can(user,detail.ProjectId,"time.view"))return null;
         if(oracle.Enabled)return await oracle.TimeEntryFor(user,issue,entry);
         await using var c=Connect();await c.OpenAsync();
-        await using var cmd=new SqlCommand("SELECT Id,IssueId,UserId,WorkDate,Hours,Activity,Note FROM dbo.TimeEntries WHERE Id=@entry AND IssueId=@issue AND EXISTS(SELECT 1 FROM dbo.Issues i WHERE i.Id=@issue AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))) OPTION(MAXRECURSION 0)",c);
+        await using var cmd=new SqlCommand("""
+            SELECT t.Id,t.IssueId,t.UserId,t.WorkDate,t.Hours,t.Activity,t.Note
+            FROM dbo.TimeEntries t JOIN dbo.Issues i ON i.Id=t.IssueId JOIN dbo.Projects p ON p.Id=i.ProjectId
+            WHERE t.Id=@entry AND t.IssueId=@issue AND p.IssuesEnabled=1 AND p.TimeEnabled=1
+              AND EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@user AND IsActive=1)
+              AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
+              AND (p.IsPublic=1 OR EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE r.UserId=@user AND rp.Permission IN ('*','issues.view'))
+                  OR EXISTS(SELECT 1 FROM dbo.EffectiveProjectRoles(p.Id,@user) r JOIN dbo.RolePermissions rp ON rp.RoleName=r.RoleName WHERE rp.Permission IN ('*','issues.view')))
+            OPTION(MAXRECURSION 0)
+            """,c);
         cmd.Parameters.AddRange([P("@entry",entry),P("@issue",issue),P("@user",user)]);
         await using var r=await cmd.ExecuteReaderAsync();return await r.ReadAsync()?new(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.GetString(6)):null;
     }
@@ -38,6 +47,11 @@ public sealed partial class IssueStore
         await using var rights=new SqlCommand("SELECT DISTINCT p.Permission FROM (SELECT RoleName FROM dbo.EffectiveUserRoles WHERE UserId=@user UNION SELECT RoleName FROM dbo.EffectiveProjectRoles(@project,@user)) r JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName OPTION(MAXRECURSION 0)",c,tx);
         rights.Parameters.AddRange([P("@user",user),P("@project",detail.ProjectId)]);var allowed=new HashSet<string>();await using(var r=await rights.ExecuteReaderAsync()){while(await r.ReadAsync())allowed.Add(r.GetString(0));}
         if(!allowed.Contains("*")&&!allowed.Contains("time.log"))throw new UnauthorizedAccessException();
+        await using(var visible=new SqlCommand("SELECT p.IsPublic FROM dbo.Projects p JOIN dbo.AppUsers u ON u.Id=@user AND u.IsActive=1 WHERE p.Id=@project",c,tx))
+        {
+            visible.Parameters.AddRange([P("@user",user),P("@project",detail.ProjectId)]);var isPublic=await visible.ExecuteScalarAsync();
+            if(isPublic is null||!Convert.ToBoolean(isPublic)&&!allowed.Contains("*")&&!allowed.Contains("issues.view"))throw new UnauthorizedAccessException();
+        }
         EditableTime before;
         await using(var read=new SqlCommand("SELECT Id,IssueId,UserId,WorkDate,Hours,Activity,Note FROM dbo.TimeEntries WITH(UPDLOCK,HOLDLOCK) WHERE Id=@entry AND IssueId=@issue",c,tx))
         {read.Parameters.AddRange([P("@entry",entry),P("@issue",issue)]);await using var r=await read.ExecuteReaderAsync();if(!await r.ReadAsync())throw new UnauthorizedAccessException();before=new(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.GetString(6));}

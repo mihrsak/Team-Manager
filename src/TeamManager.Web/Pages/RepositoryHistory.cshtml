@@ -40,7 +40,7 @@
                         <td><a asp-page="/RepositoryHistory" asp-route-projectId="@Model.ProjectId"
                             asp-route-repositoryId="@Model.Repository.Id" asp-route-commit="@commit.Id"><code>@commit.Id[..12]</code></a></td>
                         <td>@commit.Author</td>
-                        <td>@commit.Date.ToString("yyyy-MM-dd HH:mm zzz")</td>
+                        <td>@commit.Date.ToString("g") @commit.Date.ToString("zzz")</td>
                         <td>@commit.Subject</td>
                     </tr>
                 }

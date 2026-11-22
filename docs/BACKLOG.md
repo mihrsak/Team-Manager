@@ -1,6 +1,6 @@
 # Backlog Team Manager
 
-## Otvorene dorade iz revizije proizvoda
+## Revizija proizvoda — dovršene lokalne dorade
 
 ### Napredak implementacije
 
@@ -11,16 +11,15 @@
 | REV-05 / REV-08 | Dovršeno 22. 11. 2026. | Prevedeni pronađeni sistemski tekstovi profila, povijesti, Git/LDAP oznaka; ograničenja 50/30/20 u obrascu i na poslužitelju. |
 | REV-03 / REV-06 / REV-07 / REV-11 | Dovršeno 22. 11. 2026. | Rezultati prije sekundarnih radnji, 50 redaka po stranici, pretraga projekata, potpuni CSV, validirani lokalni povratni URL-ovi, regionalni datumi, aktivna navigacija, naslovi kartica i odvojeni pregled/postavke projekta. SQL Server, Oracle i Db2; HR/EN. |
 | REV-10 | Dovršeno 22. 11. 2026. | Pretraga wiki sadržaja, metapodataka dokumenata, novosti te tema/odgovora foruma; nastavak rezultata i SQL provjera projektnih prava. HR/EN, Unicode i doslovni `%_`, SQL Server/Oracle/Db2 te opoziv članstva. Binarni sadržaj datoteka nije indeksiran. |
-
 | REV-13 / REV-14 | Dovršeno 22. 11. 2026. | HR/EN: ispravak vlastitog unosa ili unos kojim upravlja voditelj, provjera ovlasti pri spremanju, zaštita od zastarjelog spremanja, prethodne/nove vrijednosti u povijesti, očuvani autor i ID/povezana polja. Detalji izvještaja vremena; filtrirane starije stranice obavijesti (50) i administrativne revizije (100). SQL Server, Oracle i Db2. |
-
 | REV-09 | Dovršeno 22. 11. 2026. | Poredak i deaktivacija šifrarnika u HR/EN administraciji; audit prethodnih/novih vrijednosti; povijesne vrijednosti ostaju, nove dodjele se odbijaju i pri ručnom POST-u. Novo ostaje aktivan. SQL Server migracija 43, Oracle/Db2 relacijska verzija 11; provjereno na sve tri baze. |
+| REV-12 | Dovršeno 22. 11. 2026. | Dvaput stvorena zasebna demo SQL baza i Db2 shema bez prepisivanja izvora; svaki uvoz neovisno usporedio 233 zapisa. Tri projekta, osam zadataka, uloge, plan, wiki/povijest, dokument, novost, forum i vrijeme. Konačni demo: 28 HR/EN axe provjera, ovlasti i obavijesti. |
 
-REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Otvorena ostaje REV-12.
+REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Svih 14 stavki REV-01–REV-14 lokalno je dovršeno i provjereno.
 
-Revizija od 20. 11. 2026. dodaje 14 otvorenih stavki, odvojeno od implementiranog funkcionalnog opsega u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
+Revizija od 20. 11. 2026. zabilježila je 14 stavki; njihovo zatvaranje evidentirano je iznad, odvojeno od ciljnih provjera u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
 
-Prije korisničkog pilota predloženi su **REV-01** (privatni projektni metapodaci kroz profile), **REV-02** (nespremljene izmjene), **REV-03** (pristup rezultatima zadataka), **REV-04** (povratna informacija nakon greške) i **REV-12** (zasebni demo podaci). Ostale stavke REV-05–REV-11 i REV-13–REV-14 predložene su za sljedeću iteraciju. Nijedna od ovih dorada nije zatvorena samim pisanjem revizije.
+Izvorni prijedlog prioriteta (20. 11. 2026.): prije korisničkog pilota predloženi su **REV-01** (privatni projektni metapodaci kroz profile), **REV-02** (nespremljene izmjene), **REV-03** (pristup rezultatima zadataka), **REV-04** (povratna informacija nakon greške) i **REV-12** (zasebni demo podaci). Ostale stavke REV-05–REV-11 i REV-13–REV-14 predložene su za sljedeću iteraciju. Nijedna od ovih dorada nije zatvorena samim pisanjem revizije.
 
 ## Implementirani funkcionalni opseg i ciljne provjere
 

@@ -32,7 +32,7 @@
     else
     {
         <p>@Text[status.Healthy ? "Zadnja provjera sandučića uspjela je." : "Provjera sandučića ili uvoz nisu uspjeli."]</p>
-        <p><time datetime="@status.CheckedAt.ToString("O")">@status.CheckedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</time></p>
+        <p><time datetime="@status.CheckedAt.ToString("O")">@status.CheckedAt.UtcDateTime.ToString("G") UTC</time></p>
         @if (status.LastIssueId is int issueId)
         {
             <p><a asp-page="/Issue" asp-route-id="@issueId">@Text["Posljednji uvezeni zadatak"]</a></p>

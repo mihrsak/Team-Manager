@@ -4,6 +4,8 @@ Pregledana verzija: `28c8bb3`. Lokalni preglednik: Db2 paket na https://localhos
 
 Glavni zaključak: prije korisničkog pilota prvo treba zatvoriti otkrivanje privatnih projektnih metapodataka kroz profile, zaštititi nespremljene izmjene i pojednostaviti dolazak do zadataka. HR/EN prijevodi pokrivaju većinu obrazaca, ali imaju konkretne praznine. Prolazak prethodnih automatiziranih testova nije uklonio ove probleme uporabljivosti i rubnih tokova.
 
+Naknadni status 22. 11. 2026.: svih 14 stavki REV-01–REV-14 lokalno je implementirano i provjereno. Ovaj izvještaj čuva izvorne nalaze; aktualni dokazi su u [BACKLOG.md](BACKLOG.md), [RELEASE-STATUS.md](RELEASE-STATUS.md) i [PRODUCT-DEMO.md](PRODUCT-DEMO.md).
+
 ## Opseg i ograničenja
 
 Ručno su pregledani prijava/odjava, projekt i projektni zadaci, uređivanje zadatka bez spremanja, filtri i skupne radnje, pretraga, kalendar/Gantt, planovi, wiki, dokumenti, forum, izvještaj vremena, profil i administracija šifrarnika. Pregledani su HR i EN prikazi te pristup postojećeg ograničenog testnog korisnika. Na demo projektu provjereni su i prazni prikazi suradničkih modula; njihovo stvaranje i izmjena sadržaja nisu ponovno izvršavani.

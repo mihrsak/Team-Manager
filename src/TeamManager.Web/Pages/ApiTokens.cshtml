@@ -32,7 +32,7 @@
                 @foreach (var token in Model.Tokens)
                 {
                     <tr>
-                        <td>@token.Name</td><td>@token.ExpiresAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@token.Name</td><td>@token.ExpiresAt.ToString("g")</td>
                         <td>@Text[token.Active ? "Aktivan" : "Neaktivan token"]</td>
                         <td><form method="post" asp-page-handler="Revoke" asp-route-id="@token.Id">
                             <button>@Text["Opozovi token"]</button>

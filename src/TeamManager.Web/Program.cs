@@ -149,6 +149,16 @@ if (!oracleMode && OracleOverviewStore.Enabled(builder.Configuration))
     healthChecks.AddCheck<OracleOverviewStore>("oracle-overview", timeout: TimeSpan.FromSeconds(5));
 builder.Services.AddSingleton<IHealthCheckPublisher, DatabaseHealthPublisher>();
 
+if(Array.IndexOf(args,"--export-sql-relational") is int sqlExportIndex&&sqlExportIndex>=0)
+{
+    if(sqlExportIndex+1>=args.Length)throw new ArgumentException("Supply the snapshot output file.");
+    await new OracleWorkspace(builder.Configuration).ExportSqlRelational(args[sqlExportIndex+1]);return;
+}
+if(Array.IndexOf(args,"--create-local-db2-demo-schema") is int demoSchemaIndex&&demoSchemaIndex>=0)
+{
+    if(demoSchemaIndex+1>=args.Length)throw new ArgumentException("Supply a generated demo schema name.");
+    await new OracleWorkspace(builder.Configuration).CreateLocalDb2DemoSchema(args[demoSchemaIndex+1]);return;
+}
 if (Array.IndexOf(args, "--export-relational") is int exportIndex && exportIndex >= 0)
 {
     await new OracleWorkspace(builder.Configuration).ExportRelational(args[exportIndex + 1]); return;

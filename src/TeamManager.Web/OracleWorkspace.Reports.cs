@@ -17,7 +17,7 @@ public sealed partial class OracleWorkspace
     }
     internal Task<List<TimeReportRow>> TimeReport(int user, IEnumerable<int> projects, DateTime? from, DateTime? to, string? person, string? activity)
         => Query("TimeReport", SecuritySql + AllowedProjectsSql + $"""
-            SELECT p."Name",u."DisplayName",u."EmployeeNumber",t."Activity",SUM(t."Hours")
+            SELECT p."Name",u."DisplayName",u."EmployeeNumber",t."Activity",CAST(SUM(t."Hours") AS DECIMAL(20,2))
             FROM "TMR_TimeEntries" t JOIN "TMR_Issues" i ON i."Id"=t."IssueId"
             JOIN "TMR_Projects" p ON p."Id"=i."ProjectId" JOIN "TMR_AppUsers" u ON u."Id"=t."UserId"
             WHERE {IssueVisibilitySql} AND p."TimeEnabled"=1 AND p."Id" IN (SELECT id FROM allowed_projects)

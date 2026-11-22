@@ -25,7 +25,7 @@
             <p>@(item.Kind == "version" ? Text["Verzija"].Value : Text["Prekretnica"].Value) · @(item.IsComplete ? Text["Dovršeno"].Value : Text["Planirano"].Value)
                 @if (item.TargetDate is DateTime date)
                 {
-                    <span>· @date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)</span>
+                    <span>· @date.ToString("d")</span>
                 }
             </p>
             @if (Model.Progress is not null)
