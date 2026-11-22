@@ -200,6 +200,12 @@ public sealed partial class IssueStore(IConfiguration config, Permissions permis
                 throw new UnauthorizedAccessException();
             if (oldStatus != input.Status && !rights.Contains("*") && !await WorkflowStore.Allowed(c, tx, user, project, oldType, oldStatus, input.Status)) throw new ArgumentException("Tvoja rola ne dopušta taj prijelaz statusa za ovaj tip zadatka.");
         }
+        using(var previousCatalog=string.IsNullOrEmpty(before)?null:JsonDocument.Parse(before))
+        {
+            await WorkflowStore.RequireCatalog(c,tx,"type",input.Type,previousCatalog?.RootElement.GetProperty("Type").GetString());
+            await WorkflowStore.RequireCatalog(c,tx,"status",input.Status,previousCatalog?.RootElement.GetProperty("Status").GetString());
+            await WorkflowStore.RequireCatalog(c,tx,"priority",input.Priority,previousCatalog?.RootElement.GetProperty("Priority").GetString());
+        }
         var sql = id is null ? "INSERT dbo.Issues(ProjectId,Title,Description,Type,Priority,Status,AssigneeId,DueDate,StartDate,RoadmapItemId,IsPrivate,CreatedBy) OUTPUT inserted.Id VALUES(@p,@t,@d,@type,@priority,@status,@a,@due,@start,@roadmap,@private,@user)" : "UPDATE dbo.Issues SET Title=@t,Description=@d,Type=@type,Priority=@priority,Status=@status,AssigneeId=@a,DueDate=@due,StartDate=@start,RoadmapItemId=@roadmap,IsPrivate=@private,Revision=Revision+1 OUTPUT inserted.Id WHERE Id=@id AND ProjectId=@p AND Revision=@revision";
         await using var cmd = new SqlCommand(sql, c, tx); cmd.Parameters.AddRange([P("@p", project), P("@t", input.Title.Trim()), P("@d", input.Description ?? ""), P("@type", input.Type), P("@priority", input.Priority), P("@status", input.Status), P("@a", input.AssigneeId), P("@due", input.DueDate), new SqlParameter("@start", System.Data.SqlDbType.Date) { Value = (object?)input.StartDate ?? DBNull.Value }, new SqlParameter("@roadmap", System.Data.SqlDbType.Int) { Value = (object?)input.RoadmapItemId ?? DBNull.Value }, P("@private", input.IsPrivate ?? false), P("@user", user), P("@id", id), P("@revision", input.Revision)]);
         var saved = await cmd.ExecuteScalarAsync(); if (saved is null) throw new InvalidOperationException("Zadatak je u međuvremenu izmijenjen. Ponovno otvori stranicu.");

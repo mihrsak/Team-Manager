@@ -3,14 +3,13 @@ using static TeamManager.Web.UserStore;
 namespace TeamManager.Web;
 
 public record Transition(string Role, string Type, string From, string To);
-public sealed class WorkflowStore(IConfiguration configuration, OracleWorkspace oracle)
+public sealed partial class WorkflowStore(IConfiguration configuration, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(configuration.GetConnectionString("TeamManager"));
     public async Task<List<string>> Values(string kind)
     {
         var table = kind switch { "type" => "IssueTypes", "status" => "IssueStatuses", "priority" => "IssuePriorities", _ => throw new ArgumentException() };
-        if (oracle.Enabled) return await oracle.Read(async w => (await w.Rows(table)).Select(r => OracleWorkspace.Workspace.Text(r, "Name")).Order().ToList());
-        await using var c = Connect(); await c.OpenAsync(); await using var cmd = new SqlCommand($"SELECT Name FROM dbo.{table} ORDER BY Name", c); await using var r = await cmd.ExecuteReaderAsync(); var result = new List<string>(); while (await r.ReadAsync()) result.Add(r.GetString(0)); return result;
+        return (await Catalog(kind)).Select(v=>v.Name).ToList();
     }
     public async Task AddValue(int actor, string kind, string name, bool closed)
     {
@@ -23,7 +22,7 @@ public sealed class WorkflowStore(IConfiguration configuration, OracleWorkspace 
             {
                 if (!(await OracleWorkspace.Right(w, actor, "workflow.manage"))) throw new UnauthorizedAccessException();
                 if ((await w.Rows(table)).Any(r => OracleWorkspace.Workspace.Text(r, "Name") == name.Trim())) throw new ArgumentException("Neispravan naziv.");
-                var r = w.Add(table, ("Name", name.Trim()));
+                var r = w.Add(table, ("Name", name.Trim()),("SortOrder",100),("IsActive",true));
                 if (kind == "status") OracleWorkspace.Workspace.Set(r, "IsClosed", closed);
                 await OracleWorkspace.Audit(w, actor, "workflow.value.create", name.Trim(), kind); return true;
             }); return;

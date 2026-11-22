@@ -108,7 +108,7 @@ public sealed partial class OracleWorkspace
             await archive.ExecuteNonQueryAsync();
         }
         await using (var freeze = RelationalCommand(connection, transaction, frozen.Trim().Replace("ON TM_ACTIVE_WORKSPACE", "ON TM_ACTIVE_WORKSPACE FOR EACH ROW"))) await freeze.ExecuteNonQueryAsync();
-        await using (var marker = RelationalCommand(connection, transaction, "INSERT INTO TMR_WORKSPACE(ID,SCHEMA_VERSION,REVISION,SOURCE_REVISION,MIGRATED_AT) VALUES(1,10,1,1,SYS_EXTRACT_UTC(SYSTIMESTAMP))")) await marker.ExecuteNonQueryAsync();
+        await using (var marker = RelationalCommand(connection, transaction, "INSERT INTO TMR_WORKSPACE(ID,SCHEMA_VERSION,REVISION,SOURCE_REVISION,MIGRATED_AT) VALUES(1,11,1,1,SYS_EXTRACT_UTC(SYSTIMESTAMP))")) await marker.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
         await InstallConcurrency();
         Console.WriteLine($"PASS: imported and independently compared {total} records into relational Db2; foreign keys validated and snapshot frozen.");

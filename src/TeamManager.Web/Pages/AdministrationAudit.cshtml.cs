@@ -49,6 +49,7 @@ public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : P
         "project.update" => "Izmjena postavki projekta",
         "project.modules" => "Izmjena modula projekta",
         "workflow.value.create" => "Dodavanje vrijednosti šifrarnika",
+        "workflow.value.update" => "Izmjena vrijednosti šifrarnika",
         "workflow.transition.add" => "Dodavanje prijelaza statusa",
         "workflow.transition.remove" => "Uklanjanje prijelaza statusa",
         "roadmap.create" => "Dodavanje stavke plana",

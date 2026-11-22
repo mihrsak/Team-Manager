@@ -8,7 +8,16 @@ public class WorkflowModel(WorkflowStore store,Permissions permissions,Microsoft
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public List<string> Types{get;set;}=[];public List<string> Statuses{get;set;}=[];public List<string> Priorities{get;set;}=[];
     public List<AccessRole> Roles{get;set;}=[];public List<Transition> Transitions{get;set;}=[];
-    public async Task<IActionResult> OnGetAsync(){if(!User.IsInRole("workflow.manage"))return Forbid();Types=await store.Values("type");Statuses=await store.Values("status");Priorities=await store.Values("priority");Roles=await permissions.Roles();Transitions=await store.Transitions();return Page();}
+    public List<CatalogValue> Catalog{get;private set;}=[];
+    public async Task<IActionResult> OnGetAsync(){if(!User.IsInRole("workflow.manage"))return Forbid();Types=await store.Values("type");Statuses=await store.Values("status");Priorities=await store.Values("priority");Catalog=[..await store.Catalog("priority"),..await store.Catalog("status"),..await store.Catalog("type")];Roles=await permissions.Roles();Transitions=await store.Transitions();return Page();}
+    public async Task<IActionResult> OnPostCatalogAsync(string kind,string name,int? order,bool? active)
+    {
+        if(!User.IsInRole("workflow.manage"))return Forbid();
+        if(order is null||active is null||!ModelState.IsValid){await OnGetAsync();ModelState.AddModelError("","Provjeri polja zadatka.");return Page();}
+        try{await store.SetCatalog(UserId,kind,name,order.Value,active.Value);return RedirectToPage();}
+        catch(UnauthorizedAccessException){return Forbid();}
+        catch(ArgumentException ex){await OnGetAsync();ModelState.AddModelError("",text[ex.Message]);return Page();}
+    }
     public async Task<IActionResult> OnPostValueAsync(string kind,string name,bool closed)
     {
         if(!User.IsInRole("workflow.manage"))return Forbid();

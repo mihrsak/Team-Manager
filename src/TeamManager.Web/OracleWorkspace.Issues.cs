@@ -59,6 +59,9 @@ public sealed partial class OracleWorkspace
         else if (input.Status != "Novo")
             throw new ArgumentException("Novi zadatak mora početi statusom Novo.");
         var before = row?.ToJsonString();
+        foreach(var (table,value,field) in new[]{("IssueTypes",input.Type,"Type"),("IssueStatuses",input.Status,"Status"),("IssuePriorities",input.Priority,"Priority")})
+            if(!(await w.Rows(table)).Any(r=>Text(r,"Name")==value&&(Flag(r,"IsActive")||row is not null&&Text(row,field)==value)))
+                throw new ArgumentException("Neaktivna vrijednost nije dostupna za novu dodjelu.");
         row ??= w.Add("Issues", ("Id", (await w.Next("Issues"))), ("ProjectId", project), ("CreatedBy", user), ("CreatedAt", DateTime.UtcNow), ("Revision", 0), ("IsPrivate", false));
         Set(row, "Title", input.Title.Trim());
         Set(row, "Description", input.Description ?? "");

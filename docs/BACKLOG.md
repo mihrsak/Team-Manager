@@ -14,7 +14,9 @@
 
 | REV-13 / REV-14 | Dovršeno 22. 11. 2026. | HR/EN: ispravak vlastitog unosa ili unos kojim upravlja voditelj, provjera ovlasti pri spremanju, zaštita od zastarjelog spremanja, prethodne/nove vrijednosti u povijesti, očuvani autor i ID/povezana polja. Detalji izvještaja vremena; filtrirane starije stranice obavijesti (50) i administrativne revizije (100). SQL Server, Oracle i Db2. |
 
-REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Otvorene ostaju REV-09 i REV-12.
+| REV-09 | Dovršeno 22. 11. 2026. | Poredak i deaktivacija šifrarnika u HR/EN administraciji; audit prethodnih/novih vrijednosti; povijesne vrijednosti ostaju, nove dodjele se odbijaju i pri ručnom POST-u. Novo ostaje aktivan. SQL Server migracija 43, Oracle/Db2 relacijska verzija 11; provjereno na sve tri baze. |
+
+REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Otvorena ostaje REV-12.
 
 Revizija od 20. 11. 2026. dodaje 14 otvorenih stavki, odvojeno od implementiranog funkcionalnog opsega u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
 

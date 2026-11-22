@@ -41,3 +41,5 @@ Ovaj status ne predstavlja potvrdu spremnosti za bankarsku produkciju. DB-02 i v
 ### Revizija: vrijeme i stariji zapisi — 22. 11. 2026.
 REV-13/REV-14: kontrolirani ispravci vremena s izvornim autorom i poviješću vrijednosti, zaštitom od zastarjelog spremanja i ovlastima; detalji izvještaja i straničenje/pretraga obavijesti i revizije. Test-ReportPages.cjs i Test-TimeCorrection.cjs prolaze na SQL Serveru, Oracleu i Db2, HR/EN. Nova ruta /TimeEntry uključena je u postojeći popis podržanih Oracle/Db2 ruta; zaštita ostaje aktivna.
 
+### Šifrarnici — 22. 11. 2026.
+REV-09: administrativni poredak i aktivnost vrijednosti, očuvanje povijesnih zadataka, transakcijska provjera dodjele i revizijski zapis. Test-CatalogRevision.cjs prolazi HR/EN na SQL Serveru, Oracleu i Db2. Prije nove aplikacije primijeniti --apply-schema za SQL Server odnosno --migrate-oracle-workspace za postojeće Oracle/Db2 sheme (verzija 11, protokol zaključavanja ostaje 5). Migracija je aditivna i ponovljiva; stare aplikacije trebaju se zaustaviti pri produkcijskoj zamjeni.

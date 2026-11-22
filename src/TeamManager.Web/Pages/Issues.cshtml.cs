@@ -28,7 +28,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     public static readonly Dictionary<string, string> SortLabels = new()
     {
         ["newest"] = "Najnoviji prvo", ["oldest"] = "Najstariji prvo",
-        ["title"] = "Naslov A–Ž", ["due"] = "Najbliži rok"
+        ["title"] = "Naslov A–Ž", ["due"] = "Najbliži rok", ["priority"]="Prioritet"
     };
     public static readonly Dictionary<string, string> GroupLabels = new()
     {
@@ -84,6 +84,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         "oldest" => rows.OrderBy(row => row.Id),
         "title" => rows.OrderBy(row => row.Title, StringComparer.CurrentCultureIgnoreCase),
         "due" => rows.OrderBy(row => row.DueDate ?? DateTime.MaxValue),
+        "priority" => rows.OrderBy(row=>Priorities.IndexOf(row.Priority) is int index&&index>=0?index:int.MaxValue).ThenByDescending(row=>row.Id),
         _ => rows
     };
 
@@ -183,6 +184,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         if (!ModelState.IsValid) return BadRequest();
         var user = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var rows = await store.List(user, ProjectId, Status, Query);
+        Priorities=await workflow.Values("priority");
         var csv = new StringBuilder("\uFEFFId,Naslov,Projekt,Status,Prioritet,Nositelj,Rok\r\n");
         NormalizeLayout();
         foreach (var row in Sort(rows))

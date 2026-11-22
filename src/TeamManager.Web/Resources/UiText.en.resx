@@ -1361,4 +1361,15 @@
 <data name="Stranice rezultata" xml:space="preserve"><value>Result pages</value></data>
 <data name="Unos vremena je ispravljen." xml:space="preserve"><value>The time entry was corrected.</value></data>
 <data name="Spremi ispravak" xml:space="preserve"><value>Save correction</value></data>
+<data name="Poredak i aktivnost šifrarnika" xml:space="preserve"><value>Catalog order and availability</value></data>
+<data name="Poredak" xml:space="preserve"><value>Order</value></data>
+<data name="Poredak mora biti između 0 i 100000." xml:space="preserve"><value>Order must be between 0 and 100000.</value></data>
+<data name="Aktivnost vrijednosti" xml:space="preserve"><value>Value availability</value></data>
+<data name="Manji broj prikazuje se prije. Neaktivne vrijednosti ostaju na starim zadacima, ali nisu dostupne za novu dodjelu. Stanja poput Blokirano i Otkazano pripadaju statusima, a prioritet označava hitnost." xml:space="preserve"><value>Lower numbers appear first. Inactive values remain on existing issues but cannot be newly assigned. Blocked and Cancelled describe status; priority describes urgency.</value></data>
+<data name="Početni status Novo mora ostati aktivan." xml:space="preserve"><value>The initial status Novo must remain active.</value></data>
+<data name="Neaktivna vrijednost nije dostupna za novu dodjelu." xml:space="preserve"><value>An inactive value cannot be newly assigned.</value></data>
+<data name="Izmjena vrijednosti šifrarnika" xml:space="preserve"><value>Catalog value updated</value></data>
+<data name="Aktivno" xml:space="preserve"><value>Active</value></data>
+<data name="Spremi" xml:space="preserve"><value>Save</value></data>
+<data name="Neaktivno" xml:space="preserve"><value>Inactive</value></data>
 </root>

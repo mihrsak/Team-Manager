@@ -69,6 +69,9 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
                     MoveProjects.Add(new(target.Id,target.Name));
             }
         }
+        Types=await workflow.Selectable("type",id is null?null:Input.Type);
+        Statuses=await workflow.Selectable("status",id is null?null:Input.Status);
+        Priorities=await workflow.Selectable("priority",id is null?null:Input.Priority);
         return Page();
     }
     public async Task<IActionResult> OnPostSaveAsync(int? id,int projectId)

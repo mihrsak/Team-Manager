@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "tables": [
     {
       "name": "AdministrationAudit",
@@ -1172,6 +1172,24 @@
           "scale": 0,
           "nullable": false,
           "defaultValue": null
+        },
+        {
+          "name": "SortOrder",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((100))"
+        },
+        {
+          "name": "IsActive",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
         }
       ],
       "keys": [
@@ -1620,6 +1638,24 @@
           "scale": 0,
           "nullable": false,
           "defaultValue": "((0))"
+        },
+        {
+          "name": "SortOrder",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((100))"
+        },
+        {
+          "name": "IsActive",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
         }
       ],
       "keys": [
@@ -1646,6 +1682,24 @@
           "scale": 0,
           "nullable": false,
           "defaultValue": null
+        },
+        {
+          "name": "SortOrder",
+          "type": "int",
+          "length": 4,
+          "precision": 10,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((100))"
+        },
+        {
+          "name": "IsActive",
+          "type": "bit",
+          "length": 1,
+          "precision": 1,
+          "scale": 0,
+          "nullable": false,
+          "defaultValue": "((1))"
         }
       ],
       "keys": [

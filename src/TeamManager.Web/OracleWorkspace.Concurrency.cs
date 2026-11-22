@@ -17,7 +17,22 @@ public sealed partial class OracleWorkspace
         await using (var state = new OracleCommand("SELECT SCHEMA_VERSION FROM TMR_WORKSPACE WHERE ID=1", connection))
         {
             var version = Convert.ToInt32(await state.ExecuteScalarAsync());
-            if (version is not (6 or 7 or 8 or 9 or 10)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
+            if (version is not (6 or 7 or 8 or 9 or 10 or 11)) throw new InvalidOperationException("Migrate the relational Oracle workspace first.");
+        }
+        // Additive, restartable migration; historical catalog references remain unchanged.
+        foreach(var table in new[]{"IssueTypes","IssueStatuses","IssuePriorities"})
+        foreach(var column in new[]{"SortOrder","IsActive"})
+        {
+            await using var check=new OracleCommand(connection.IsDb2?"SELECT COUNT(*) FROM SYSCAT.COLUMNS WHERE TABSCHEMA=CURRENT SCHEMA AND TABNAME=:table_name AND COLNAME=:column_name":"SELECT COUNT(*) FROM USER_TAB_COLUMNS WHERE TABLE_NAME=:table_name AND COLUMN_NAME=:column_name",connection);
+            AddQueryParameter(check,"table_name","TMR_"+table);AddQueryParameter(check,"column_name",column);
+            if(Convert.ToInt32(await check.ExecuteScalarAsync())>0)continue;
+            var value=column=="IsActive"?1:100;
+            await using var add=new OracleCommand(connection.IsDb2?$"ALTER TABLE {Quote("TMR_"+table)} ADD COLUMN {Quote(column)} INTEGER NOT NULL WITH DEFAULT {value}":$"ALTER TABLE {Quote("TMR_"+table)} ADD ({Quote(column)} NUMBER(10) DEFAULT {value} NOT NULL)",connection);
+            await add.ExecuteNonQueryAsync();
+            if(table=="IssuePriorities"&&column=="SortOrder")
+            {
+                await using var order=new OracleCommand("UPDATE \"TMR_IssuePriorities\" SET \"SortOrder\"=CASE \"Name\" WHEN N'Hitno' THEN 10 WHEN N'Visok' THEN 20 WHEN N'Normalan' THEN 30 WHEN N'Nizak' THEN 40 ELSE 100 END",connection);await order.ExecuteNonQueryAsync();
+            }
         }
         var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "database/oracle/007-concurrency-and-reports.sql"));
         foreach (var statement in Regex.Split(sql, @"(?m)^/\s*$").Where(s => !string.IsNullOrWhiteSpace(s)))
@@ -45,7 +60,7 @@ public sealed partial class OracleWorkspace
         await AcquireWriteLock(connection, transaction, "policy", 6);
         await using (var feature = RelationalCommand(connection, transaction, "MERGE INTO TMR_RUNTIME_FEATURES t USING (SELECT 'fine-writes' NAME FROM DUAL) s ON(t.NAME=s.NAME) WHEN MATCHED THEN UPDATE SET VERSION=5 WHEN NOT MATCHED THEN INSERT(NAME,VERSION) VALUES(s.NAME,5)"))
             await feature.ExecuteNonQueryAsync();
-        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=10 WHERE ID=1"))
+        await using (var state = RelationalCommand(connection, transaction, "UPDATE TMR_WORKSPACE SET SCHEMA_VERSION=11 WHERE ID=1"))
             await state.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
         Console.WriteLine($"PASS: {(IsDb2 ? "Db2" : "Oracle")} sequences, scoped write locks and report indexes installed; existing sequences were not reset.");

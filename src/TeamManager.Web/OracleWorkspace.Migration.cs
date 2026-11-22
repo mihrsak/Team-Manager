@@ -21,7 +21,7 @@ public sealed partial class OracleWorkspace
             var installed = await marker.ExecuteScalarAsync();
             if (installed is not null and not DBNull)
             {
-                if (Convert.ToInt32(installed) is not (6 or 7 or 8 or 9 or 10))
+                if (Convert.ToInt32(installed) is not (6 or 7 or 8 or 9 or 10 or 11))
                     throw new InvalidOperationException("Unexpected relational Oracle schema version.");
                 await InstallConcurrency();
                 Console.WriteLine("Relational Oracle migration already applied; active data was not overwritten.");

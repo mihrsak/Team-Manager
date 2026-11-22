@@ -186,6 +186,9 @@ CREATE TABLE IF NOT EXISTS "TMR_IssuePriorities" (
     "__EMPTY" NUMBER(19) DEFAULT 0 NOT NULL CHECK ("__EMPTY">=0),
     "Name" NVARCHAR2(20),
     CHECK ("Name" IS NOT NULL OR BITAND("__EMPTY",1)<>0),
+    "SortOrder" NUMBER(10) NOT NULL,
+    "IsActive" NUMBER(1) NOT NULL,
+    CHECK ("IsActive" IN (0,1)),
     CONSTRAINT "TMR_K_IssuePriorities_0" PRIMARY KEY ("Name") DEFERRABLE INITIALLY DEFERRED
 )
 /
@@ -245,6 +248,9 @@ CREATE TABLE IF NOT EXISTS "TMR_IssueStatuses" (
     CHECK ("Name" IS NOT NULL OR BITAND("__EMPTY",1)<>0),
     "IsClosed" NUMBER(1) NOT NULL,
     CHECK ("IsClosed" IN (0,1)),
+    "SortOrder" NUMBER(10) NOT NULL,
+    "IsActive" NUMBER(1) NOT NULL,
+    CHECK ("IsActive" IN (0,1)),
     CONSTRAINT "TMR_K_IssueStatuses_0" PRIMARY KEY ("Name") DEFERRABLE INITIALLY DEFERRED
 )
 /
@@ -252,6 +258,9 @@ CREATE TABLE IF NOT EXISTS "TMR_IssueTypes" (
     "__EMPTY" NUMBER(19) DEFAULT 0 NOT NULL CHECK ("__EMPTY">=0),
     "Name" NVARCHAR2(50),
     CHECK ("Name" IS NOT NULL OR BITAND("__EMPTY",1)<>0),
+    "SortOrder" NUMBER(10) NOT NULL,
+    "IsActive" NUMBER(1) NOT NULL,
+    CHECK ("IsActive" IN (0,1)),
     CONSTRAINT "TMR_K_IssueTypes_0" PRIMARY KEY ("Name") DEFERRABLE INITIALLY DEFERRED
 )
 /
