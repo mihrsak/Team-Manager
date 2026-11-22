@@ -1353,4 +1353,12 @@
   <data name="Administracija" xml:space="preserve"><value>Administration</value></data>
   <data name="Pregled projekta" xml:space="preserve"><value>Project overview</value></data>
   <data name="Postavke projekta" xml:space="preserve"><value>Project settings</value></data>
+<data name="Ispravak zadržava autora i povezana polja. Prethodne i nove vrijednosti ostaju u povijesti zadatka." xml:space="preserve"><value>Corrections preserve the author and linked fields. Previous and new values remain in the issue history.</value></data>
+<data name="Stranica {0}" xml:space="preserve"><value>Page {0}</value></data>
+<data name="Unos vremena je promijenjen. Ponovno učitaj stranicu." xml:space="preserve"><value>The time entry has changed. Reload the page.</value></data>
+<data name="Detalji unosa vremena" xml:space="preserve"><value>Time entry details</value></data>
+<data name="Aktivnost mora imati od 1 do 60 znakova." xml:space="preserve"><value>Activity must contain between 1 and 60 characters.</value></data>
+<data name="Stranice rezultata" xml:space="preserve"><value>Result pages</value></data>
+<data name="Unos vremena je ispravljen." xml:space="preserve"><value>The time entry was corrected.</value></data>
+<data name="Spremi ispravak" xml:space="preserve"><value>Save correction</value></data>
 </root>

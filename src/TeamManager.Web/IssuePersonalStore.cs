@@ -62,15 +62,16 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues,
         await transaction.CommitAsync();
     }
 
-    public async Task<List<IssueNotification>> Notifications(int user)
+    public async Task<List<IssueNotification>> Notifications(int user,int offset=0,int take=50,string? query=null)
     {
-        if (oracle.Enabled) return await oracle.Notifications(user);
+        offset=Math.Clamp(offset,0,500000);take=Math.Clamp(take,1,51);
+        if (oracle.Enabled) return await oracle.NotificationPage(user,offset,take,query);
         var allowed = await issues.Projects(user);
         if (allowed.Count == 0) return [];
         await using var connection = Connect();
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
-            SELECT TOP (50) n.EventId,i.Id,i.Title,p.Name,e.Kind,e.CreatedAt,n.IsRead
+            SELECT n.EventId,i.Id,i.Title,p.Name,e.Kind,e.CreatedAt,n.IsRead
             FROM dbo.IssueNotifications n
             JOIN dbo.IssueEvents e ON e.Id=n.EventId
             JOIN dbo.Issues i ON i.Id=n.IssueId
@@ -78,9 +79,11 @@ public sealed class IssuePersonalStore(IConfiguration config, IssueStore issues,
             JOIN OPENJSON(@projects) WITH (Id int '$') allowed ON allowed.Id=p.Id
             WHERE n.UserId=@user AND p.IssuesEnabled=1 AND (e.Kind<>'time' OR p.TimeEnabled=1)
               AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
-            ORDER BY n.IsRead,e.CreatedAt DESC,n.EventId DESC OPTION(MAXRECURSION 0)
+              AND (@query IS NULL OR CHARINDEX(@query,i.Title)>0 OR CHARINDEX(@query,p.Name)>0)
+            ORDER BY n.IsRead,e.CreatedAt DESC,n.EventId DESC OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY OPTION(MAXRECURSION 0)
             """, connection);
         command.Parameters.Add(P("@user", user));
+        command.Parameters.AddRange([P("@offset",offset),P("@take",take),P("@query",query)]);
         command.Parameters.Add(ProjectFilter(allowed));
         var notifications = new List<IssueNotification>();
         await using var reader = await command.ExecuteReaderAsync();

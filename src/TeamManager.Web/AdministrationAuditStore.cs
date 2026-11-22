@@ -32,15 +32,18 @@ public sealed class AdministrationAuditStore(IConfiguration config,OracleWorkspa
         return affected;
     }
 
-    public async Task<List<AdministrationAuditEntry>> Recent()
+    public async Task<List<AdministrationAuditEntry>> Recent(int offset=0,int take=100,string? query=null)
     {
-        if(oracle.Enabled)return await oracle.RecentAuditSql();
+        offset=Math.Clamp(offset,0,500000);take=Math.Clamp(take,1,101);
+        if(oracle.Enabled)return await oracle.AuditPage(offset,take,query);
         await using var connection = new SqlConnection(config.GetConnectionString("TeamManager"));
         await connection.OpenAsync();
         await using var command = new SqlCommand("""
-            SELECT TOP (100) CreatedAt,ActorEmployeeNumber,Action,Subject,Details
-            FROM dbo.AdministrationAudit ORDER BY Id DESC
+            SELECT CreatedAt,ActorEmployeeNumber,Action,Subject,Details
+            FROM dbo.AdministrationAudit WHERE @query IS NULL OR CHARINDEX(@query,ActorEmployeeNumber)>0 OR CHARINDEX(@query,Action)>0 OR CHARINDEX(@query,Subject)>0 OR CHARINDEX(@query,Details)>0
+            ORDER BY Id DESC OFFSET @offset ROWS FETCH NEXT @take ROWS ONLY
             """, connection);
+        command.Parameters.AddRange([UserStore.P("@offset",offset),UserStore.P("@take",take),UserStore.P("@query",query)]);
         await using var reader = await command.ExecuteReaderAsync();
         var entries = new List<AdministrationAuditEntry>();
         while (await reader.ReadAsync())

@@ -25,7 +25,7 @@ public record IssueEvent(string Author, string Kind, string Body, DateTime At);
 public record TimeEntry(string Author, DateTime Date, decimal Hours, string Note, string Activity, int Id);
 public record TimeReportRow(string Project, string Person, string EmployeeNumber, string Activity, decimal Hours);
 public record TransferProject(int Id,string Name,bool CanMove);
-public sealed class IssueStore(IConfiguration config, Permissions permissions, WorkflowStore workflow, ProjectStore projects, OracleWorkspace oracle)
+public sealed partial class IssueStore(IConfiguration config, Permissions permissions, WorkflowStore workflow, ProjectStore projects, OracleWorkspace oracle)
 {
     public static readonly string[] Types = ["Zadatak", "Greška", "Zahtjev"];
     public static readonly string[] Priorities = ["Nizak", "Normalan", "Visok", "Hitno"];

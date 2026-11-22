@@ -6,12 +6,18 @@ namespace TeamManager.Web.Pages;
 public sealed class AdministrationAuditModel(AdministrationAuditStore audit) : PageModel
 {
     public List<AdministrationAuditEntry> Entries { get; private set; } = [];
+    [BindProperty(SupportsGet=true)]public int PageNumber {get;set;}=1;
+    [BindProperty(SupportsGet=true)]public string? Query {get;set;}
+    public bool HasMore {get;private set;}
+    public string PageUrl(int page)=>Url.Page("/AdministrationAudit",new{PageNumber=page,Query})!;
 
     public async Task<IActionResult> OnGetAsync()
     {
         if (!User.IsInRole("*")) return Forbid();
         Response.Headers.CacheControl = "private, no-store";
-        Entries = await audit.Recent();
+        PageNumber=Math.Clamp(PageNumber,1,5000);Query=Query?.Trim();if(Query?.Length>200)Query=Query[..200];
+        Entries = await audit.Recent((PageNumber-1)*100,101,Query);
+        HasMore=Entries.Count>100;Entries=Entries.Take(100).ToList();
         return Page();
     }
 

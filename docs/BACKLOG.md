@@ -12,7 +12,9 @@
 | REV-03 / REV-06 / REV-07 / REV-11 | Dovršeno 22. 11. 2026. | Rezultati prije sekundarnih radnji, 50 redaka po stranici, pretraga projekata, potpuni CSV, validirani lokalni povratni URL-ovi, regionalni datumi, aktivna navigacija, naslovi kartica i odvojeni pregled/postavke projekta. SQL Server, Oracle i Db2; HR/EN. |
 | REV-10 | Dovršeno 22. 11. 2026. | Pretraga wiki sadržaja, metapodataka dokumenata, novosti te tema/odgovora foruma; nastavak rezultata i SQL provjera projektnih prava. HR/EN, Unicode i doslovni `%_`, SQL Server/Oracle/Db2 te opoziv članstva. Binarni sadržaj datoteka nije indeksiran. |
 
-REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Ostale stavke revizije ostaju otvorene.
+| REV-13 / REV-14 | Dovršeno 22. 11. 2026. | HR/EN: ispravak vlastitog unosa ili unos kojim upravlja voditelj, provjera ovlasti pri spremanju, zaštita od zastarjelog spremanja, prethodne/nove vrijednosti u povijesti, očuvani autor i ID/povezana polja. Detalji izvještaja vremena; filtrirane starije stranice obavijesti (50) i administrativne revizije (100). SQL Server, Oracle i Db2. |
+
+REV-01 filtrira projektna članstva na poslužitelju prema trenutačnom promatraču; odabir projekata za upravljanje članstvima zasebno vraća samo upravljive projekte. Otvorene ostaju REV-09 i REV-12.
 
 Revizija od 20. 11. 2026. dodaje 14 otvorenih stavki, odvojeno od implementiranog funkcionalnog opsega u tablici ispod. Dokazi, prioriteti i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-20.md](PRODUCT-REVIEW-2026-11-20.md).
 

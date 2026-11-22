@@ -26,6 +26,7 @@ internal static class OracleWorkspaceRoutes
         "/Gantt",
         "/Activity",
         "/TimeReport",
+        "/TimeEntry",
         "/Search",
         "/Roadmap",
         "/ProjectNews",

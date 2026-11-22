@@ -37,3 +37,7 @@ Provjereno lokalno 19. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivn
 | QA-02 | Automatizirane lokalne provjere prošle; kapacitet i završna prihvatna provjera na ciljnom produkcijskom okruženju ostaju otvoreni. |
 
 Ovaj status ne predstavlja potvrdu spremnosti za bankarsku produkciju. DB-02 i vanjske provjere nisu zatvoreni samim pushom na GitHub. Potvrda registracije e-poštom ostaje izvan dogovorenog opsega AUTH-05.
+
+### Revizija: vrijeme i stariji zapisi — 22. 11. 2026.
+REV-13/REV-14: kontrolirani ispravci vremena s izvornim autorom i poviješću vrijednosti, zaštitom od zastarjelog spremanja i ovlastima; detalji izvještaja i straničenje/pretraga obavijesti i revizije. Test-ReportPages.cjs i Test-TimeCorrection.cjs prolaze na SQL Serveru, Oracleu i Db2, HR/EN. Nova ruta /TimeEntry uključena je u postojeći popis podržanih Oracle/Db2 ruta; zaštita ostaje aktivna.
+

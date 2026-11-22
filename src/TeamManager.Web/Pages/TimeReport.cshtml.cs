@@ -15,6 +15,10 @@ public sealed class TimeReportModel(IssueStore store) : PageModel
 
     public List<Team> Projects { get; private set; } = [];
     public List<TimeReportRow> Rows { get; private set; } = [];
+    [BindProperty(SupportsGet=true)]public int PageNumber{get;set;}=1;
+    public List<TimeDetail> Details{get;private set;}=[];
+    public bool HasMore{get;private set;}
+    public string PageUrl(int page)=>Url.Page("/TimeReport",new{ProjectId,From=From?.ToString("yyyy-MM-dd"),To=To?.ToString("yyyy-MM-dd"),Person,Activity,PageNumber=page})!;
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -30,7 +34,12 @@ public sealed class TimeReportModel(IssueStore store) : PageModel
         {
             var projectIds = ProjectId is int selected ? [selected] : Projects.Select(p => p.Id).ToArray();
             if (projectIds.Length > 0)
+            {
                 Rows = await store.TimeReport(user, projectIds, From?.Date, To?.Date, Person?.Trim(), Activity?.Trim());
+                PageNumber=Math.Clamp(PageNumber,1,10000);
+                Details=await store.TimeDetails(user,projectIds,From?.Date,To?.Date,Person?.Trim(),Activity?.Trim(),PageNumber);
+                HasMore=Details.Count>50;Details=Details.Take(50).ToList();
+            }
         }
 
         return Page();

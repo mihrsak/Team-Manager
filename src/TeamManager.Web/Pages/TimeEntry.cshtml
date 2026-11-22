@@ -1,0 +1,17 @@
+@page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@model TeamManager.Web.Pages.TimeEntryModel
+<h1>@Text["Detalji unosa vremena"]</h1>
+<p>@Text["Ispravak zadržava autora i povezana polja. Prethodne i nove vrijednosti ostaju u povijesti zadatka."]</p>
+<form method="post" class="card">
+ <div asp-validation-summary="All"></div>
+ <input type="hidden" asp-for="IssueId"><input type="hidden" asp-for="Id"><input type="hidden" asp-for="Token">
+ <fieldset disabled="@(!Model.CanCorrect)">
+  <label>@Text["Datum"]<input asp-for="Date" type="date" required></label>
+  <label>@Text["Sati"]<input asp-for="Hours" inputmode="decimal" required></label>
+  <label>@Text["Aktivnost"]<input asp-for="Activity" maxlength="60" required></label>
+  <label>@Text["Napomena"]<textarea asp-for="Note" maxlength="1000"></textarea></label>
+  @if(Model.CanCorrect){<button>@Text["Spremi ispravak"]</button>}
+ </fieldset>
+</form>
+<p><a asp-page="/Issue" asp-route-id="@Model.IssueId">@Text["Zadatak"]</a></p>

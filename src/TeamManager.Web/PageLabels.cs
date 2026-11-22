@@ -7,7 +7,7 @@ public static class PageLabels
         "/Login"=>"Prijava", "/LdapLogin"=>"LDAP prijava", "/Dashboard"=>"Moji zadaci",
         "/Search"=>"Pretraga", "/Projects"=>"Projekti", "/Project"=>"Projekt",
         "/Issues"=>"Zadaci", "/Issue"=>"Zadatak", "/Calendar"=>"Kalendar", "/Gantt"=>"Gantt",
-        "/Activity"=>"Aktivnosti", "/Notifications"=>"Obavijesti", "/TimeReport"=>"Izvještaj o vremenu",
+        "/Activity"=>"Aktivnosti", "/Notifications"=>"Obavijesti", "/TimeReport"=>"Izvještaj o vremenu", "/TimeEntry"=>"Detalji unosa vremena",
         "/Profile"=>"Moj profil", "/Users"=>"Korisnici", "/Roles"=>"Role i ovlasti", "/Workflow"=>"Tijek rada",
         "/Roadmap"=>"Karta planova", "/ProjectNews"=>"Novosti", "/Wiki"=>"Wiki", "/Forum"=>"Forum",
         "/ProjectDocuments"=>"Dokumenti", "/Repositories"=>"Git repozitoriji", "/RepositoryHistory"=>"Git repozitoriji",
