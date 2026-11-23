@@ -41,9 +41,11 @@ public sealed class GanttModel(IssueStore issues, IssueLinkStore links, Microsof
             var endDate = (issue.DueDate ?? issue.StartDate)!.Value;
             var first = startDate < month ? 1 : startDate.Day;
             var last = endDate > end ? Days : endDate.Day;
-            var dates = issue.StartDate is null ? $"{text["Rok"]} {endDate:dd.MM.yyyy}" :
-                issue.DueDate is null ? $"{text["Početak"]} {startDate:dd.MM.yyyy}" :
-                $"{startDate:dd.MM.yyyy} – {endDate:dd.MM.yyyy}";
+            var startLabel = startDate.ToString("d", CultureInfo.CurrentCulture);
+            var endLabel = endDate.ToString("d", CultureInfo.CurrentCulture);
+            var dates = issue.StartDate is null ? $"{text["Rok"]} {endLabel}" :
+                issue.DueDate is null ? $"{text["Početak"]} {startLabel}" :
+                $"{startLabel} – {endLabel}";
             Tasks.Add(new(issue, first, last - first + 1, dates));
         }
         if (Tasks.Count > 0)

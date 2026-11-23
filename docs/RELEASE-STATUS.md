@@ -2,6 +2,18 @@
 
 Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## REV2-03 / REV2-04 / REV2-06 — dovršeno 23. 11. 2026.
+
+Aktivni lokalni paket: `artifacts/rev2-presentation-final`; [demo](https://localhost:7610) i [postojeći Db2 podaci](https://localhost:7589). Konfiguracija i baze su očuvane; nema nove migracije (shema 11 / protokol 5).
+
+- **REV2-03:** tablica vremena ima zaseban označen okvir s tab-stopom, vidljivim fokusom i lokalnim vodoravnim pomicanjem. Fiksne čitljive širine sprječavaju svođenje stupaca na pojedinačna slova; dodatna polja unosa vremena imaju naslov stupca. Dugi neprekinuti tekstovi u tablici i povijesti prelamaju se unutar stranice. Izmjereni `document.scrollWidth` jednak je 320 odnosno 390 px u HR/EN i obje teme, uključujući napomenu od 1000 neprekinutih znakova. Zadnji stupac dohvatljiv je tipkovnicom.
+- **REV2-04:** zadane Required/StringLength poruke i standardne model-binding poruke koriste zajedničke HR/EN resurse. Nazivi aktualnih polja lokaliziraju se tijekom zahtjeva, bez zaključavanja jezika u zajednički cache metapodataka. Prilagođene postojeće poruke ostaju sačuvane. Provjereni su aktivnost, napomena, naslov zadatka, naziv projekta i lozinka te nevaljan datum/broj. Sažetak greške ostaje fokusiran, `role=alert`, a nevaljano polje označeno `aria-invalid` i povezano sa sažetkom.
+- **REV2-06:** Gantt opis raspona, samo početka i samo roka koristi `CurrentCulture` kao drugi izvještaji. Osnovni HR/EN formati potvrđeni su na sva tri providera, a dodatni Db2 proces s `Formatting:Culture=en-US` potvrđuje `4/5/2027` / `4/9/2027` u oba jezika. HTML datumski ulazi ostaju ISO; geometrija vremenskog prikaza nije promijenjena.
+
+`Test-MobileLocalization.cjs` prolazi na privremenom SQL Serveru te izoliranim Oracle/Db2 shemama: HR/EN, 320/390 px, svijetla/tamna tema, tipkovničko pomicanje, zadnji stupac, axe, serverski Required/StringLength, lokalizirani nazivi te datum/broj pretvorbe. Negativni upisi ne mijenjaju postojeći unos vremena. Poseban en-US proces prošao je isti test uz izričitu provjeru očekivanih datuma. Skripta stvara svoje regresijske projekte/zadatke i treba je pokretati samo na izoliranim lokalnim bazama.
+
+`Test-DraftProtection.cjs` ponovljen je na konačnom SQL Server paketu i potvrđuje prethodne P1 zaštite nacrta, wiki konflikata i preuzimanja. Nakon postavljanja ponovljeni su `Test-ProductDemo.cjs` (28 HR/EN axe provjera, glavni tokovi i granice privatnosti) i `Test-ReviewSmoke.cjs` nad postojećim Db2 podacima. Dokazi mobilnog prikaza su u ignoriranoj mapi `artifacts/rev2-mobile-evidence` (snimke i measurements.json). Otvorene ostaju REV2-05/07/08/09/10; vanjski produkcijski uvjeti nisu ponovno potvrđivani.
+
 ## REV2-01 / REV2-02 — dovršeno 23. 11. 2026.
 
 Paket `artifacts/rev2-drafts-final` postavljen je na demo [https://localhost:7610](https://localhost:7610) i postojeći Db2 pregled [https://localhost:7589](https://localhost:7589). Baza, ovlasti i konfiguracija su sačuvane; nema nove migracije (relacijska verzija ostaje 11, protokol 5).

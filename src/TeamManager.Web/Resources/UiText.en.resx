@@ -1375,4 +1375,18 @@
 <data name="Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje." xml:space="preserve"><value>I have reviewed the current version and want to replace it with this draft.</value></data>
 <data name="Tvoj sačuvani nacrt" xml:space="preserve"><value>Your preserved draft</value></data>
 <data name="Nacrt je sačuvan. Usporedi ga s aktualnom verzijom prikazanom iznad prije spremanja." xml:space="preserve"><value>Your draft is preserved. Compare it with the current version shown above before saving.</value></data>
+<data name="Identifikator" xml:space="preserve"><value>Identifier</value></data>
+<data name="Unesi valjanu vrijednost za polje {0}." xml:space="preserve"><value>Enter a valid value for {0}.</value></data>
+<data name="Nedostaje sadržaj zahtjeva." xml:space="preserve"><value>The request body is required.</value></data>
+<data name="Obavezno polje nije popunjeno." xml:space="preserve"><value>A required field is missing.</value></data>
+<data name="Polje {0} mora biti broj." xml:space="preserve"><value>The {0} field must be a number.</value></data>
+<data name="Unesi valjanu vrijednost." xml:space="preserve"><value>Enter a valid value.</value></data>
+<data name="Vrijednost &apos;{0}&apos; nije valjana za polje {1}." xml:space="preserve"><value>The value &apos;{0}&apos; is not valid for {1}.</value></data>
+<data name="Stranica" xml:space="preserve"><value>Page</value></data>
+<data name="Polje {0} može imati najviše {1} znakova." xml:space="preserve"><value>The {0} field must contain at most {1} characters.</value></data>
+<data name="Polje {0} mora imati od {2} do {1} znakova." xml:space="preserve"><value>The {0} field must contain between {2} and {1} characters.</value></data>
+<data name="Polje {0} je obavezno." xml:space="preserve"><value>The {0} field is required.</value></data>
+<data name="Unesi valjan broj." xml:space="preserve"><value>Enter a valid number.</value></data>
+<data name="Nedostaje obavezna vrijednost." xml:space="preserve"><value>A required value is missing.</value></data>
+<data name="Vrijednost &apos;{0}&apos; nije valjana." xml:space="preserve"><value>The value &apos;{0}&apos; is not valid.</value></data>
 </root>

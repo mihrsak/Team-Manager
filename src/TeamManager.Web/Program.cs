@@ -64,7 +64,8 @@ builder.Services.AddRazorPages(options => {
     options.Conventions.AllowAnonymousToPage("/LdapLogin");
     options.Conventions.AllowAnonymousToPage("/Register");
     options.Conventions.AllowAnonymousToPage("/Error");
-});
+}).AddDataAnnotationsLocalization(options=>options.DataAnnotationLocalizerProvider=(_,factory)=>factory.Create(typeof(UiText)));
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<Microsoft.AspNetCore.Mvc.MvcOptions>,LocalizedValidationOptions>();
 builder.Services.AddScoped<TeamStore>();
 builder.Services.AddScoped<IssueStore>();
 builder.Services.AddScoped<ProjectContentSearchStore>();

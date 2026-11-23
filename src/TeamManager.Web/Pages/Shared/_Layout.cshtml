@@ -31,6 +31,15 @@ html[data-theme="dark"] {
 .grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
 .validation-summary-valid{display:none}
 .admin-links,.pagination{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.table-scroll{max-width:100%;overflow-x:auto}
+main{overflow-wrap:anywhere}
+.table-scroll:focus-visible{outline:2px solid var(--link);outline-offset:3px}
+.issue-time-table{min-width:48rem;table-layout:fixed}
+.issue-time-table th:nth-child(1){width:16%}
+.issue-time-table th:nth-child(2),.issue-time-table th:nth-child(3),.issue-time-table th:nth-child(6){width:18%}
+.issue-time-table th:nth-child(4){width:8%}
+.issue-time-table th:nth-child(5){width:22%}
+.issue-time-table td{overflow-wrap:anywhere}
 nav a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px;font-weight:700}
 details>summary{cursor:pointer;padding:12px 0;font-weight:600}
 </style><script src="~/js/forms.js" asp-append-version="true" defer></script></head><body data-unsaved-message="@Text["Imaš nespremljene izmjene. Želiš li napustiti stranicu i odbaciti ih?"]">

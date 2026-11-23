@@ -2,22 +2,22 @@
 
 ## Druga revizija — status dorada 23. 11. 2026.
 
-Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset nalaza; REV2-01 i REV2-02 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvoreno ostaje osam stavki (pet P2 i tri P3). Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Početni pregled bio je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju navedene P1 popravke, a ne cijelo produkcijsko okruženje.
+Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset nalaza; REV2-01/02/03/04/06 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvoreno ostaje pet stavki (REV2-05/07 te REV2-08–10). Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Početni pregled bio je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju navedene popravke, a ne cijelo produkcijsko okruženje.
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
 | REV2-01 | P1 | Dovršeno: sačuvani sirovi nacrt i izvorna wiki revizija, izričita potvrda nakon pregleda aktualne verzije, zaštita ponovnog konflikta; vraćena polja nevaljanog vremena i upozorenje pri odlasku s vraćenog nacrta. HR/EN, sva tri providera. |
 | REV2-02 | P1 | Dovršeno: dokumenti/privitci koriste download poveznice; CSV se preuzima u odvojenom skrivenom okviru bez navigacije uređivane stranice; nove izmjene i povratak iz povijesti ponovno aktiviraju zaštitu. HR/EN stvarna preuzimanja, odustanak od reloada i pojedinačna potvrda odlaska, sva tri providera. |
-| REV2-03 | P2 | Otvoreno: ograničiti vodoravno pomicanje tablice vremena na detalju zadatka; cijela stranica sada prelazi 320/390 px. |
-| REV2-04 | P2 | Otvoreno: lokalizirati serverske Required/DataAnnotations poruke i nazive polja u HR/EN. |
+| REV2-03 | P2 | Dovršeno: tipkovnicom dostupan zasebni okvir tablice vremena, čitljive širine i označeni stupci; prelamanje dugog korisničkog sadržaja i povijesti. HR/EN, 320/390 px, svijetla/tamna tema, SQL Server/Oracle/Db2. |
+| REV2-04 | P2 | Dovršeno: zajedničke HR/EN Required/StringLength i model-binding poruke, lokalizirani nazivi polja uz jezik trenutačnog zahtjeva. Provjereni obavezna aktivnost/lozinka/naziv, predugi naslov/aktivnost/napomena, nevaljan datum/broj te fokus i ARIA greške, sva tri providera. |
 | REV2-05 | P2 | Otvoreno: zadržati siguran povratni kontekst iz pretrage i izvještaja vremena, uz aktivnu navigaciju povezanih stranica. |
-| REV2-06 | P2 | Otvoreno: uskladiti Gantt opis raspona s konfiguriranom kulturom datuma. |
+| REV2-06 | P2 | Dovršeno: raspon, samo početak i samo rok koriste CurrentCulture kao izvještaji; HR/EN i posebna en-US Formatting:Culture provjereni neovisno od jezika. ISO ulazni datumi ostaju nepromijenjeni. |
 | REV2-07 | P2 | Otvoreno: na detalju vremena prikazati autora, zadatak i projekt prije ispravka. |
 | REV2-08 | P3 | Prijedlog: čitljive promjene polja u povijesti, uz očuvan izvorni JSON zapis. |
 | REV2-09 | P3 | Prijedlog: generički HR/EN 404 prikaz s povratkom u aplikaciju, bez otkrivanja privatnih zapisa. |
 | REV2-10 | P3 | Otvoreno: omogućiti povratak s prazne kasnije stranice pretrage. |
 
-Sljedeće: REV2-03/04/06, povezani tokovi REV2-05/07 te REV2-08–10. Regresija P1 popravaka: scripts/Test-DraftProtection.cjs na izoliranim testnim bazama; glavni demo i postojeći radni Db2 pregled nadograđeni su bez promjene konfiguracije ili migracije baze. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
+Sljedeće: povezani tokovi REV2-05/07 te REV2-08–10. Nove regresije: scripts/Test-MobileLocalization.cjs; pokretati na izoliranim lokalnim bazama. Regresija P1 popravaka: scripts/Test-DraftProtection.cjs na izoliranim testnim bazama; glavni demo i postojeći radni Db2 pregled nadograđeni su bez promjene konfiguracije ili migracije baze. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
 
 ## Prva revizija proizvoda — lokalno dovršene dorade 22. 11. 2026.
 
