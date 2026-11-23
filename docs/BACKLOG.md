@@ -1,6 +1,25 @@
 # Backlog Team Manager
 
-## Revizija proizvoda — dovršene lokalne dorade
+## Otvorene dorade iz druge revizije — 23. 11. 2026.
+
+Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset preostalih nalaza. Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Nova revizija ne predstavlja novu potvrdu SQL Servera, Oraclea ili produkcijskog okruženja.
+
+| Stavka | Prioritet | Status / predložena dorada |
+|---|---|---|
+| REV2-01 | P1 | Otvoreno: sačuvati wiki nacrt pri konfliktu revizije i unesena polja vremena pri serverskoj grešci. |
+| REV2-02 | P1 | Otvoreno: zadržati zaštitu novih nespremljenih izmjena nakon dovršenog preuzimanja datoteke. |
+| REV2-03 | P2 | Otvoreno: ograničiti vodoravno pomicanje tablice vremena na detalju zadatka; cijela stranica sada prelazi 320/390 px. |
+| REV2-04 | P2 | Otvoreno: lokalizirati serverske Required/DataAnnotations poruke i nazive polja u HR/EN. |
+| REV2-05 | P2 | Otvoreno: zadržati siguran povratni kontekst iz pretrage i izvještaja vremena, uz aktivnu navigaciju povezanih stranica. |
+| REV2-06 | P2 | Otvoreno: uskladiti Gantt opis raspona s konfiguriranom kulturom datuma. |
+| REV2-07 | P2 | Otvoreno: na detalju vremena prikazati autora, zadatak i projekt prije ispravka. |
+| REV2-08 | P3 | Prijedlog: čitljive promjene polja u povijesti, uz očuvan izvorni JSON zapis. |
+| REV2-09 | P3 | Prijedlog: generički HR/EN 404 prikaz s povratkom u aplikaciju, bez otkrivanja privatnih zapisa. |
+| REV2-10 | P3 | Otvoreno: omogućiti povratak s prazne kasnije stranice pretrage. |
+
+Prvo zatvoriti REV2-01/02, zatim REV2-03/04/06, povezane tokove REV2-05/07 te REV2-08–10. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
+
+## Prva revizija proizvoda — lokalno dovršene dorade 22. 11. 2026.
 
 ### Napredak implementacije
 

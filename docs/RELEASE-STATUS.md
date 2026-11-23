@@ -2,7 +2,13 @@
 
 Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
-## Završetak revizije 22. 11. 2026.
+## Druga revizija — 23. 11. 2026.
+
+Pregledan je paket `artifacts/review-release` (commit `1f174a0`) na [https://localhost:7610](https://localhost:7610), Db2 LUW. Pokrenuti su postojeći VM, Db2 kontejner i demo nakon restarta računala; postojeća baza nije ponovno stvarana. Pregledano je 44 HR/EN prikaza, projektne granice triju demo uloga, običan odustanak od izmjena, odbijeni upisi, konflikt wiki revizije, preuzimanje datoteke, mobilni prikaz i 24 automatizirane provjere pristupačnosti u svijetloj/tamnoj temi. Axe nije prijavio povrede u tim provjerama, ali zasebno je potvrđen problem reflowa na zadatku.
+
+**Deset novih otvorenih nalaza:** dva P1 (gubitak nacrta kod konflikta/greške i neaktivna zaštita novih izmjena nakon preuzimanja), pet P2 te tri P3. Detalji: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md); redoslijed: [BACKLOG.md](BACKLOG.md). U provjerenim scenarijima nema novog otkrivanja privatnog projektnog članstva. Ranije zatvaranje REV-01–REV-14 ne pokriva dodatne grane pronađene ovom revizijom. U ovoj iteraciji izrađeni su izvještaj i prioriteti; aplikacijski kod nije mijenjan. SQL Server, Oracle, IIS/OpenShift, NVDA i produkcijski kapacitet nisu ponovno provjeravani.
+
+## Završetak prve revizije 22. 11. 2026.
 
 Svih 14 stavki REV-01–REV-14 je lokalno implementirano i provjereno. Novi demo radi na [https://localhost:7610/Projects](https://localhost:7610/Projects), postojeći Db2 podaci na [https://localhost:7589/Projects](https://localhost:7589/Projects). Paket: artifacts/review-release; Oracle/Db2 relacijska verzija 11, protokol zaključavanja 5. Postojeći Db2 pregled je nadograđen uz očuvanje konfiguracije i baze. Detalji ponovljivog demo postupka: [PRODUCT-DEMO.md](PRODUCT-DEMO.md).
 
