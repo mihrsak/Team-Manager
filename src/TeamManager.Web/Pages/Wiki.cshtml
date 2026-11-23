@@ -77,11 +77,13 @@ else
     (Model.Selected is null || Model.Displayed?.Number == Model.Selected.Revision))
 {
     <section class="card">
-        <h2>@(Model.Selected is null ? Text["Nova wiki stranica"].Value : Text["Uredi stranicu"].Value)</h2>
-        <form method="post" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id" asp-route-wikiId="@Model.Selected?.Id">
-            <input type="hidden" name="revision" value="@(Model.Selected?.Revision ?? 0)">
+        <h2>@(Model.HasConflict ? Text["Tvoj sačuvani nacrt"].Value : Model.Selected is null ? Text["Nova wiki stranica"].Value : Text["Uredi stranicu"].Value)</h2>
+        @if(Model.HasConflict){<p>@Text["Nacrt je sačuvan. Usporedi ga s aktualnom verzijom prikazanom iznad prije spremanja."]</p>}
+        <form method="post" data-unsaved-draft="@(Model.HasDraft ? "true" : null)" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id" asp-route-wikiId="@Model.Selected?.Id">
+            <input type="hidden" name="revision" value="@(Model.DraftRevision ?? Model.Selected?.Revision ?? 0)">
             <label>@Text["Naslov"]<input name="title" maxlength="120" required value="@(Model.DraftTitle ?? Model.Displayed?.Title)"></label>
             <label>@Text["Sadržaj"]<textarea name="body" rows="10" maxlength="20000" required>@(Model.DraftBody ?? Model.Displayed?.Body)</textarea></label>
+            @if(Model.HasConflict){<input type="hidden" name="reviewedRevision" value="@Model.Selected!.Revision"><label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>}
             <button>@Text["Spremi stranicu"]</button>
         </form>
     </section>

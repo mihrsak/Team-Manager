@@ -1,13 +1,13 @@
 # Backlog Team Manager
 
-## Otvorene dorade iz druge revizije — 23. 11. 2026.
+## Druga revizija — status dorada 23. 11. 2026.
 
-Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset preostalih nalaza. Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Nova revizija ne predstavlja novu potvrdu SQL Servera, Oraclea ili produkcijskog okruženja.
+Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset nalaza; REV2-01 i REV2-02 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvoreno ostaje osam stavki (pet P2 i tri P3). Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Početni pregled bio je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju navedene P1 popravke, a ne cijelo produkcijsko okruženje.
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
-| REV2-01 | P1 | Otvoreno: sačuvati wiki nacrt pri konfliktu revizije i unesena polja vremena pri serverskoj grešci. |
-| REV2-02 | P1 | Otvoreno: zadržati zaštitu novih nespremljenih izmjena nakon dovršenog preuzimanja datoteke. |
+| REV2-01 | P1 | Dovršeno: sačuvani sirovi nacrt i izvorna wiki revizija, izričita potvrda nakon pregleda aktualne verzije, zaštita ponovnog konflikta; vraćena polja nevaljanog vremena i upozorenje pri odlasku s vraćenog nacrta. HR/EN, sva tri providera. |
+| REV2-02 | P1 | Dovršeno: dokumenti/privitci koriste download poveznice; CSV se preuzima u odvojenom skrivenom okviru bez navigacije uređivane stranice; nove izmjene i povratak iz povijesti ponovno aktiviraju zaštitu. HR/EN stvarna preuzimanja, odustanak od reloada i pojedinačna potvrda odlaska, sva tri providera. |
 | REV2-03 | P2 | Otvoreno: ograničiti vodoravno pomicanje tablice vremena na detalju zadatka; cijela stranica sada prelazi 320/390 px. |
 | REV2-04 | P2 | Otvoreno: lokalizirati serverske Required/DataAnnotations poruke i nazive polja u HR/EN. |
 | REV2-05 | P2 | Otvoreno: zadržati siguran povratni kontekst iz pretrage i izvještaja vremena, uz aktivnu navigaciju povezanih stranica. |
@@ -17,7 +17,7 @@ Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 a
 | REV2-09 | P3 | Prijedlog: generički HR/EN 404 prikaz s povratkom u aplikaciju, bez otkrivanja privatnih zapisa. |
 | REV2-10 | P3 | Otvoreno: omogućiti povratak s prazne kasnije stranice pretrage. |
 
-Prvo zatvoriti REV2-01/02, zatim REV2-03/04/06, povezane tokove REV2-05/07 te REV2-08–10. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
+Sljedeće: REV2-03/04/06, povezani tokovi REV2-05/07 te REV2-08–10. Regresija P1 popravaka: scripts/Test-DraftProtection.cjs na izoliranim testnim bazama; glavni demo i postojeći radni Db2 pregled nadograđeni su bez promjene konfiguracije ili migracije baze. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
 
 ## Prva revizija proizvoda — lokalno dovršene dorade 22. 11. 2026.
 

@@ -4,6 +4,8 @@ Pregledani commit: `1f174a0`, paket `artifacts/review-release`, demo [https://lo
 
 Pronađeno je **10 preostalih nalaza: dva P1, pet P2 i tri P3**. Prvo treba zaštititi nacrt pri sukobu wiki izmjena i održati zaštitu nespremljenih izmjena nakon preuzimanja datoteke. Novi nalazi imaju oznake **REV2-01–REV2-10**; uključuju dodatne scenarije u područjima ranijih dorada, čije prethodne provjere nisu pokrivale ove slučajeve.
 
+Naknadni status 23. 11. 2026.: **REV2-01 i REV2-02 su popravljeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN**. Izvorni nalazi ispod ostaju dokaz revizije pregledanog commita. Aktualni paket je artifacts/rev2-drafts-final; detalji provjera i otvorenih stavki su u [RELEASE-STATUS.md](RELEASE-STATUS.md) i [BACKLOG.md](BACKLOG.md).
+
 ## Što je provjereno
 
 - **44 prikaza**: 22 glavne stranice na HR i EN, desktop 1440 px i mobilni pregled 390 px. Dashboard, projekti, zadaci/novi zadatak, kalendar/Gantt, aktivnosti, pretraga, plan, wiki, dokumenti, novosti, forum, izvještaj i detalji vremena, obavijesti, administrativna revizija, tijek rada, profil i korisnici. Svi navedeni autorizirani prikazi vratili su HTTP 200.

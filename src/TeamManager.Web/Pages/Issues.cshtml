@@ -26,7 +26,7 @@
         <label><input style="width:auto" type="checkbox" name="Column" value="@column.Key" checked="@Model.VisibleColumns.Contains(column.Key)"> @(column.Key == "id" ? Text["Broj zadatka"].Value : Text[column.Value].Value)</label>
     }
 </fieldset>
-<div><button>@Text["Primijeni"]</button> <button name="handler" value="Csv">@Text["Izvezi CSV"]</button> <a href="/Issues">@Text["Očisti"]</a></div></form></div>
+<div><button>@Text["Primijeni"]</button> <button name="handler" value="Csv" data-download>@Text["Izvezi CSV"]</button> <a href="/Issues">@Text["Očisti"]</a></div></form></div>
 @if(Model.ProjectId is int selectedProject){var selected=Model.Projects.Find(p=>p.Id==selectedProject); if(selected is not null){<p><a asp-page="/Project" asp-route-id="@selectedProject">@selected.Name</a> @if(Model.CanCreate.Contains(selectedProject)){<a class="button" asp-page="/Issue" asp-route-projectId="@selectedProject" asp-route-returnUrl="@Model.CurrentListUrl">@Text["Novi zadatak"]</a>}</p>}}
 else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
 @if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}

@@ -32,7 +32,7 @@
             <p style="white-space:pre-wrap;overflow-wrap:anywhere">@document.Description</p>
         }
         <div class="actions">
-            <a asp-page-handler="Download" asp-route-projectId="@Model.Project.Id" asp-route-documentId="@document.Id">@document.FileName</a>
+            <a download asp-page-handler="Download" asp-route-projectId="@Model.Project.Id" asp-route-documentId="@document.Id">@document.FileName</a>
             <span>@document.Size B</span>
             @if (Model.CanEdit)
             {

@@ -2,13 +2,19 @@
     const message = document.body.dataset.unsavedMessage;
     const initial = new Map();
     let submitting = false;
+    let downloadFrame;
     function state(form) {
         return JSON.stringify([...form.elements].filter(field => field.name && !['hidden','submit','button'].includes(field.type)).map(field =>
             [field.name, field.type === 'checkbox' || field.type === 'radio' ? field.checked : field.type === 'file'
                 ? [...field.files].map(file => [file.name,file.size,file.lastModified]) : field.multiple ? [...field.selectedOptions].map(option => option.value) : field.value]));
     }
     for (const form of document.forms) if (form.method.toLowerCase() === 'post') initial.set(form, state(form));
-    const dirty = except => [...initial].some(([form, original]) => form !== except && state(form) !== original);
+    const dirty = except => [...initial].some(([form, original]) => form !== except && (form.dataset.unsavedDraft === 'true' || state(form) !== original));
+    // Any new interaction re-arms protection, including after a download or a
+    // cancelled navigation. A restored browser-history document must re-arm too.
+    document.addEventListener('input', () => submitting = false);
+    document.addEventListener('change', () => submitting = false);
+    window.addEventListener('pageshow', () => submitting = false);
     window.addEventListener('beforeunload', event => {
         if (!submitting && dirty()) { event.preventDefault(); event.returnValue = ''; }
     });
@@ -21,6 +27,20 @@
         else submitting = true;
     });
     document.addEventListener('submit', event => {
+        if (event.submitter?.hasAttribute('data-download') || event.target.hasAttribute('data-download')) {
+            // A form navigation can fire beforeunload before the browser sees
+            // Content-Disposition. Keep downloads in a separate browsing context
+            // so the editable page never starts navigating or suspends its guard.
+            if (!downloadFrame) {
+                downloadFrame = document.createElement('iframe');
+                downloadFrame.hidden = true;
+                downloadFrame.name = 'tm-download-' + crypto.randomUUID();
+                document.body.append(downloadFrame);
+            }
+            if (event.submitter) event.submitter.setAttribute('formtarget', downloadFrame.name);
+            else event.target.target = downloadFrame.name;
+            return;
+        }
         if (dirty(event.target) && !window.confirm(message)) { event.preventDefault(); return; }
         submitting = true;
     });

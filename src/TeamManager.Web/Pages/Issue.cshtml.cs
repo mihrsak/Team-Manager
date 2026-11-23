@@ -23,6 +23,11 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public List<PrivateIssueNote> PrivateNotes {get;private set;}=[];
     public bool CanAddPrivateNote {get;private set;}
     public bool IsWatching {get;private set;}
+    public bool HasTimeDraft {get;private set;}
+    public string TimeDraftDate {get;private set;}=DateTime.Today.ToString("yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture);
+    public string? TimeDraftHours {get;private set;}
+    public string? TimeDraftActivity {get;private set;}
+    public string? TimeDraftNote {get;private set;}
     public List<RoadmapItem> RoadmapItems {get;set;}=[];
     public List<IssueLink> Links {get;set;}=[];
     public List<Team> CopyProjects {get;set;}=[];
@@ -89,6 +94,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     }
     public async Task<IActionResult> OnPostTimeAsync(int id,DateTime? date,string? hours,string? note,string? activity)
     {
+        HasTimeDraft=true;TimeDraftDate=Request.Form["date"].ToString();TimeDraftHours=Request.Form["hours"].ToString();TimeDraftActivity=Request.Form["activity"].ToString();TimeDraftNote=Request.Form["note"].ToString();
         var parsed=decimal.TryParse(hours?.Replace(',','.'),System.Globalization.NumberStyles.AllowDecimalPoint,System.Globalization.CultureInfo.InvariantCulture,out var value);
         var valid=date is not null&&parsed&&!ModelState.Any(x=>x.Key=="date" && x.Value!.Errors.Count>0);
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;if(!valid){ModelState.AddModelError("","Unesi valjan datum i broj sati.");return Page();}

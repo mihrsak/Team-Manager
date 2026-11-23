@@ -1372,4 +1372,7 @@
 <data name="Aktivno" xml:space="preserve"><value>Active</value></data>
 <data name="Spremi" xml:space="preserve"><value>Save</value></data>
 <data name="Neaktivno" xml:space="preserve"><value>Inactive</value></data>
+<data name="Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje." xml:space="preserve"><value>I have reviewed the current version and want to replace it with this draft.</value></data>
+<data name="Tvoj sačuvani nacrt" xml:space="preserve"><value>Your preserved draft</value></data>
+<data name="Nacrt je sačuvan. Usporedi ga s aktualnom verzijom prikazanom iznad prije spremanja." xml:space="preserve"><value>Your draft is preserved. Compare it with the current version shown above before saving.</value></data>
 </root>

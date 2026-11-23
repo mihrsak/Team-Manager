@@ -2,11 +2,23 @@
 
 Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## REV2-01 / REV2-02 — dovršeno 23. 11. 2026.
+
+Paket `artifacts/rev2-drafts-final` postavljen je na demo [https://localhost:7610](https://localhost:7610) i postojeći Db2 pregled [https://localhost:7589](https://localhost:7589). Baza, ovlasti i konfiguracija su sačuvane; nema nove migracije (relacijska verzija ostaje 11, protokol 5).
+
+Wiki vraća izvorni naslov/sadržaj nacrta i očekivanu reviziju umjesto zamjene nacrta novom verzijom. Aktualna spremljena verzija ostaje odvojeno prikazana. Spremanje preko nje traži izričitu potvrdu pregleda; nova konkurentna izmjena ponovo odbija spremanje i čuva nacrt. Prazni unosi i tekst s početnim/završnim razmacima ostaju u obrascu pri grešci. Odbijeni unos vremena zadržava datum, sirove sate (uključujući nevaljan tekst), aktivnost i napomenu. Obrazac sati prima decimalnu točku ili zarez uz postojeću serversku provjeru raspona i preciznosti. Vraćeni nacrti odmah se smatraju nespremljenima, i prije nove tipkovničke izmjene.
+
+Dokumenti i privitci imaju izričite download poveznice. CSV obrazac cilja skriveni okvir kako pokušaj navigacije glavnog dokumenta ne bi aktivirao ili suspendirao njegovu zaštitu prije primitka attachment odgovora. Input/change i pageshow ponovno aktiviraju zaštitu nakon novih izmjena i vraćanja stranice. Očuvana je pojedinačna lokalizirana potvrda stvarnog odlaska, a valjan submit vlastitog obrasca prolazi bez dodatne potvrde.
+
+`Test-DraftProtection.cjs` prošao je na privremenom SQL Serveru te izoliranim Oracle i Db2 shemama: oba jezika, dva uzastopna wiki konflikta, zabrana tihog prepisivanja, izričito pregledano spremanje, prazni/nevaljani nacrti, zadržavanje i ispravan unos vremena, stvarna preuzimanja dokumenata/privitaka/CSV-a, stvarni beforeunload pri odustanku od reloada i odsutnost dvostrukih potvrda. HR/EN konfliktne stranice prošle su axe provjeru. Skripta stvara regresijske podatke i treba je pokretati samo na izoliranim lokalnim bazama, ne na čistom demou ili radnim podacima.
+
+Nakon postavljanja, `Test-ProductDemo.cjs` ponovno je prošao 28 HR/EN axe provjera, glavne tokove i granice projektne privatnosti, a `Test-ReviewSmoke.cjs` provjerio je postojeći radni Db2 pregled bez promjene poslovnih zapisa. Oba URL-a imaju readiness 200. Preostale stavke REV2-03–REV2-10 ostaju otvorene; vanjski produkcijski uvjeti nisu promijenjeni.
+
 ## Druga revizija — 23. 11. 2026.
 
 Pregledan je paket `artifacts/review-release` (commit `1f174a0`) na [https://localhost:7610](https://localhost:7610), Db2 LUW. Pokrenuti su postojeći VM, Db2 kontejner i demo nakon restarta računala; postojeća baza nije ponovno stvarana. Pregledano je 44 HR/EN prikaza, projektne granice triju demo uloga, običan odustanak od izmjena, odbijeni upisi, konflikt wiki revizije, preuzimanje datoteke, mobilni prikaz i 24 automatizirane provjere pristupačnosti u svijetloj/tamnoj temi. Axe nije prijavio povrede u tim provjerama, ali zasebno je potvrđen problem reflowa na zadatku.
 
-**Deset novih otvorenih nalaza:** dva P1 (gubitak nacrta kod konflikta/greške i neaktivna zaštita novih izmjena nakon preuzimanja), pet P2 te tri P3. Detalji: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md); redoslijed: [BACKLOG.md](BACKLOG.md). U provjerenim scenarijima nema novog otkrivanja privatnog projektnog članstva. Ranije zatvaranje REV-01–REV-14 ne pokriva dodatne grane pronađene ovom revizijom. U ovoj iteraciji izrađeni su izvještaj i prioriteti; aplikacijski kod nije mijenjan. SQL Server, Oracle, IIS/OpenShift, NVDA i produkcijski kapacitet nisu ponovno provjeravani.
+**Deset nalaza prvotnog pregleda (P1 naknadno zatvoreni iznad):** dva P1 (gubitak nacrta kod konflikta/greške i neaktivna zaštita novih izmjena nakon preuzimanja), pet P2 te tri P3. Detalji: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md); redoslijed: [BACKLOG.md](BACKLOG.md). U provjerenim scenarijima nema novog otkrivanja privatnog projektnog članstva. Ranije zatvaranje REV-01–REV-14 ne pokriva dodatne grane pronađene ovom revizijom. U samom izvornom pregledu izrađeni su izvještaj i prioriteti; naknadna P1 implementacija i provjere opisane su iznad. SQL Server, Oracle, IIS/OpenShift, NVDA i produkcijski kapacitet nisu ponovno provjeravani.
 
 ## Završetak prve revizije 22. 11. 2026.
 
