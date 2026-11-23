@@ -9,6 +9,11 @@ namespace TeamManager.Web;
 
 public sealed record EditableTime(int Id,int IssueId,int AuthorId,DateTime Date,decimal Hours,string Activity,string Note)
 {
+    public string AuthorName{get;init;}="";
+    public string AuthorEmployeeNumber{get;init;}="";
+    public string IssueTitle{get;init;}="";
+    public int ProjectId{get;init;}
+    public string ProjectName{get;init;}="";
     public string Token=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new{Id,IssueId,AuthorId,Date=Date.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture),Hours=Hours.ToString("0.00",CultureInfo.InvariantCulture),Activity,Note}))));
 }
 public sealed partial class IssueStore
@@ -19,8 +24,9 @@ public sealed partial class IssueStore
         if(oracle.Enabled)return await oracle.TimeEntryFor(user,issue,entry);
         await using var c=Connect();await c.OpenAsync();
         await using var cmd=new SqlCommand("""
-            SELECT t.Id,t.IssueId,t.UserId,t.WorkDate,t.Hours,t.Activity,t.Note
+            SELECT t.Id,t.IssueId,t.UserId,t.WorkDate,t.Hours,t.Activity,t.Note,a.DisplayName,a.EmployeeNumber,i.Title,p.Name,p.Id
             FROM dbo.TimeEntries t JOIN dbo.Issues i ON i.Id=t.IssueId JOIN dbo.Projects p ON p.Id=i.ProjectId
+            JOIN dbo.AppUsers a ON a.Id=t.UserId
             WHERE t.Id=@entry AND t.IssueId=@issue AND p.IssuesEnabled=1 AND p.TimeEnabled=1
               AND EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@user AND IsActive=1)
               AND EXISTS(SELECT 1 FROM dbo.IssueVisibility(@user,i.ProjectId,i.IsPrivate,i.CreatedBy,i.AssigneeId))
@@ -29,7 +35,7 @@ public sealed partial class IssueStore
             OPTION(MAXRECURSION 0)
             """,c);
         cmd.Parameters.AddRange([P("@entry",entry),P("@issue",issue),P("@user",user)]);
-        await using var r=await cmd.ExecuteReaderAsync();return await r.ReadAsync()?new(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.GetString(6)):null;
+        await using var r=await cmd.ExecuteReaderAsync();return await r.ReadAsync()?new(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.GetString(6)){AuthorName=r.GetString(7),AuthorEmployeeNumber=r.GetString(8),IssueTitle=r.GetString(9),ProjectName=r.GetString(10),ProjectId=r.GetInt32(11)}:null;
     }
     internal static void ValidateTime(DateTime date,decimal hours,string? activity,string? note)
     {

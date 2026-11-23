@@ -1,7 +1,7 @@
 @page
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.IssueModel
-<a href="@Model.BackUrl">@Text["← Projektni zadaci"]</a><h1>@(Model.Id is null?Text["Novi zadatak"].Value:Text["Zadatak #{0}", Model.Id!].Value)</h1><p>@Model.ProjectName</p>
+<a href="@Model.BackUrl">@Text[Model.BackLabel]</a><h1>@(Model.Id is null?Text["Novi zadatak"].Value:Text["Zadatak #{0}", Model.Id!].Value)</h1><p>@Model.ProjectName</p>
 @if (Model.Id is not null)
 {
     @if (Model.Input.IsPrivate == true) { <p class="badge">@Text["Privatni zadatak"]</p> }

@@ -37,6 +37,7 @@ if (builder.Configuration["DataProtection:KeyDirectory"] is { Length: > 0 } keyD
     builder.Services.AddDataProtection().SetApplicationName("TeamManager")
         .PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
 builder.Services.AddScoped<LocalizedValidationFilter>();
+builder.Services.AddScoped<ReturnNavigationFilter>();
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSingleton<IProjectNavigationExtension, ConfiguredProjectLinks>();
 builder.Services.AddRateLimiter(options =>
@@ -59,6 +60,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddRazorPages(options => {
     options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.ServiceFilterAttribute(typeof(LocalizedValidationFilter)));
+    options.Conventions.ConfigureFilter(new Microsoft.AspNetCore.Mvc.ServiceFilterAttribute(typeof(ReturnNavigationFilter)));
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Login");
     options.Conventions.AllowAnonymousToPage("/LdapLogin");

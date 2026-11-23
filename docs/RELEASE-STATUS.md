@@ -2,6 +2,17 @@
 
 Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## REV2-05 / REV2-07 — dovršeno 23. 11. 2026.
+
+Aktivni paket: `artifacts/rev2-navigation-final`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589), readiness 200. Konfiguracija i baze očuvane su bez migracije (shema 11 / protokol 5).
+
+- **REV2-05:** povratni kontekst pretrage i izvještaja prenosi se kroz detalje, GET/POST obrasce, validaciju i spremanje, uključujući 303 nakon prijenosa dokumenta. Čuvaju se upit, modul, stranica, filtri i sidro retka izvještaja. Prihvaća se samo jedna lokalna povratna adresa do 4096 znakova; vanjske i dvosmislene vrijednosti odbacuju se. Posebni znakovi nisu dvostruko HTML kodirani. Glavna navigacija označava izvještaj za detalj vremena i kalendar za Gantt, bez označavanja navigacije stranica izvještaja.
+- **REV2-07:** prikazuju se izvorni autor i broj radnika, zadatak i projekt s poveznicama prije obrasca ispravka. Ciljani autorizirani SQL upiti svih providera vraćaju podatke koji nisu vezani uz POST. Očuvani su autor, token konkurentnosti, zaključavanje i pravila uređivanja. Prikaz bez prava uređivanja ima HR/EN poruku; opoziv pristupa primjenjuje se odmah.
+
+`Test-ReturnContext.cjs` prolazi na privremenom SQL Serveru te izoliranim Oracle/Db2 shemama, HR/EN: osam modula pretrage, posebni znakovi, druga wiki stranica, prijenos dokumenta, druga stranica izvještaja s 51 unosom, nevaljan i valjan ispravak, povezani detalji, izvorni autor, krivotvoreni metapodaci, pregled bez uređivanja, opoziv, nepodudarni zadatak/unos, nesigurne adrese, mobilnih 320 px i axe. Skripta stvara regresijske podatke i namijenjena je samo izoliranim bazama.
+
+Ponovljeni su SQL regresija navigacije s 52 retka i potpunim CSV-om te zaštite nacrta/preuzimanja. Konačni paket prolazi `Test-DraftProtection.cjs`, `Test-ProductDemo.cjs` (28 HR/EN axe provjera i glavni demo tokovi) i `Test-ReviewSmoke.cjs` nad postojećim Db2 podacima bez promjene poslovnih zapisa. Ostaju REV2-08/09/10; vanjski produkcijski uvjeti nisu ponovno potvrđivani.
+
 ## REV2-03 / REV2-04 / REV2-06 — dovršeno 23. 11. 2026.
 
 Aktivni lokalni paket: `artifacts/rev2-presentation-final`; [demo](https://localhost:7610) i [postojeći Db2 podaci](https://localhost:7589). Konfiguracija i baze su očuvane; nema nove migracije (shema 11 / protokol 5).

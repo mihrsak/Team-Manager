@@ -14,6 +14,7 @@ public sealed class SearchModel(ProjectStore projects, IssueStore issues, Roadma
     [BindProperty(SupportsGet = true)] public string? Module { get; set; }
     [BindProperty(SupportsGet=true)] public int PageNumber {get;set;}=1;
     public HashSet<string> More {get;}=[];
+    public string ReturnUrl=>Url.Page("/Search",new{Query,Module,PageNumber})!;
     public static readonly Dictionary<string,string> ModuleLabels=new(){["projects"]="Projekti",["issues"]="Zadaci",["roadmap"]="Verzije i prekretnice",["users"]="Korisnici",["wiki"]="Wiki",["documents"]="Dokumenti",["news"]="Novosti",["forum"]="Forum"};
     public string ResultsUrl(string label,int page)=>Url.Page("/Search",new{Query,Module=ModuleLabels.Single(p=>p.Value==label).Key,PageNumber=page})!;
     private void Add(string label,IEnumerable<SearchHit> hits,bool paged=false)

@@ -7,6 +7,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     [BindProperty]public IssueInput Input{get;set;}=new();
     [BindProperty(SupportsGet=true)] public string? ReturnUrl {get;set;}
     public string BackUrl => ReturnUrl is not null && Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : Url.Page("/Issues",new{ProjectId})!;
+    public string BackLabel=>ReturnNavigation.Get(HttpContext) is {} navigation&&navigation.Label!="Natrag na zadatke"?navigation.Label:"← Projektni zadaci";
     public int? Id{get;set;}
     public int ProjectId{get;set;}
     public string ProjectName{get;set;}="";

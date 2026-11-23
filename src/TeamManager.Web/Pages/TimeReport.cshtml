@@ -50,7 +50,7 @@
 @if(Model.Details.Count>0)
 {
  <section class="card table"><h2>@Text["Detalji unosa vremena"]</h2><table><thead><tr><th>@Text["Datum"]</th><th>@Text["Projekt"]</th><th>@Text["Zadatak"]</th><th>@Text["Osoba"]</th><th>@Text["Aktivnost"]</th><th>@Text["Sati"]</th><th>@Text["Napomena"]</th></tr></thead><tbody>
- @foreach(var row in Model.Details){<tr><td><a asp-page="/TimeEntry" asp-route-id="@row.Id" asp-route-issueId="@row.IssueId">@row.Date.ToString("d")</a></td><td>@row.Project</td><td><a asp-page="/Issue" asp-route-id="@row.IssueId">@row.Title</a></td><td>@row.Person</td><td>@row.Activity</td><td>@row.Hours.ToString("0.00")</td><td>@row.Note</td></tr>}
+ @foreach(var row in Model.Details){<tr id="time-report-@row.Id"><td><a asp-page="/TimeEntry" asp-route-id="@row.Id" asp-route-issueId="@row.IssueId" asp-route-returnUrl="@Model.ReturnTo(row.Id)">@row.Date.ToString("d")</a></td><td>@row.Project</td><td><a asp-page="/Issue" asp-route-id="@row.IssueId" asp-route-returnUrl="@Model.ReturnTo(row.Id)">@row.Title</a></td><td>@row.Person</td><td>@row.Activity</td><td>@row.Hours.ToString("0.00")</td><td>@row.Note</td></tr>}
  </tbody></table></section>
 }
 @if(Model.PageNumber>1||Model.HasMore){<nav aria-label="@Text["Stranice rezultata"]">@if(Model.PageNumber>1){<a href="@Model.PageUrl(Model.PageNumber-1)">@Text["Prethodna stranica"]</a>} <span>@Text["Stranica {0}",Model.PageNumber]</span> @if(Model.HasMore){<a href="@Model.PageUrl(Model.PageNumber+1)">@Text["Sljedeća stranica"]</a>}</nav>}

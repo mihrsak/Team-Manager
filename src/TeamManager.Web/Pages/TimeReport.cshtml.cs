@@ -18,7 +18,8 @@ public sealed class TimeReportModel(IssueStore store) : PageModel
     [BindProperty(SupportsGet=true)]public int PageNumber{get;set;}=1;
     public List<TimeDetail> Details{get;private set;}=[];
     public bool HasMore{get;private set;}
-    public string PageUrl(int page)=>Url.Page("/TimeReport",new{ProjectId,From=From?.ToString("yyyy-MM-dd"),To=To?.ToString("yyyy-MM-dd"),Person,Activity,PageNumber=page})!;
+    public string PageUrl(int page)=>Url.Page("/TimeReport",new{ProjectId,From=From?.ToString("yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture),To=To?.ToString("yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture),Person,Activity,PageNumber=page})!;
+    public string ReturnTo(int entry)=>PageUrl(PageNumber)+"#time-report-"+entry;
 
     public async Task<IActionResult> OnGetAsync()
     {

@@ -1,9 +1,19 @@
 @page
 @inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
 @model TeamManager.Web.Pages.TimeEntryModel
+<p><a href="@Model.BackUrl">@Text[Model.BackLabel]</a></p>
 <h1>@Text["Detalji unosa vremena"]</h1>
+<section class="card" aria-label="@Text["Podaci o unosu vremena"]">
+ <h2>@Text["Unos vremena #{0}",Model.Entry.Id]</h2>
+ <dl>
+  <dt>@Text["Autor"]</dt><dd>@Model.Entry.AuthorName (@Model.Entry.AuthorEmployeeNumber)</dd>
+  <dt>@Text["Projekt"]</dt><dd><a asp-page="/Project" asp-route-id="@Model.Entry.ProjectId">@Model.Entry.ProjectName</a></dd>
+  <dt>@Text["Zadatak"]</dt><dd><a asp-page="/Issue" asp-route-id="@Model.Entry.IssueId">#@Model.Entry.IssueId · @Model.Entry.IssueTitle</a></dd>
+ </dl>
+</section>
 <p>@Text["Ispravak zadržava autora i povezana polja. Prethodne i nove vrijednosti ostaju u povijesti zadatka."]</p>
-<form method="post" class="card">
+@if(!Model.CanCorrect){<p>@Text["Ovaj unos možeš samo pregledati."]</p>}
+<form method="post" class="card" data-unsaved-draft="@(!ViewData.ModelState.IsValid ? "true" : null)">
  <div asp-validation-summary="All"></div>
  <input type="hidden" asp-for="IssueId"><input type="hidden" asp-for="Id"><input type="hidden" asp-for="Token">
  <fieldset disabled="@(!Model.CanCorrect)">
@@ -14,4 +24,3 @@
   @if(Model.CanCorrect){<button>@Text["Spremi ispravak"]</button>}
  </fieldset>
 </form>
-<p><a asp-page="/Issue" asp-route-id="@Model.IssueId">@Text["Zadatak"]</a></p>

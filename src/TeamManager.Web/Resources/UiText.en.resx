@@ -1389,4 +1389,13 @@
 <data name="Unesi valjan broj." xml:space="preserve"><value>Enter a valid number.</value></data>
 <data name="Nedostaje obavezna vrijednost." xml:space="preserve"><value>A required value is missing.</value></data>
 <data name="Vrijednost &apos;{0}&apos; nije valjana." xml:space="preserve"><value>The value &apos;{0}&apos; is not valid.</value></data>
+<data name="Natrag" xml:space="preserve"><value>Back</value></data>
+<data name="Natrag na izvještaj vremena" xml:space="preserve"><value>Back to time report</value></data>
+<data name="Ovaj unos možeš samo pregledati." xml:space="preserve"><value>You can only view this entry.</value></data>
+<data name="Natrag na pretragu" xml:space="preserve"><value>Back to search</value></data>
+<data name="Natrag na projekte" xml:space="preserve"><value>Back to projects</value></data>
+<data name="Unos vremena #{0}" xml:space="preserve"><value>Time entry #{0}</value></data>
+<data name="Podaci o unosu vremena" xml:space="preserve"><value>Time entry context</value></data>
+<data name="Natrag na zadatke" xml:space="preserve"><value>Back to issues</value></data>
+<data name="Glavna navigacija" xml:space="preserve"><value>Primary navigation</value></data>
 </root>

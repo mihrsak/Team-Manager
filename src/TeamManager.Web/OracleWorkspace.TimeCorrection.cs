@@ -5,10 +5,11 @@ public sealed partial class OracleWorkspace
     internal async Task<EditableTime?> TimeEntryFor(int user,int issue,int entry)
     {
         var rows=await Query("TimeEntry",SecuritySql+$"""
-            SELECT t."Id",t."IssueId",t."UserId",t."WorkDate",t."Hours",t."Activity",t."Note"
+            SELECT t."Id",t."IssueId",t."UserId",t."WorkDate",t."Hours",t."Activity",t."Note",a."DisplayName",a."EmployeeNumber",i."Title",p."Name",p."Id"
             FROM "TMR_TimeEntries" t JOIN "TMR_Issues" i ON i."Id"=t."IssueId" JOIN "TMR_Projects" p ON p."Id"=i."ProjectId"
+            JOIN "TMR_AppUsers" a ON a."Id"=t."UserId"
             WHERE t."Id"=:entry AND i."Id"=:issue AND p."TimeEnabled"=1 AND {IssueVisibilitySql}
-            """,c=>{Viewer(c,user);AddQueryParameter(c,"entry",entry);AddQueryParameter(c,"issue",issue);},r=>new EditableTime(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.IsDBNull(6)?"":r.GetString(6)));
+            """,c=>{Viewer(c,user);AddQueryParameter(c,"entry",entry);AddQueryParameter(c,"issue",issue);},r=>new EditableTime(r.GetInt32(0),r.GetInt32(1),r.GetInt32(2),r.GetDateTime(3),r.GetDecimal(4),r.GetString(5),r.IsDBNull(6)?"":r.GetString(6)){AuthorName=r.IsDBNull(7)?"":r.GetString(7),AuthorEmployeeNumber=r.IsDBNull(8)?"":r.GetString(8),IssueTitle=r.IsDBNull(9)?"":r.GetString(9),ProjectName=r.IsDBNull(10)?"":r.GetString(10),ProjectId=r.GetInt32(11)});
         return rows.SingleOrDefault();
     }
     internal Task CorrectTime(int user,int issue,int entry,string token,DateTime date,decimal hours,string activity,string note)=>WriteIssues(user,[issue],async w=>

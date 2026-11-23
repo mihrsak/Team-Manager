@@ -1,0 +1,5 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@if(ReturnNavigation.Get(Context) is {} navigation && ViewContext.RouteData.Values["page"]?.ToString() is not ("/Issue" or "/TimeEntry"))
+{
+ <p class="return-navigation"><a href="@navigation.Url">@Text[navigation.Label]</a></p>
+}
