@@ -21,6 +21,7 @@
     @if (Model.Results.Values.All(items => items.Count == 0))
     {
         <p>@Text["Nema rezultata za odabrani pojam."]</p>
+        @if(Model.PageNumber>1){<p><a href="@Url.Page("/Search",new{Model.Query,Model.Module,PageNumber=Model.PageNumber-1})">@Text["Prethodna stranica"]</a> · <a href="@Url.Page("/Search",new{Model.Query,Model.Module,PageNumber=1})">@Text["Prva stranica"]</a></p>}
     }
     else
     {

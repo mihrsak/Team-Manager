@@ -1398,4 +1398,15 @@
 <data name="Podaci o unosu vremena" xml:space="preserve"><value>Time entry context</value></data>
 <data name="Natrag na zadatke" xml:space="preserve"><value>Back to issues</value></data>
 <data name="Glavna navigacija" xml:space="preserve"><value>Primary navigation</value></data>
+  <data name="Nije postavljeno" xml:space="preserve"><value>Not set</value></data>
+  <data name="Nedostupno (#{0})" xml:space="preserve"><value>Unavailable (#{0})</value></data>
+  <data name="Prije" xml:space="preserve"><value>Before</value></data>
+  <data name="Poslije" xml:space="preserve"><value>After</value></data>
+  <data name="Nema promjena prikazanih polja." xml:space="preserve"><value>No changes to the displayed fields.</value></data>
+  <data name="Izvorni revizijski zapis" xml:space="preserve"><value>Original audit record</value></data>
+  <data name="Stranica nije dostupna." xml:space="preserve"><value>Page unavailable.</value></data>
+  <data name="Traženu stranicu nije moguće otvoriti. Vrati se na dostupne projekte." xml:space="preserve"><value>The requested page cannot be opened. Return to the available projects.</value></data>
+  <data name="Prva stranica" xml:space="preserve"><value>First page</value></data>
+  <data name="Da" xml:space="preserve"><value>Yes</value></data>
+  <data name="Ne" xml:space="preserve"><value>No</value></data>
 </root>

@@ -2,7 +2,7 @@
 
 ## Druga revizija — status dorada 23. 11. 2026.
 
-Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset nalaza; REV2-01/02/03/04/05/06/07 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvorene ostaju tri P3 stavke (REV2-08–10). Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Početni pregled bio je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju navedene popravke, a ne cijelo produkcijsko okruženje.
+Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 axe provjere. Pronađeno je deset nalaza; REV2-01–REV2-10 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Svih deset nalaza druge revizije lokalno je zatvoreno. Dokazi, reprodukcije, vrste nalaza i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-23.md](PRODUCT-REVIEW-2026-11-23.md). Početni pregled bio je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju navedene popravke, a ne cijelo produkcijsko okruženje.
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
@@ -13,11 +13,11 @@ Pregled demo okruženja na Db2-u, 44 HR/EN prikaza, tri ograničene uloge i 24 a
 | REV2-05 | P2 | Dovršeno: siguran lokalni povratak kroz osam modula pretrage, obrasce, validaciju i spremanje; očuvani filtri, stranica i redak izvještaja. Aktivna glavna navigacija. HR/EN, SQL Server/Oracle/Db2. |
 | REV2-06 | P2 | Dovršeno: raspon, samo početak i samo rok koriste CurrentCulture kao izvještaji; HR/EN i posebna en-US Formatting:Culture provjereni neovisno od jezika. ISO ulazni datumi ostaju nepromijenjeni. |
 | REV2-07 | P2 | Dovršeno: autor s brojem radnika, povezani zadatak i projekt iz autoriziranog upita; prikaz bez prava uređivanja. Očuvani autor, token i ovlasti. HR/EN, sva tri providera. |
-| REV2-08 | P3 | Prijedlog: čitljive promjene polja u povijesti, uz očuvan izvorni JSON zapis. |
-| REV2-09 | P3 | Prijedlog: generički HR/EN 404 prikaz s povratkom u aplikaciju, bez otkrivanja privatnih zapisa. |
-| REV2-10 | P3 | Otvoreno: omogućiti povratak s prazne kasnije stranice pretrage. |
+| REV2-08 | P3 | Dovršeno: lokalizirani stari/novi iznosi i vrijednosti, dostupna imena nositelja, plana i projekata; promjene zadatka, ispravka vremena i premještanja. Izvorni JSON je sačuvan u dodatnim detaljima; nema lažnih promjena zbog escapinga, datuma ili revizije. |
+| REV2-09 | P3 | Dovršeno: generički HR/EN 404 s povratkom na projekte; isti prikaz za nedostupni i nepostojeći zapis, bez imena/ID-a zapisa. Očuvani status, no-store, anonimni i HEAD odgovor te API ugovor. SQL Server/Oracle/Db2. |
+| REV2-10 | P3 | Dovršeno: prazna kasnija pretraga ima prethodnu i prvu stranicu uz očuvanje pojma i modula, uključujući posebne znakove i sve module. HR/EN, sva tri providera. |
 
-Sljedeće: REV2-08–10. Regresija povratnog konteksta i detalja vremena: scripts/Test-ReturnContext.cjs, isključivo na izoliranim bazama. Nove regresije: scripts/Test-MobileLocalization.cjs; pokretati na izoliranim lokalnim bazama. Regresija P1 popravaka: scripts/Test-DraftProtection.cjs na izoliranim testnim bazama; glavni demo i postojeći radni Db2 pregled nadograđeni su bez promjene konfiguracije ili migracije baze. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
+Druga revizija lokalno je dovršena. Regresija završnih stavki: scripts/Test-ReviewPolish.cjs na izoliranim SQL Server/Oracle/Db2 bazama, HR/EN, mobilni prikaz i axe. Vanjske ciljne provjere iz osnovnog backloga ostaju zasebne. Regresija povratnog konteksta i detalja vremena: scripts/Test-ReturnContext.cjs, isključivo na izoliranim bazama. Nove regresije: scripts/Test-MobileLocalization.cjs; pokretati na izoliranim lokalnim bazama. Regresija P1 popravaka: scripts/Test-DraftProtection.cjs na izoliranim testnim bazama; glavni demo i postojeći radni Db2 pregled nadograđeni su bez promjene konfiguracije ili migracije baze. Poslovni podaci demoa nisu mijenjani radi stvaranja regresijskih primjera; jezik i tema administratora vraćeni su na početne postavke.
 
 ## Prva revizija proizvoda — lokalno dovršene dorade 22. 11. 2026.
 

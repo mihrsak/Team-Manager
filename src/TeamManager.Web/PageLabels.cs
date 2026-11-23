@@ -5,6 +5,7 @@ public static class PageLabels
     public static string For(string? page)=>page switch
     {
         "/Login"=>"Prijava", "/LdapLogin"=>"LDAP prijava", "/Dashboard"=>"Moji zadaci",
+        "/NotFound"=>"Stranica nije dostupna.",
         "/Search"=>"Pretraga", "/Projects"=>"Projekti", "/Project"=>"Projekt",
         "/Issues"=>"Zadaci", "/Issue"=>"Zadatak", "/Calendar"=>"Kalendar", "/Gantt"=>"Gantt",
         "/Activity"=>"Aktivnosti", "/Notifications"=>"Obavijesti", "/TimeReport"=>"Izvještaj o vremenu", "/TimeEntry"=>"Detalji unosa vremena",

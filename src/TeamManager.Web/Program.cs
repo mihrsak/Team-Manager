@@ -66,6 +66,7 @@ builder.Services.AddRazorPages(options => {
     options.Conventions.AllowAnonymousToPage("/LdapLogin");
     options.Conventions.AllowAnonymousToPage("/Register");
     options.Conventions.AllowAnonymousToPage("/Error");
+    options.Conventions.AllowAnonymousToPage("/NotFound");
 }).AddDataAnnotationsLocalization(options=>options.DataAnnotationLocalizerProvider=(_,factory)=>factory.Create(typeof(UiText)));
 builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<Microsoft.AspNetCore.Mvc.MvcOptions>,LocalizedValidationOptions>();
 builder.Services.AddScoped<TeamStore>();
@@ -261,6 +262,13 @@ app.Use(async (context, next) =>
     }
     finally { System.Globalization.CultureInfo.CurrentUICulture = previous; System.Globalization.CultureInfo.CurrentCulture=previousCulture; }
 });
+// Render browser 404s without changing the status or exposing the requested record.
+// API clients retain their existing response contract.
+app.UseWhen(context => (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
+    !context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/health"),
+    branch => branch.UseStatusCodePagesWithReExecute("/NotFound"));
+// Keep routing inside the re-executable pipeline so the error page replaces the original endpoint.
+app.UseRouting();
 if (oracleMode)
 {
     app.Use(async (context, next) =>

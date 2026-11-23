@@ -1,0 +1,8 @@
+@page
+@inject Microsoft.Extensions.Localization.IStringLocalizer<UiText> Text
+@model TeamManager.Web.Pages.NotFoundModel
+<section class="card">
+    <h1>@Text["Stranica nije dostupna."]</h1>
+    <p>@Text["Traženu stranicu nije moguće otvoriti. Vrati se na dostupne projekte."]</p>
+    <p><a asp-page="/Projects">@Text["Natrag na projekte"]</a></p>
+</section>

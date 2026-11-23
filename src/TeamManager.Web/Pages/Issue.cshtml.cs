@@ -11,6 +11,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public int? Id{get;set;}
     public int ProjectId{get;set;}
     public string ProjectName{get;set;}="";
+    public Dictionary<int,string> HistoryProjects {get;private set;}=[];
     public List<Team> Assignees{get;set;}=[];
     public List<string> Types{get;set;}=[];public List<string> Statuses{get;set;}=[];public List<string> Priorities{get;set;}=[];
     public List<IssueEvent> Events{get;set;}=[];
@@ -56,7 +57,8 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             catch (UnauthorizedAccessException) { return NotFound(); }
         }
         else ProjectId=projectId;
-        var project=(await store.Projects(UserId)).FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
+        var visibleProjects=await store.Projects(UserId);HistoryProjects=visibleProjects.ToDictionary(p=>p.Id,p=>p.Name);
+        var project=visibleProjects.FirstOrDefault(x=>x.Id==ProjectId);if(project is null)return NotFound();ProjectName=project.Name;Assignees=await store.Assignees(ProjectId);
         RoadmapItems = await roadmap.List(ProjectId);
         CanEdit=await store.Can(UserId,ProjectId,id is null?"issues.create":"issues.edit");CanComment=await store.Can(UserId,ProjectId,"issues.comment");ShowTime=await store.Can(UserId,ProjectId,"time.view");CanLogTime=await store.Can(UserId,ProjectId,"time.log");if(id is null&&!CanEdit)return Forbid();
         if (id is not null)
