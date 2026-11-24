@@ -1,5 +1,19 @@
 # Backlog Team Manager
 
+## Četvrta revizija — otvorene dorade 24. 11. 2026.
+
+Pregled aktualnog paketa rev3-navigation-complete (aed6e3d / kod 10c8943) na Db2 demou: 80 HR/EN prikaza i axe provjera, tri uloge, mobilnih 320 px, negativni unosi dokumenata, filtri i CSV. Pet nalaza: jedan P1, jedan P2 i tri P3. Nema novih implementiranih popravaka u ovom koraku. Dokazi i kriteriji: [PRODUCT-REVIEW-2026-11-24-R4.md](PRODUCT-REVIEW-2026-11-24-R4.md).
+
+| Stavka | Prioritet | Status / predložena dorada |
+|---|---|---|
+| REV4-01 | P1 | Otvoreno: sačuvati naslov/opis dokumenta nakon odbijenog prijenosa, zaštititi nacrt i objasniti ponovni odabir datoteke. Potvrđeni nevaljan naslov i datoteka jedan bajt iznad 10 MiB. |
+| REV4-02 | P2 | Otvoreno: uskladiti validaciju projektnih/statusnih filtara s prikazom odabira i rezultata, bez tihog proširenja nevaljanog upita. |
+| REV4-03 | P3 | Otvoreno: uskladiti EN CSV zaglavlja i naziv datoteke uz očuvan ugovor i sigurnost izvoza. |
+| REV4-04 | P3 | Otvoreno: opisni HR/EN naslovi polja, registracijskih zahtjeva i odbijenog pristupa; razlikovati vlastiti i tuđi profil. |
+| REV4-05 | P3 | Prijedlog: razlikovati administrativni katalog definicija polja od osobnih vrijednosti u navigaciji. |
+
+Redoslijed: REV4-01, REV4-02, REV4-03/04, zatim REV4-05. Prethodni REV3 popravci prolaze provjerene regresije; novi nalazi obuhvaćaju dodatne scenarije izvan prethodnih kriterija. Svježe pozitivne provjere upisa/povratka provedene su u privremenim SQL bazama, dok je demo sačuvan. Oracle i vanjski produkcijski uvjeti nisu ponovno potvrđivani.
+
 ## Treća revizija — status dorada 24. 11. 2026.
 
 Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i desktop, tri demo uloge, odbijeni unosi bez poslovnih upisa. Dodatno prolaze prethodni tokovi upisa/nacrta na izoliranoj Db2 shemi i 28 završnih HR/EN demo axe provjera. Pronađeno je šest nalaza: jedan P1, tri P2 i dva P3. Izvještaj, reprodukcije i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md). REV3-01–REV3-06 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Svih šest nalaza treće revizije lokalno je zatvoreno; prethodna zatvaranja REV2 odnose se na ranije pokriveni opseg.

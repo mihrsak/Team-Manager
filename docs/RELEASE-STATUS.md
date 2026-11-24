@@ -2,6 +2,12 @@
 
 Ažurirano nakon lokalnih revizija 24. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Četvrta revizija — 24. 11. 2026.
+
+Pregledan je nepromijenjeni paket artifacts/rev3-navigation-complete (aed6e3d / kod 10c8943), demo Db2 na [https://localhost:7610](https://localhost:7610). 80 HR/EN axe prikaza i tri demo uloge prolaze osnovne provjere, bez novih prijavljenih povreda ili otkrivanja privatnog članstva. Dodatni scenariji otkrivaju pet nalaza: P1 gubitak nacrta dokumenta, P2 nedosljedne nevaljane filtre te P3 jezik CSV-a, naslove kartica i administrativni kontekst kataloga polja. Izvještaj: [PRODUCT-REVIEW-2026-11-24-R4.md](PRODUCT-REVIEW-2026-11-24-R4.md); REV4-01–05 su otvoreni u backlogu.
+
+Aktualni paket prolazi Test-CollaborationDrafts.cjs i Test-ReturnContext.cjs u privremenim SQL bazama te Test-ProductDemo.cjs s još 28 HR/EN axe provjera. Datoteke odbijene na demou nisu dodane u zbirku; jezik i tema vraćeni su na početne vrijednosti. Ovaj korak sadrži izvještaj i prioritete, bez novih implementacijskih promjena. Raniji lokalni prihvat ostaje dokaz svojeg navedenog opsega; Oracle, ciljni IIS/OpenShift, NVDA i stvarne integracije nisu ponovno potvrđivani.
+
 ## Završni lokalni prihvat — 24. 11. 2026.
 
 Nakon automatskog nastavka provjeren je paket artifacts/rev3-navigation-complete, kod 10c8943. HR/EN prihvat šest nalaza na živom demou, 18 navigacijskih scenarija i tri regresijska skupa u privremenim SQL bazama prolaze. Nakon odbijenih unosa očuvani su projekti, zadaci, vrijeme, wiki, forum, novosti i planske revizije. Oba URL-a imaju readiness 200. Dokazi, hash paketa i odvojeni preostali ciljni uvjeti: [LOCAL-ACCEPTANCE-2026-11-24.md](LOCAL-ACCEPTANCE-2026-11-24.md). Ovo je lokalni funkcionalni prihvat; ciljni IIS/OpenShift, bankarske integracije i Db2 z/OS ostaju zasebne provjere.
