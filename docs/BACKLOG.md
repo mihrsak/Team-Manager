@@ -1,19 +1,19 @@
 # Backlog Team Manager
 
-## Treća revizija — otvorene dorade 24. 11. 2026.
+## Treća revizija — status dorada 24. 11. 2026.
 
-Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i desktop, tri demo uloge, odbijeni unosi bez poslovnih upisa. Dodatno prolaze prethodni tokovi upisa/nacrta na izoliranoj Db2 shemi i 28 završnih HR/EN demo axe provjera. Pronađeno je šest nalaza: jedan P1, tri P2 i dva P3. Izvještaj, reprodukcije i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md). U ovoj reviziji nema implementiranih popravaka; prethodna zatvaranja REV2 odnose se na ranije pokriveni opseg.
+Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i desktop, tri demo uloge, odbijeni unosi bez poslovnih upisa. Dodatno prolaze prethodni tokovi upisa/nacrta na izoliranoj Db2 shemi i 28 završnih HR/EN demo axe provjera. Pronađeno je šest nalaza: jedan P1, tri P2 i dva P3. Izvještaj, reprodukcije i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md). REV3-01 i REV3-03 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvorene ostaju REV3-02/04/05/06; prethodna zatvaranja REV2 odnose se na ranije pokriveni opseg.
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
-| REV3-01 | P1 | Otvoreno: sačuvati odbijene nacrte foruma, novosti i planova, sirova polja i izvorne revizije; zaštititi vraćeni nacrt pri odlasku. |
+| REV3-01 | P1 | Dovršeno: sirovi nacrti teme/odgovora, novosti/komentara i plana; zaštita odlaska i reloada; izvorna revizija, prikaz aktualne stavke i izričit pregled prije zamjene, uključujući drugi sukob. HR/EN, SQL Server/Oracle/Db2. |
 | REV3-02 | P2 | Otvoreno: čitljive mobilne tablice zadataka i izvještaja vremena; dostupno lokalno pomicanje umjesto stupaca od nekoliko znakova. |
-| REV3-03 | P2 | Otvoreno: ograničiti generičku 404 obradu na 404; sačuvati 400 i druge izvorne statuse. Potvrđeno na nevaljanom kalendaru/Ganttu/forumu. |
+| REV3-03 | P2 | Dovršeno: samo prazan 404 pokreće generičku stranicu; sačuvani 400/401/403/405/409/429/500/503, postojeće tijelo i zaglavlja. Middleware test i stvarni HR/EN GET/HEAD 400/404 na sve tri baze, API/health bez promjene. |
 | REV3-04 | P2 | Otvoreno: siguran povratak iz zadatka u kalendar/Gantt/aktivnosti te iz detalja vremena u izvorni zadatak, uz očuvanje filtara i sidra. |
 | REV3-05 | P3 | Otvoreno: lokalizirati sistemsku nedodijeljenu grupu na EN u grupiranom popisu zadataka. |
 | REV3-06 | P3 | Prijedlog: označiti nadređeni odjeljak za projektna polja i osobne tokene/e-poštu te aktivnu administrativnu poveznicu. |
 
-Preporučeni redoslijed: REV3-01, REV3-03, REV3-02, REV3-04, zatim REV3-05/06. Ova revizija ne predstavlja novu potvrdu SQL Servera/Oraclea, ciljnog IIS-a/OpenShifta, NVDA, kapaciteta ili bankarskih integracija. Postojeća demo konfiguracija i poslovni podaci ostaju očuvani.
+Sljedeće: REV3-02, REV3-04, zatim REV3-05/06. Regresije: scripts/Test-CollaborationDrafts.cjs na izoliranim bazama te scripts/Test-BrowserStatusPages.ps1. Početni pregled proveden je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju ove popravke, a ne cijelo produkcijsko okruženje. Ciljni IIS/OpenShift, NVDA, kapacitet i bankarske integracije nisu ponovno potvrđivani. Postojeća demo konfiguracija i poslovni podaci ostaju očuvani.
 
 ## Druga revizija — status dorada 23. 11. 2026.
 

@@ -1409,4 +1409,5 @@
   <data name="Prva stranica" xml:space="preserve"><value>First page</value></data>
   <data name="Da" xml:space="preserve"><value>Yes</value></data>
   <data name="Ne" xml:space="preserve"><value>No</value></data>
+  <data name="Prikazana je aktualna spremljena stavka. Tvoj nacrt ostaje u obrascu." xml:space="preserve"><value>The current saved item is shown. Your draft remains in the form.</value></data>
 </root>

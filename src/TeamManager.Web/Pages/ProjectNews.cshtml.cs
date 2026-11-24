@@ -12,6 +12,10 @@ public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore new
     public int? NewsId { get; private set; }
     public bool CanPublish { get; private set; }
     public bool CanComment { get; private set; }
+    public bool HasDraft { get; private set; }
+    public string? DraftTitle { get; private set; }
+    public string? DraftBody { get; private set; }
+
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task<IActionResult> OnGetAsync(int projectId, int? newsId)
@@ -42,6 +46,9 @@ public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore new
         var result = await OnGetAsync(projectId, null);
         if (result is not PageResult) return result;
         if (!CanPublish) return Forbid();
+        HasDraft = true;
+        DraftTitle = Request.Form["title"].ToString();
+        DraftBody = Request.Form["body"].ToString();
         title = title?.Trim();
         body = body?.Trim();
         if (!ModelState.IsValid || title is null or { Length: 0 or > 150 } || body is null or { Length: 0 or > 4000 })
@@ -57,6 +64,8 @@ public sealed class ProjectNewsModel(ProjectStore projects, ProjectNewsStore new
         var result = await OnGetAsync(projectId, newsId);
         if (result is not PageResult) return result;
         if (!CanComment) return Forbid();
+        HasDraft = true;
+        DraftBody = Request.Form["body"].ToString();
         body = body?.Trim();
         if (!ModelState.IsValid || body is null or { Length: 0 or > 2000 })
             return Invalid("Unesi komentar do 2000 znakova.");

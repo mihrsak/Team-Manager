@@ -26,8 +26,8 @@
         }
         @if (Model.CanComment)
         {
-            <form method="post" asp-page-handler="Comment" asp-route-projectId="@Model.Project.Id" asp-route-newsId="@selected">
-                <label>@Text["Komentar"]<textarea name="body" rows="3" maxlength="2000" required></textarea></label>
+            <form method="post" asp-page-handler="Comment" data-unsaved-draft="@(Model.HasDraft ? "true" : null)" asp-route-projectId="@Model.Project.Id" asp-route-newsId="@selected">
+                <label>@Text["Komentar"]<textarea name="body" rows="3" maxlength="2000" required>@("\n"+Model.DraftBody)</textarea></label>
                 <button>@Text["Dodaj komentar"]</button>
             </form>
         }
@@ -39,9 +39,9 @@ else
     {
         <section class="card">
             <h2>@Text["Nova objava"]</h2>
-            <form method="post" asp-page-handler="Publish" asp-route-projectId="@Model.Project.Id">
-                <label>@Text["Naslov"]<input name="title" maxlength="150" required></label>
-                <label>@Text["Tekst objave"]<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
+            <form method="post" asp-page-handler="Publish" data-unsaved-draft="@(Model.HasDraft ? "true" : null)" asp-route-projectId="@Model.Project.Id">
+                <label>@Text["Naslov"]<input name="title" maxlength="150" required value="@Model.DraftTitle"></label>
+                <label>@Text["Tekst objave"]<textarea name="body" rows="5" maxlength="4000" required>@("\n"+Model.DraftBody)</textarea></label>
                 <button>@Text["Objavi"]</button>
             </form>
         </section>

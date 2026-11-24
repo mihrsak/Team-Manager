@@ -31,8 +31,8 @@
         }
         @if (Model.CanPost && !topic.IsLocked)
         {
-            <form method="post" asp-page-handler="Reply" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@topic.Id">
-                <label>@Text["Odgovor"]<textarea name="body" rows="4" maxlength="4000" required></textarea></label>
+            <form method="post" asp-page-handler="Reply" data-unsaved-draft="@(Model.HasDraft ? "true" : null)" asp-route-projectId="@Model.Project.Id" asp-route-topicId="@topic.Id">
+                <label>@Text["Odgovor"]<textarea name="body" rows="4" maxlength="4000" required>@("\n"+Model.DraftBody)</textarea></label>
                 <button>@Text["Objavi odgovor"]</button>
             </form>
         }
@@ -44,9 +44,9 @@ else
     {
         <section class="card">
             <h2>@Text["Nova tema"]</h2>
-            <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id">
-                <label>@Text["Naslov"]<input name="title" maxlength="150" required></label>
-                <label>@Text["Tekst teme"]<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
+            <form method="post" asp-page-handler="Create" data-unsaved-draft="@(Model.HasDraft ? "true" : null)" asp-route-projectId="@Model.Project.Id">
+                <label>@Text["Naslov"]<input name="title" maxlength="150" required value="@Model.DraftTitle"></label>
+                <label>@Text["Tekst teme"]<textarea name="body" rows="5" maxlength="4000" required>@("\n"+Model.DraftBody)</textarea></label>
                 <button>@Text["Otvori temu"]</button>
             </form>
         </section>

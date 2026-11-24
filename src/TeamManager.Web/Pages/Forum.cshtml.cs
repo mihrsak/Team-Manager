@@ -13,6 +13,10 @@ public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, P
     public bool CanPost { get; private set; }
     public bool CanModerate { get; private set; }
 
+    public bool HasDraft { get; private set; }
+    public string? DraftTitle { get; private set; }
+    public string? DraftBody { get; private set; }
+
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task<IActionResult> OnGetAsync(int projectId, int? topicId)
@@ -44,6 +48,9 @@ public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, P
         var result = await OnGetAsync(projectId, null);
         if (result is not PageResult) return result;
         if (!CanPost) return Forbid();
+        HasDraft = true;
+        DraftTitle = Request.Form["title"].ToString();
+        DraftBody = Request.Form["body"].ToString();
         title = title?.Trim();
         body = body?.Trim();
         if (title is null or { Length: 0 or > 150 } || body is null or { Length: 0 or > 4000 })
@@ -57,6 +64,8 @@ public sealed class ForumModel(ProjectStore projects, ProjectForumStore forum, P
         var result = await OnGetAsync(projectId, topicId);
         if (result is not PageResult) return result;
         if (!CanPost || Selected!.IsLocked) return Forbid();
+        HasDraft = true;
+        DraftBody = Request.Form["body"].ToString();
         body = body?.Trim();
         if (body is null or { Length: 0 or > 4000 }) return Invalid("Unesi odgovor do 4000 znakova.");
         if (!await forum.Reply(UserId, projectId, topicId, body)) return Forbid();

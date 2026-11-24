@@ -1,6 +1,19 @@
 # Status izdanja Team Manager
 
-Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
+Ažurirano nakon lokalnih revizija 24. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
+
+## REV3-01 / REV3-03 — dovršeno 24. 11. 2026.
+
+Aktivni paket: `artifacts/rev3-drafts-reviewed`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589), readiness 200. Lokalni dotnet HTTPS procesi koriste postojeće konfiguracije i objavljeni webroot; poslovni podaci su očuvani, bez migracije (shema 11 / protokol 5).
+
+- **REV3-01:** forum (tema/odgovor), novosti (objava/komentar) i planovi vraćaju sirova polja odbijenog nacrta, uključujući razmake, prazne vrijednosti, početne prazne retke i višeredni tekst. Samo pripadajući obrazac dobiva `data-unsaved-draft=true`, pa zaštita djeluje i bez novog unosa. Provjere ovlasti ostaju prije vraćanja obrasca. Plan čuva ID, izvornu reviziju, vrstu, naziv, opis, datum i dovršenost; nevaljan datum ostaje popravljiv tekstualni unos. Duplikat ne zamjenjuje nacrt spremljenim vrijednostima. Pri sukobu prikazuje se aktualna spremljena stavka odvojeno od nacrta, uz HR/EN poruku. Zamjena traži izričit pregled aktualne revizije; nova konkurentna izmjena ponovno odbija spremanje, osvježava spremljeni prikaz i čuva nacrt bez tihog prepisivanja.
+- **REV3-03:** `BrowserStatusPages` ograničava ponovno izvršavanje stranice `/NotFound` na prazan 404 odgovor. Ostali statusi, postojeća tijela odgovora i zaglavlja ostaju izvorni. Zadržani su GET/HEAD opseg te izuzeća API-ja i health putanja. Izravni `/NotFound` i privatni/nepostojeći zapisi ostaju generički 404.
+
+`Test-CollaborationDrafts.cjs` prolazi na privremenom SQL Serveru i izoliranim Oracle/Db2 shemama, HR/EN: stvarno pregledničko slanje razmaka u naslovu, sirovi tekst/HTML kodiranje, odgovor/komentar iznad ograničenja, fokus i axe, odustanak od odlaska i stvarnog reloada, oporavak i valjan upis; prazna polja plana, duplikat, nevaljan datum, zaseban nacrt novog plana, dvije uzastopne konkurentne izmjene s izričitim pregledom i nepromijenjenim izvornim tokenom. Stvarni GET/HEAD zahtjevi za nevaljan kalendar/Gantt/forum vraćaju 400, a nepostojeći zapis/putanja 404. API i readiness ostaju očuvani. Skripta stvara svoje zapise i smije se pokretati samo na izoliranim lokalnim bazama.
+
+`Test-BrowserStatusPages.ps1` provjerava stvarni middleware u zasebnom procesu bez baze: samo prazan 404 renderira stranicu; 200/204/400/401/403/405/409/429/500/503, postojeće tijelo, izvorna putanja i Retry-After ostaju očuvani. Nisu izazivani produkcijsko opterećenje ili stvarni serverski kvarovi radi tih provjera.
+
+Na prethodno provjerenom paketu istih handlera prolaze `Test-DraftProtection.cjs` i `Test-ReturnContext.cjs`; završni paket dodatno čuva početne prazne retke. Izolirani Oracle prolazi REST token/oporavak pristupa iz `Test-OracleApi.cjs`. Nakon postavljanja prolaze `Test-ProductDemo.cjs` (28 HR/EN axe provjera i ovlasti) i `Test-ReviewSmoke.cjs` nad postojećim Db2 podacima bez poslovnih upisa. Na oba korisnička URL-a zasebno potvrđeni autentificirani odgovori 400 za nevaljane parametre i 404 za nepostojeću stranicu. HR/EN vizualni dokazi su u ignoriranoj mapi `artifacts/rev3-drafts-evidence`. Otvorene ostaju REV3-02/04/05/06; vanjski uvjeti IIS/OpenShift, NVDA i bankarskih integracija nisu ponovno potvrđivani.
 
 ## Treća revizija — 24. 11. 2026.
 

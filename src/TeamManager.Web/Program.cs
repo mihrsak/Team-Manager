@@ -266,7 +266,7 @@ app.Use(async (context, next) =>
 // API clients retain their existing response contract.
 app.UseWhen(context => (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)) &&
     !context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/health"),
-    branch => branch.UseStatusCodePagesWithReExecute("/NotFound"));
+    branch => branch.UseBrowserNotFoundPage());
 // Keep routing inside the re-executable pipeline so the error page replaces the original endpoint.
 app.UseRouting();
 if (oracleMode)

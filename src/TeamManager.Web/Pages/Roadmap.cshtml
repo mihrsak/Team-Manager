@@ -15,6 +15,8 @@
     var entries = Model.CanEdit
         ? Model.Items.Append(new RoadmapItem(0, "version", "", "", null, false, 0))
         : Model.Items;
+    if(Model.CanEdit && Model.Draft is { ItemId: not 0 } missing && !Model.Items.Any(item=>item.Id==missing.ItemId))
+        entries=entries.Append(new RoadmapItem(missing.ItemId,"version","","",null,false,0));
 }
 @foreach (var item in entries)
 {
@@ -56,21 +58,32 @@
         }
         @if (Model.CanEdit)
         {
-            <form method="post" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id">
-                <input type="hidden" name="itemId" value="@item.Id">
-                <input type="hidden" name="revision" value="@item.Revision">
+            var draft=Model.Draft?.ItemId==item.Id?Model.Draft:null;
+            var kind=draft?.Kind??item.Kind;
+            var date=draft?.TargetDate??item.TargetDate?.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
+            var dateType=string.IsNullOrEmpty(date)||DateTime.TryParseExact(date,"yyyy-MM-dd",CultureInfo.InvariantCulture,DateTimeStyles.None,out _)?"date":"text";
+            @if(draft is not null && Model.HasConflict){<p class="notice">@Text["Prikazana je aktualna spremljena stavka. Tvoj nacrt ostaje u obrascu."]</p>}
+            <form method="post" asp-page-handler="Save" asp-route-projectId="@Model.Project.Id" data-unsaved-draft="@(draft is not null ? "true" : null)">
+                <input type="hidden" name="itemId" value="@(draft?.IdValue??item.Id.ToString(CultureInfo.InvariantCulture))">
+                <input type="hidden" name="revision" value="@(draft?.Revision??item.Revision.ToString(CultureInfo.InvariantCulture))">
                 <div class="grid">
                     <label>@Text["Vrsta"]
                         <select name="kind">
-                            <option value="version" selected="@(item.Kind == "version")">@Text["Verzija"]</option>
-                            <option value="milestone" selected="@(item.Kind == "milestone")">@Text["Prekretnica"]</option>
+                            @if(kind is not ("version" or "milestone")){<option selected value="@kind">@kind</option>}
+                            <option value="version" selected="@(kind == "version")">@Text["Verzija"]</option>
+                            <option value="milestone" selected="@(kind == "milestone")">@Text["Prekretnica"]</option>
                         </select>
                     </label>
-                    <label>@Text["Naziv"]<input name="name" value="@item.Name" maxlength="100" required></label>
-                    <label>@Text["Ciljni datum"]<input type="date" name="targetDate" value="@item.TargetDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"></label>
+                    <label>@Text["Naziv"]<input name="name" value="@(draft?.Name??item.Name)" maxlength="100" required></label>
+                    <label>@Text["Ciljni datum"]<input type="@dateType" name="targetDate" value="@date"></label>
                 </div>
-                <label>@Text["Opis"]<textarea name="description" maxlength="1000" rows="3">@item.Description</textarea></label>
-                <label><input type="checkbox" name="isComplete" value="true" checked="@item.IsComplete"> @Text["Dovršeno"]</label>
+                <label>@Text["Opis"]<textarea name="description" maxlength="1000" rows="3">@("\n"+(draft?.Description??item.Description))</textarea></label>
+                <label><input type="checkbox" name="isComplete" value="true" checked="@(draft?.IsComplete??item.IsComplete)"> @Text["Dovršeno"]</label>
+                @if(draft is not null && Model.HasConflict)
+                {
+                    <input type="hidden" name="reviewedRevision" value="@item.Revision">
+                    <label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>
+                }
                 <button>@(item.Id == 0 ? Text["Dodaj"].Value : Text["Spremi izmjene"].Value)</button>
             </form>
         }
