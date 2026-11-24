@@ -2,7 +2,7 @@
 
 Pregledani commit: `c68fa47`, paket `artifacts/rev2-polish-final`, [lokalni demo](https://localhost:7610), Db2 LUW, relacijska shema 11 / protokol 5. Aplikacija je već bila dostupna; baza nije ponovno stvarana. Pregled je izvršen u Edgeu putem Playwrighta.
 
-Pronađeno je **šest nalaza: jedan P1, tri P2 i dva P3**. Preporučeni prvi zahvat je zaštita nacrta u forumu, novostima i planovima. REV2-01–REV2-10 ostaju povijesno zatvorene stavke za ranije provjereni opseg; ova revizija proširuje scenarije i otkriva i regresiju u obradi HTTP grešaka. Ovdje su dokumentirani nalazi i prioriteti; popravci nisu implementirani.
+Pronađeno je **šest nalaza: jedan P1, tri P2 i dva P3**. Preporučeni prvi zahvat je zaštita nacrta u forumu, novostima i planovima. REV2-01–REV2-10 ostaju povijesno zatvorene stavke za ranije provjereni opseg; ova revizija proširuje scenarije i otkriva i regresiju u obradi HTTP grešaka. Izvorni pregled dokumentirao je nalaze i prioritete prije implementacije; naknadni status popravaka je ispod.
 
 Naknadni status 24. 11. 2026.: **Svih šest nalaza REV3-01–REV3-06 popravljeno je i provjereno na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev3-navigation-complete`; svih šest nalaza lokalno je zatvoreno. Izvorni nalazi i reprodukcije ispod ostaju dokaz pregledanog commita. Detalji implementacije i provjera: [RELEASE-STATUS.md](RELEASE-STATUS.md).
 

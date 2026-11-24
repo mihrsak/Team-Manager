@@ -2,6 +2,10 @@
 
 Ažurirano nakon lokalnih revizija 24. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Završni lokalni prihvat — 24. 11. 2026.
+
+Nakon automatskog nastavka provjeren je paket artifacts/rev3-navigation-complete, kod 10c8943. HR/EN prihvat šest nalaza na živom demou, 18 navigacijskih scenarija i tri regresijska skupa u privremenim SQL bazama prolaze. Nakon odbijenih unosa očuvani su projekti, zadaci, vrijeme, wiki, forum, novosti i planske revizije. Oba URL-a imaju readiness 200. Dokazi, hash paketa i odvojeni preostali ciljni uvjeti: [LOCAL-ACCEPTANCE-2026-11-24.md](LOCAL-ACCEPTANCE-2026-11-24.md). Ovo je lokalni funkcionalni prihvat; ciljni IIS/OpenShift, bankarske integracije i Db2 z/OS ostaju zasebne provjere.
+
 ## REV3-05 / REV3-06 — dovršeno 24. 11. 2026.
 
 Aktivni paket: `artifacts/rev3-navigation-complete`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589). Konfiguracija i poslovni podaci ostaju očuvani, bez migracije (shema 11 / protokol 5).
