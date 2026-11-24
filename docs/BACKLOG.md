@@ -2,7 +2,7 @@
 
 ## Treća revizija — status dorada 24. 11. 2026.
 
-Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i desktop, tri demo uloge, odbijeni unosi bez poslovnih upisa. Dodatno prolaze prethodni tokovi upisa/nacrta na izoliranoj Db2 shemi i 28 završnih HR/EN demo axe provjera. Pronađeno je šest nalaza: jedan P1, tri P2 i dva P3. Izvještaj, reprodukcije i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md). REV3-01–REV3-04 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Otvorene ostaju REV3-05/06; prethodna zatvaranja REV2 odnose se na ranije pokriveni opseg.
+Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i desktop, tri demo uloge, odbijeni unosi bez poslovnih upisa. Dodatno prolaze prethodni tokovi upisa/nacrta na izoliranoj Db2 shemi i 28 završnih HR/EN demo axe provjera. Pronađeno je šest nalaza: jedan P1, tri P2 i dva P3. Izvještaj, reprodukcije i kriteriji prihvata: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md). REV3-01–REV3-06 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Svih šest nalaza treće revizije lokalno je zatvoreno; prethodna zatvaranja REV2 odnose se na ranije pokriveni opseg.
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
@@ -10,10 +10,10 @@ Pregled commita c68fa47 na lokalnom Db2 demou: 60 HR/EN prikaza, 320 px i deskto
 | REV3-02 | P2 | Dovršeno: obične tablice imaju čitljive širine, označeno lokalno pomicanje i fokus tipkovnice; zadaci, vrijeme, projekti, korisnici, audit i aktivnosti. HR/EN, 320/390 px, obje teme, SQL Server/Oracle/Db2. |
 | REV3-03 | P2 | Dovršeno: samo prazan 404 pokreće generičku stranicu; sačuvani 400/401/403/405/409/429/500/503, postojeće tijelo i zaglavlja. Middleware test i stvarni HR/EN GET/HEAD 400/404 na sve tri baze, API/health bez promjene. |
 | REV3-04 | P2 | Dovršeno: mjesec, projekt i sidro izvornog retka ostaju nakon validacije i spremanja; vrijeme vraća na zadatak s njegovim prethodnim kontekstom. Izvještaj otvoren izravno ostaje vlastiti izvor; lokalne adrese i ovlasti provjerene. HR/EN, sva tri providera. |
-| REV3-05 | P3 | Otvoreno: lokalizirati sistemsku nedodijeljenu grupu na EN u grupiranom popisu zadataka. |
-| REV3-06 | P3 | Prijedlog: označiti nadređeni odjeljak za projektna polja i osobne tokene/e-poštu te aktivnu administrativnu poveznicu. |
+| REV3-05 | P3 | Dovršeno: sistemska nedodijeljena grupa koristi HR/EN resurs trenutačnog zahtjeva; stvarna prikazna imena i brojevi radnika ostaju izvorni. SQL Server/Oracle/Db2. |
+| REV3-06 | P3 | Dovršeno: poslužiteljsko označavanje glavne i administrativne navigacije; projektna/vremenska/osobna i tuđa korisnička polja, vlastiti/tuđi profil, tokeni i e-pošta. Isti HR/EN rezultat bez JavaScripta; 404/odbijen pristup bez lažne oznake. |
 
-Sljedeće: REV3-05/06. Mobilna/navigacijska regresija: scripts/Test-MobileReturnContext.cjs na izoliranim bazama. Regresije: scripts/Test-CollaborationDrafts.cjs na izoliranim bazama te scripts/Test-BrowserStatusPages.ps1. Početni pregled proveden je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju ove popravke, a ne cijelo produkcijsko okruženje. Ciljni IIS/OpenShift, NVDA, kapacitet i bankarske integracije nisu ponovno potvrđivani. Postojeća demo konfiguracija i poslovni podaci ostaju očuvani.
+Sljedeće: završni lokalni prihvat nakon treće revizije. Regresija lokalizacije/navigacije: scripts/Test-LocalizedNavigation.cjs na izoliranim bazama. Mobilna/navigacijska regresija: scripts/Test-MobileReturnContext.cjs na izoliranim bazama. Regresije: scripts/Test-CollaborationDrafts.cjs na izoliranim bazama te scripts/Test-BrowserStatusPages.ps1. Početni pregled proveden je na Db2-u; naknadne SQL Server/Oracle provjere obuhvaćaju ove popravke, a ne cijelo produkcijsko okruženje. Ciljni IIS/OpenShift, NVDA, kapacitet i bankarske integracije nisu ponovno potvrđivani. Postojeća demo konfiguracija i poslovni podaci ostaju očuvani.
 
 ## Druga revizija — status dorada 23. 11. 2026.
 

@@ -93,7 +93,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         "project" => row.Project,
         "status" => row.Status,
         "priority" => row.Priority,
-        "assignee" => row.Assignee is null ? "Nije dodijeljen" : $"{row.Assignee} ({row.AssigneeEmployeeNumber})",
+        "assignee" => row.Assignee is null ? text["Nije dodijeljen"].Value : $"{row.Assignee} ({row.AssigneeEmployeeNumber})",
         _ => ""
     };
 

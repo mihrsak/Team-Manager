@@ -2,6 +2,17 @@
 
 Ažurirano nakon lokalnih revizija 24. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## REV3-05 / REV3-06 — dovršeno 24. 11. 2026.
+
+Aktivni paket: `artifacts/rev3-navigation-complete`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589). Konfiguracija i poslovni podaci ostaju očuvani, bez migracije (shema 11 / protokol 5).
+
+- **REV3-05:** nedodijeljena grupa u popisu zadataka koristi postojeći HR/EN resurs, odabran prema jeziku trenutačnog zahtjeva. Grupa dodijeljene osobe i dalje prikazuje točno njezino ime i broj radnika; test namjerno koristi ime koje sadrži i Unassigned i Nije dodijeljen.
+- **REV3-06:** glavne i administrativne poveznice dobivaju `aria-current=page` na poslužitelju, prema stvarno učitanoj stranici i modelu. Projektna polja pripadaju projektima, vremenska izvještaju, vlastita korisnička polja profilu, tuđa korisnička polja i profil korisnicima; tokeni i e-pošta profilu. Administrativne poveznice označavaju samo točnu stranicu, s vidljivom stilskom oznakom. Poslužiteljska mapa zadržava odjeljke zadatka/vremena/Gantta i ostalih projektnih modula. 404, greške i odbijen pristup ne dobivaju pogrešnu aktivnu oznaku. Uklonjena je paralelna JS mapa; paginacija i poslovne poveznice nemaju navigacijske oznake.
+
+`Test-LocalizedNavigation.cjs` prolazi na privremenom SQL Serveru te izoliranim Oracle/Db2 shemama, HR/EN. Provjerava lokaliziranu grupu i izvorno prikazno ime, 21 stranicu/scenarij sa i bez JavaScripta, aktivnu administrativnu poveznicu, vrstu i vlasnika prilagodljivih polja, lažni scope na nevezanoj stranici, prikaz ograničene uloge, 404 nakon opoziva i axe provjere. Skripta stvara svoje regresijske podatke i koristi se samo na izoliranim lokalnim bazama.
+
+Nakon postavljanja prolaze Test-ProductDemo.cjs (28 HR/EN axe provjera, glavni tokovi i ovlasti) i Test-ReviewSmoke.cjs nad postojećim Db2 podacima, bez poslovnih upisa. Oba URL-a imaju readiness 200. Svih šest nalaza treće revizije lokalno je zatvoreno. Sljedeći korak je završni lokalni prihvat; vanjske ciljne provjere ostaju zasebne.
+
 ## REV3-02 / REV3-04 — dovršeno 24. 11. 2026.
 
 Aktivni paket: `artifacts/rev3-mobile-context`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589), readiness 200. Lokalni dotnet HTTPS procesi koriste očuvanu konfiguraciju i objavljeni webroot; nema migracije (shema 11 / protokol 5).

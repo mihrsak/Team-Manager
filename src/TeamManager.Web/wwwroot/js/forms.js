@@ -45,10 +45,6 @@
         submitting = true;
     });
     const errors = document.querySelector('[data-validation-focus]');
-    const current=location.pathname.toLowerCase();
-    const projectPages=['/project','/roadmap','/wiki','/projectdocuments','/projectnews','/forum','/repositories','/repositoryhistory','/issuefields'];
-    const section=current==='/issue'?'/issues':current==='/timeentry'?'/timereport':current==='/gantt'?'/calendar':projectPages.includes(current)?'/projects':current;
-    for(const link of document.querySelectorAll('[data-primary-navigation] a[href]')) if(new URL(link.href,location.href).pathname.toLowerCase()===section) link.setAttribute('aria-current','page');
     if (errors) errors.focus();
     for (const notice of document.querySelectorAll('.notice')) notice.setAttribute('role','status');
     for (const kind of document.querySelectorAll('[data-lookup-kind]')) {

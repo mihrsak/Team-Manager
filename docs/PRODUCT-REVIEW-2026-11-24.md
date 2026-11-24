@@ -4,7 +4,7 @@ Pregledani commit: `c68fa47`, paket `artifacts/rev2-polish-final`, [lokalni demo
 
 Pronađeno je **šest nalaza: jedan P1, tri P2 i dva P3**. Preporučeni prvi zahvat je zaštita nacrta u forumu, novostima i planovima. REV2-01–REV2-10 ostaju povijesno zatvorene stavke za ranije provjereni opseg; ova revizija proširuje scenarije i otkriva i regresiju u obradi HTTP grešaka. Ovdje su dokumentirani nalazi i prioriteti; popravci nisu implementirani.
 
-Naknadni status 24. 11. 2026.: **REV3-01–REV3-04 popravljeni su i provjereni na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev3-mobile-context`; otvorene ostaju REV3-05/06. Izvorni nalazi i reprodukcije ispod ostaju dokaz pregledanog commita. Detalji implementacije i provjera: [RELEASE-STATUS.md](RELEASE-STATUS.md).
+Naknadni status 24. 11. 2026.: **Svih šest nalaza REV3-01–REV3-06 popravljeno je i provjereno na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev3-navigation-complete`; svih šest nalaza lokalno je zatvoreno. Izvorni nalazi i reprodukcije ispod ostaju dokaz pregledanog commita. Detalji implementacije i provjera: [RELEASE-STATUS.md](RELEASE-STATUS.md).
 
 ## Opseg i pozitivni rezultati
 
