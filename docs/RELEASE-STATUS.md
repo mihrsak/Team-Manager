@@ -2,6 +2,12 @@
 
 Ažurirano nakon lokalne revizije 22. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Treća revizija — 24. 11. 2026.
+
+Pregledan je postojeći paket `artifacts/rev2-polish-final` (commit c68fa47) na [demou](https://localhost:7610), Db2 LUW, bez ponovnog stvaranja baze ili nove migracije. 60 HR/EN prikaza i axe provjera prolazi osnovne statuse, privatnost triju uloga i odsutnost JavaScript grešaka. Vizualni pregled 320 px te odbijeni unosi otkrivaju šest dodatnih nalaza: P1 gubitak nacrta u forumu/novostima/planu; P2 nečitljive mobilne tablice, pretvaranje drugih HTTP grešaka u 404 i preostali povratni tokovi; P3 EN naziv nedodijeljene grupe i navigacijska orijentacija. Detalji: [PRODUCT-REVIEW-2026-11-24.md](PRODUCT-REVIEW-2026-11-24.md), otvorene stavke REV3-01–06 u [BACKLOG.md](BACKLOG.md).
+
+`Test-ReturnContext.cjs` i `Test-DraftProtection.cjs` prolaze na izoliranoj Db2 shemi, uključujući stvarne upise, konflikte i preuzimanja. `Test-ProductDemo.cjs` zatim potvrđuje očuvan demo i 28 dodatnih HR/EN axe provjera. Nema novih implementacijskih promjena ni tvrdnje o zatvaranju novih nalaza. SQL Server/Oracle, ciljni IIS/OpenShift, NVDA i vanjske integracije nisu ponovno potvrđivani. Jezik i tema vraćeni su na početne vrijednosti.
+
 ## REV2-08 / REV2-09 / REV2-10 — dovršeno 23. 11. 2026.
 
 Aktivni paket: `artifacts/rev2-polish-final`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589). Konfiguracija i poslovni podaci očuvani su bez migracije (shema 11 / protokol 5). Svih deset nalaza druge revizije lokalno je zatvoreno; vanjske produkcijske provjere ostaju zasebne.
