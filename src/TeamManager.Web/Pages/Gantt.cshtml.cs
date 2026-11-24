@@ -11,6 +11,8 @@ public sealed class GanttModel(IssueStore issues, IssueLinkStore links, Microsof
 {
     [BindProperty(SupportsGet = true)] public string? Month { get; set; }
     [BindProperty(SupportsGet = true)] public int? ProjectId { get; set; }
+    public string ReturnUrl=>Url.Page("/Gantt",new{Month,ProjectId})!;
+    public string ReturnTo(int issue)=>ReturnUrl+"#task-"+issue;
 
     public List<Team> Projects { get; private set; } = [];
     public List<GanttTask> Tasks { get; private set; } = [];

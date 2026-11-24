@@ -13,6 +13,8 @@ public sealed class CalendarModel(IssueStore issues) : PageModel
 
     [BindProperty(SupportsGet = true)] public string? Month { get; set; }
     [BindProperty(SupportsGet = true)] public int? ProjectId { get; set; }
+    public string ReturnUrl=>Url.Page("/Calendar",new{Month,ProjectId})!;
+    public string ReturnTo(int issue)=>ReturnUrl+"#calendar-issue-"+issue;
 
     public List<Team> Projects { get; private set; } = [];
     public ILookup<int, IssueRow> Deadlines { get; private set; } = Array.Empty<IssueRow>().ToLookup(_ => 0);

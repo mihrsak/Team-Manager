@@ -6,7 +6,7 @@
 {
     <p><a asp-page="/RegistrationRequests">@Text["Zahtjevi za registraciju"]</a></p>
 }
-<div class="card table"><table><thead><tr><th>@Text["Broj radnika"]</th><th>@Text["Ime i prezime"]</th><th>@Text["Funkcija"]</th><th>@Text["Organizacijska jedinica"]</th><th></th></tr></thead><tbody>
+<div class="card table"><table scroll-label="@Text["Korisnici"]"><thead><tr><th>@Text["Broj radnika"]</th><th>@Text["Ime i prezime"]</th><th>@Text["Funkcija"]</th><th>@Text["Organizacijska jedinica"]</th><th></th></tr></thead><tbody>
 @foreach(var entry in Model.Entries){<tr><td>@entry.User.EmployeeNumber</td><td>@entry.User.DisplayName @if (!entry.User.IsActive) { <span class="badge">@Text["Deaktiviran"]</span> }</td><td>@entry.User.JobTitle</td><td>@entry.Unit</td><td><a asp-page="/Profile" asp-route-id="@entry.User.Id">@Text["Profil"]</a></td></tr>}
 </tbody></table></div>
 <div asp-validation-summary="All"></div><div class="grid">

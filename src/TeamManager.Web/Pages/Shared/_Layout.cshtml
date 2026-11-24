@@ -34,6 +34,10 @@ html[data-theme="dark"] {
 .table-scroll{max-width:100%;overflow-x:auto}
 main{overflow-wrap:anywhere}
 .table-scroll:focus-visible{outline:2px solid var(--link);outline-offset:3px}
+.responsive-table-scroll{min-width:0;width:100%;overscroll-behavior-x:contain}
+.responsive-table{min-width:40rem}
+.responsive-table th,.responsive-table td{min-width:7rem;max-width:28rem;overflow-wrap:anywhere}
+.responsive-table th{white-space:nowrap}
 .issue-time-table{min-width:48rem;table-layout:fixed}
 .issue-time-table th:nth-child(1){width:16%}
 .issue-time-table th:nth-child(2),.issue-time-table th:nth-child(3),.issue-time-table th:nth-child(6){width:18%}

@@ -42,7 +42,7 @@ else
                     var remaining = Model.Days - task.FirstDay - task.Span + 1;
                     <tr id="task-@task.Issue.Id">
                         <th scope="row">
-                            <a asp-page="/Issue" asp-route-id="@task.Issue.Id">#@task.Issue.Id @task.Issue.Title</a>
+                            <a asp-page="/Issue" asp-route-id="@task.Issue.Id" asp-route-returnUrl="@Model.ReturnTo(task.Issue.Id)">#@task.Issue.Id @task.Issue.Title</a>
                             <small>@task.Issue.Project · @task.Dates</small>
                         </th>
                         @if (task.FirstDay > 1)

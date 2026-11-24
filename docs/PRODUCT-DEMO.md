@@ -2,7 +2,7 @@
 
 Završni pregled od 22. 11. 2026.: [https://localhost:7610/Projects](https://localhost:7610/Projects). Lokalni demonstracijski administrator: `admin` / `admin`. Ovaj račun pripada isključivo lokalnoj demo bazi. Demo korisnici `demo.lead`, `demo.dev` i `demo.viewer` imaju generiranu lozinku u ignoriranoj datoteci `LocalDemoAccess.private.json`; ne spremati je u Git niti koristiti za stvarne račune.
 
-Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste konačni paket `artifacts/rev3-drafts-reviewed` i lokalni dotnet HTTPS proces. Završni paket nije objavljen na IIS u ovoj sesiji jer proces nema Windows administratorski token.
+Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste konačni paket `artifacts/rev3-mobile-context` i lokalni dotnet HTTPS proces. Završni paket nije objavljen na IIS u ovoj sesiji jer proces nema Windows administratorski token.
 
 ## Sadržaj i tokovi za pregled
 
@@ -20,7 +20,7 @@ Iz korijena repozitorija:
 
 ```powershell
 ./scripts/New-ProductDemo.ps1 `
-  -ApplicationDll artifacts/rev3-drafts-reviewed/TeamManager.Web.dll `
+  -ApplicationDll artifacts/rev3-mobile-context/TeamManager.Web.dll `
   -Db2SettingsPath artifacts/db2-complete-final/appsettings.Local.json `
   -Port 7610 -SeedPort 7614
 ```
@@ -32,7 +32,7 @@ Svaki pokušaj ostavlja zasebnu ignoriranu mapu `artifacts/product-demo-<GUID>`:
 Provjera postojećeg demoa:
 
 ```powershell
-$env:NODE_EXTRA_CA_CERTS=(Resolve-Path artifacts/rev3-drafts-reviewed/dev-ca.pem).Path
+$env:NODE_EXTRA_CA_CERTS=(Resolve-Path artifacts/rev3-mobile-context/dev-ca.pem).Path
 node scripts/Test-ProductDemo.cjs artifacts/product-demo-<GUID>
 ```
 

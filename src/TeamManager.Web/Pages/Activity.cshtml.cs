@@ -10,6 +10,8 @@ namespace TeamManager.Web.Pages;
 public sealed class ActivityModel(IssueStore issues, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int? ProjectId { get; set; }
+    public string ReturnUrl=>Url.Page("/Activity",new{ProjectId})!;
+    public string ReturnTo(int entry)=>ReturnUrl+"#activity-"+entry;
     public List<Team> Projects { get; private set; } = [];
     public List<ActivityRow> Entries { get; private set; } = [];
 

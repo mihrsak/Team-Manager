@@ -1410,4 +1410,11 @@
   <data name="Da" xml:space="preserve"><value>Yes</value></data>
   <data name="Ne" xml:space="preserve"><value>No</value></data>
   <data name="Prikazana je aktualna spremljena stavka. Tvoj nacrt ostaje u obrascu." xml:space="preserve"><value>The current saved item is shown. Your draft remains in the form.</value></data>
+  <data name="Natrag na kalendar" xml:space="preserve"><value>Back to calendar</value></data>
+  <data name="Natrag na Gantt" xml:space="preserve"><value>Back to Gantt</value></data>
+  <data name="Natrag na aktivnosti" xml:space="preserve"><value>Back to activity</value></data>
+  <data name="Natrag na zadatak" xml:space="preserve"><value>Back to issue</value></data>
+  <data name="Tablica podataka" xml:space="preserve"><value>Data table</value></data>
+  <data name="{0}: vodoravno pomicanje" xml:space="preserve"><value>{0}: horizontal scrolling</value></data>
+  <data name="Sažetak vremena" xml:space="preserve"><value>Time summary</value></data>
 </root>

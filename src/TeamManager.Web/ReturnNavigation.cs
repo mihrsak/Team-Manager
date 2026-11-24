@@ -27,7 +27,9 @@ public sealed record ReturnNavigation(string Url,string Label)
         var label=PagePath(url,helper.ActionContext.HttpContext).ToLowerInvariant() switch
         {
             "/search"=>"Natrag na pretragu","/timereport"=>"Natrag na izvještaj vremena",
-            "/issues"=>"Natrag na zadatke","/projects"=>"Natrag na projekte",_=>"Natrag"
+            "/issues"=>"Natrag na zadatke","/projects"=>"Natrag na projekte",
+            "/calendar"=>"Natrag na kalendar","/gantt"=>"Natrag na Gantt",
+            "/activity"=>"Natrag na aktivnosti","/issue"=>"Natrag na zadatak",_=>"Natrag"
         };
         return new(url,label);
     }

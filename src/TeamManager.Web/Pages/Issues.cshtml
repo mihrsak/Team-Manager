@@ -41,7 +41,7 @@ else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
         <p>@Text["Ukupno zadataka"]: @Model.TotalCount</p>
         @foreach (var group in Model.Groups)
         {
-            <table>
+            <table scroll-label="@Text["Projektni zadaci"]">
                 @if (Model.GroupBy is not null)
                 {
                     <caption>@group.Key · @Text["{0} zadataka", group.Count()]</caption>

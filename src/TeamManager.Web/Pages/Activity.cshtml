@@ -29,16 +29,16 @@
 else
 {
     <div class="card table">
-        <table>
+        <table scroll-label="@Text["Aktivnosti"]">
             <caption>@Text["Posljednjih {0} aktivnosti", Model.Entries.Count]</caption>
             <thead><tr><th>@Text["Vrijeme (UTC)"]</th><th>@Text["Aktivnost"]</th><th>@Text["Zadatak"]</th><th>@Text["Projekt"]</th><th>@Text["Korisnik"]</th></tr></thead>
             <tbody>
                 @foreach (var entry in Model.Entries)
                 {
-                    <tr>
+                    <tr id="activity-@entry.Id">
                         <td><time datetime="@entry.At.ToString("O")">@entry.At.ToString("g")</time></td>
                         <td>@Text[ActivityModel.KindLabel(entry.Kind)]</td>
-                        <td><a asp-page="/Issue" asp-route-id="@entry.IssueId">@entry.Title</a></td>
+                        <td><a asp-page="/Issue" asp-route-id="@entry.IssueId" asp-route-returnUrl="@Model.ReturnTo(entry.Id)">@entry.Title</a></td>
                         <td>@entry.Project</td><td>@entry.Author</td>
                     </tr>
                 }

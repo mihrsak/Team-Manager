@@ -52,7 +52,7 @@
                                     <ul>
                                         @foreach (var issue in Model.Deadlines[day])
                                         {
-                                            <li><a asp-page="/Issue" asp-route-id="@issue.Id">@issue.Title</a></li>
+                                            <li id="calendar-issue-@issue.Id"><a asp-page="/Issue" asp-route-id="@issue.Id" asp-route-returnUrl="@Model.ReturnTo(issue.Id)">@issue.Title</a></li>
                                         }
                                     </ul>
                                 }
