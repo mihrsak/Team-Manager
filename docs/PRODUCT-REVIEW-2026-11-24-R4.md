@@ -1,8 +1,10 @@
 # Četvrta revizija Team Managera — 24. 11. 2026.
 
-Pregledani commit: `aed6e3d` (implementacija `10c8943`), paket `artifacts/rev3-navigation-complete`, [demo](https://localhost:7610), Db2 LUW, shema 11 / protokol 5. Postojeća aplikacija i baza ostale su dostupne tijekom pregleda. Izvještaj dokumentira **pet nalaza: jedan P1, jedan P2 i tri P3**; popravci novih nalaza nisu implementirani.
+Pregledani commit: `aed6e3d` (implementacija `10c8943`), paket `artifacts/rev3-navigation-complete`, [demo](https://localhost:7610), Db2 LUW, shema 11 / protokol 5. Postojeća aplikacija i baza ostale su dostupne tijekom pregleda. Izvještaj dokumentira **pet nalaza: jedan P1, jedan P2 i tri P3**; prilikom izvornog pregleda popravci novih nalaza nisu bili implementirani.
 
 Najviši prioritet je očuvanje tekstualnog nacrta dokumenta nakon odbijenog prijenosa. Prethodne dorade REV3-01–06 prolaze svoje provjere; novi nalazi obuhvaćaju dodatne obrasce, nevaljane filtre, izvoz i administrativni kontekst izvan prethodnih kriterija prihvata. Raniji lokalni prihvat ostaje dokaz za tada izričito provjereni opseg.
+
+Naknadni status 24. 11. 2026.: **REV4-01 i REV4-02 popravljeni su i provjereni na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev4-documents-filters`; otvorene ostaju REV4-03/04/05. Izvorni nalazi ispod ostaju dokaz pregledanog commita; detalji provjera su u [RELEASE-STATUS.md](RELEASE-STATUS.md).
 
 ## Što je provjereno
 

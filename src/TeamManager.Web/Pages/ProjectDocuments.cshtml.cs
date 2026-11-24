@@ -9,6 +9,9 @@ public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocument
     public ProjectDetail Project { get; private set; } = null!;
     public List<ProjectDocument> Documents { get; private set; } = [];
     public bool CanEdit { get; private set; }
+    public bool HasDraft { get; private set; }
+    public string? DraftTitle { get; private set; }
+    public string? DraftDescription { get; private set; }
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private async Task<ProjectDetail?> VisibleProject(int id)
@@ -41,6 +44,9 @@ public sealed class ProjectDocumentsModel(ProjectStore projects, ProjectDocument
         if (result is not PageResult) return result;
         if (!CanEdit) return Forbid();
 
+        HasDraft = true;
+        DraftTitle = Request.Form["title"].ToString();
+        DraftDescription = Request.Form["description"].ToString();
         title = title?.Trim();
         description = description?.Trim() ?? "";
         if (!ModelState.IsValid || title is null or { Length: 0 or > 150 } || description.Length > 2000)

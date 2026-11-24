@@ -9,10 +9,11 @@
 {
     <section class="card">
         <h2>@Text["Novi dokument"]</h2>
-        <form method="post" asp-page-handler="Add" asp-route-projectId="@Model.Project.Id" enctype="multipart/form-data">
-            <label>@Text["Naslov"]<input name="title" maxlength="150" required></label>
-            <label>@Text["Opis"]<textarea name="description" maxlength="2000" rows="3"></textarea></label>
-            <label>@Text["Datoteka (do 10 MiB)"]<input name="attachment" type="file" required></label>
+        <form method="post" asp-page-handler="Add" asp-route-projectId="@Model.Project.Id" enctype="multipart/form-data" data-unsaved-draft="@(Model.HasDraft ? "true" : null)">
+            <label>@Text["Naslov"]<input name="title" maxlength="150" required value="@Model.DraftTitle"></label>
+            <label>@Text["Opis"]<textarea name="description" maxlength="2000" rows="3">@("\n"+Model.DraftDescription)</textarea></label>
+            @if(Model.HasDraft){<p id="document-file-reselect" class="notice">@Text["Nacrt je sačuvan. Ponovno odaberi datoteku prije slanja."]</p>}
+            <label>@Text["Datoteka (do 10 MiB)"]<input name="attachment" type="file" required aria-describedby="@(Model.HasDraft ? "document-file-reselect" : null)"></label>
             <button>@Text["Dodaj dokument"]</button>
         </form>
     </section>

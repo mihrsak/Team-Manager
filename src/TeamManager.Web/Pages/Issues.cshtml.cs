@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text;
 using System.Security.Claims;
@@ -8,8 +9,8 @@ namespace TeamManager.Web.Pages;
 public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQueryStore savedQueries,Microsoft.Extensions.Localization.IStringLocalizer<UiText> text):PageModel
 {
     [BindProperty(SupportsGet=true)]public int? ProjectId{get;set;}
-    [BindProperty(SupportsGet=true)]public string? Status{get;set;}
-    [BindProperty(SupportsGet=true)]public string? Query{get;set;}
+    [BindProperty(SupportsGet=true), StringLength(30)]public string? Status{get;set;}
+    [BindProperty(SupportsGet=true), StringLength(200)]public string? Query{get;set;}
     [BindProperty(SupportsGet=true)] public string? SortOrder { get; set; }
     [BindProperty(SupportsGet=true)] public string? GroupBy { get; set; }
     [BindProperty(SupportsGet=true)] public string? Columns { get; set; }
@@ -51,13 +52,31 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     public List<string> Priorities {get;set;}=[];
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public List<SavedIssueQuery> SavedQueries { get; private set; } = [];
-    public async Task OnGetAsync()
+    public bool FiltersValid=>ListFilterValidation.Valid(ModelState,"ProjectId","Status","Query","PageNumber");
+    public bool InvalidProjectFilter=>!ListFilterValidation.Valid(ModelState,"ProjectId");
+    public bool InvalidStatusFilter=>!ListFilterValidation.Valid(ModelState,"Status");
+    public string ProjectFilterValue=>ListFilterValidation.Value(ModelState,"ProjectId",ProjectId?.ToString(CultureInfo.InvariantCulture));
+    public string StatusFilterValue=>ListFilterValidation.Value(ModelState,"Status",Status);
+
+    private async Task<IActionResult?> LoadFilters()
     {
         NormalizeLayout();
         SavedQueries = await savedQueries.List(UserId);
         Priorities = await workflow.Values("priority");
         Statuses = await workflow.Values("status");
         Projects = await store.Projects(UserId);
+        ListFilterValidation.SingleValues(Request,ModelState,"ProjectId","Status","Query","PageNumber");
+        if(ProjectId is int selected && !Projects.Any(p=>p.Id==selected))return NotFound();
+        if(Query?.Length>200)ModelState.TryAddModelError(nameof(Query),"Pretraga može imati najviše 200 znakova.");
+        if(Status is {Length:>30})ModelState.TryAddModelError(nameof(Status),"Odaberi valjan status.");
+        if(Status is not null && !Statuses.Contains(Status))ModelState.TryAddModelError(nameof(Status),"Odaberi valjan status.");
+        return null;
+    }
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var error=await LoadFilters();if(error is not null)return error;
+        if(!FiltersValid)return Page();
         Items = Sort(await store.List(UserId, ProjectId, Status, Query)).ToList();
         TotalCount=Items.Count;PageCount=Math.Max(1,(TotalCount+49)/50);PageNumber=Math.Clamp(PageNumber,1,PageCount);
         Items=Items.Skip((PageNumber-1)*50).Take(50).ToList();
@@ -66,6 +85,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
             if (await store.Can(UserId, project.Id, "issues.create")) CanCreate.Add(project.Id);
             if (await store.Can(UserId, project.Id, "issues.edit")) CanEdit.Add(project.Id);
         }
+        return Page();
     }
 
     private void NormalizeLayout()
@@ -112,11 +132,16 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     {
         var saved = (await savedQueries.List(UserId)).Find(query => query.Id == id);
         if (saved is null) return NotFound();
+        ProjectId=saved.ProjectId;Status=saved.Status;Query=saved.SearchText;SortOrder=saved.SortOrder;GroupBy=saved.GroupBy;Columns=saved.Columns;
+        var error=await LoadFilters();if(error is not null)return error;
+        if(!FiltersValid)return Page();
         return RedirectToPage(new { saved.ProjectId, saved.Status, Query = saved.SearchText, saved.SortOrder, saved.GroupBy, saved.Columns });
     }
 
     public async Task<IActionResult> OnPostSaveQueryAsync(string? name)
     {
+        var filterError=await LoadFilters();if(filterError is not null)return filterError;
+        if(!FiltersValid)return Page();
         name = name?.Trim();
         if (!ModelState.IsValid || name is null or { Length: 0 or > 80 } ||
             Query is { Length: > 200 } || Status is { Length: > 30 })
@@ -139,6 +164,8 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
 
     public async Task<IActionResult> OnPostDeleteQueryAsync(int id)
     {
+        var error=await LoadFilters();if(error is not null)return error;
+        if(!FiltersValid)return Page();
         if (!await savedQueries.Delete(UserId, id)) return NotFound();
         TempData["Notice"] = "Spremljeni upit je uklonjen.";
         return RedirectToPage(IssueRoute);
@@ -147,12 +174,13 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
     private async Task<IActionResult> InvalidQuery(string message)
     {
         ModelState.AddModelError("", message);
-        await OnGetAsync();
-        return Page();
+        return await OnGetAsync();
     }
 
     public async Task<IActionResult> OnPostBulkAsync(string[] selection, string? bulkStatus, string? bulkPriority)
     {
+        var error=await LoadFilters();if(error is not null)return error;
+        if(!FiltersValid)return Page();
         var revisions = new Dictionary<int, int>();
         foreach (var item in selection)
         {
@@ -174,14 +202,14 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             ModelState.AddModelError("", ex.Message);
-            await OnGetAsync();
-            return Page();
+            return await OnGetAsync();
         }
     }
 
     public async Task<IActionResult> OnGetCsvAsync()
     {
-        if (!ModelState.IsValid) return BadRequest();
+        var error=await LoadFilters();if(error is not null)return error;
+        if (!ModelState.IsValid || !FiltersValid) return BadRequest();
         var user = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var rows = await store.List(user, ProjectId, Status, Query);
         Priorities=await workflow.Values("priority");

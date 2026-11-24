@@ -4,9 +4,13 @@
 <h1>@Text["Projekti"]</h1>
 <p>@Text["Javni projekti vidljivi su svim prijavljenim korisnicima. Zatvoreni i arhivirani projekti čuvaju podatke, a zadaci su dostupni samo za čitanje."]</p>
 @if(Model.CanCreate){<a class="button" asp-page="/Project">@Text["Novi projekt"]</a>}
-<form method="get" class="card grid"><label>@Text["Pretraga"]<input asp-for="Query" type="search" maxlength="200"></label><label>@Text["Stanje"]<select asp-for="State"><option value="">@Text["Sva stanja"]</option><option value="Active">@Text["Aktivan"]</option><option value="Closed">@Text["Zatvoren"]</option><option value="Archived">@Text["Arhiviran"]</option></select></label><div><button>@Text["Primijeni"]</button> <a asp-page="/Projects">@Text["Očisti"]</a></div></form>
+<form method="get" class="card grid"><label>@Text["Pretraga"]<input asp-for="Query" type="search" maxlength="200"></label><label>@Text["Stanje"]<select name="State" id="State">@if(Model.InvalidStateFilter){<option value="@Model.StateFilterValue" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>}<option value="" selected="@(!Model.InvalidStateFilter && Model.State is null)">@Text["Sva stanja"]</option><option value="Active" selected="@(!Model.InvalidStateFilter && Model.State=="Active")">@Text["Aktivan"]</option><option value="Closed" selected="@(!Model.InvalidStateFilter && Model.State=="Closed")">@Text["Zatvoren"]</option><option value="Archived" selected="@(!Model.InvalidStateFilter && Model.State=="Archived")">@Text["Arhiviran"]</option></select></label><div><button>@Text["Primijeni"]</button> <a asp-page="/Projects">@Text["Očisti"]</a></div></form>
+<div asp-validation-summary="All"></div>
+@if(Model.FiltersValid){
 <p>@Text["Ukupno"]: @Model.TotalCount</p>
 <div class="card table"><table scroll-label="@Text["Projekti"]"><thead><tr><th>@Text["Naziv"]</th><th>@Text["Nadređeni projekt"]</th><th>@Text["Vidljivost"]</th><th>@Text["Stanje"]</th></tr></thead><tbody>
 @foreach(var p in Model.Items){<tr><td><a asp-page="/Project" asp-route-id="@p.Id">@p.Input.Name</a></td><td>@(p.Input.ParentId is int parent && !Model.HasParent(parent) ? Text["Nedostupan projekt"].Value : Model.ParentName(p.Input.ParentId))</td><td>@(p.Input.IsPublic?Text["Javni"].Value:Text["Privatni"].Value)</td><td>@Text[TeamManager.Web.Pages.ProjectsModel.StateName(p.Input.State)]</td></tr>}
 </tbody></table></div>
 @if(Model.PageCount>1){<div class="pagination" role="navigation" aria-label="@Text["Stranice projekata"]">@if(Model.PageNumber>1){<a href="@Model.PageUrl(Model.PageNumber-1)">@Text["Prethodna stranica"]</a>} <span>@Text["Stranica {0} od {1}",Model.PageNumber,Model.PageCount]</span> @if(Model.PageNumber<Model.PageCount){<a href="@Model.PageUrl(Model.PageNumber+1)">@Text["Sljedeća stranica"]</a>}</div>}
+
+}

@@ -7,7 +7,7 @@
     var canSelect = Model.Items.Any(item => Model.CanEdit.Contains(item.ProjectId));
 }
 <p class="muted">@Text["PROJEKTI / ZADACI"]</p><h1>@Text["Projektni zadaci"]</h1><p>@Text["Prikazani su projekti za koje imaš ovlast pregleda zadataka."]</p>
-<div class="card"><form method="get" class="grid"><label>@Text["Projekt"]<select asp-for="ProjectId"><option value="">@Text["Svi dostupni projekti"]</option>@foreach(var p in Model.Projects){<option value="@p.Id">@p.Name</option>}</select></label><label>@Text["Status"]<select asp-for="Status"><option value="">@Text["Svi statusi"]</option>@foreach(var s in Model.Statuses){<option>@s</option>}</select></label><label>@Text["Pretraga"]<input asp-for="Query" maxlength="200"></label><label>@Text["Sortiranje"]
+<div class="card"><form method="get" class="grid"><label>@Text["Projekt"]<select name="ProjectId" id="ProjectId">@if(Model.InvalidProjectFilter){<option value="@Model.ProjectFilterValue" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>}<option value="" selected="@(!Model.InvalidProjectFilter && Model.ProjectId is null)">@Text["Svi dostupni projekti"]</option>@foreach(var p in Model.Projects){<option value="@p.Id" selected="@(!Model.InvalidProjectFilter && Model.ProjectId==p.Id)">@p.Name</option>}</select></label><label>@Text["Status"]<select name="Status" id="Status">@if(Model.InvalidStatusFilter){<option value="@Model.StatusFilterValue" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>}<option value="" selected="@(!Model.InvalidStatusFilter && Model.Status is null)">@Text["Svi statusi"]</option>@foreach(var status in Model.Statuses){<option value="@status" selected="@(!Model.InvalidStatusFilter && Model.Status==status)">@status</option>}</select></label><label>@Text["Pretraga"]<input asp-for="Query" maxlength="200"></label><label>@Text["Sortiranje"]
     <select asp-for="SortOrder">
         @foreach(var sort in IssuesModel.SortLabels){<option value="@sort.Key">@Text[sort.Value]</option>}
     </select>
@@ -26,11 +26,12 @@
         <label><input style="width:auto" type="checkbox" name="Column" value="@column.Key" checked="@Model.VisibleColumns.Contains(column.Key)"> @(column.Key == "id" ? Text["Broj zadatka"].Value : Text[column.Value].Value)</label>
     }
 </fieldset>
-<div><button>@Text["Primijeni"]</button> <button name="handler" value="Csv" data-download>@Text["Izvezi CSV"]</button> <a href="/Issues">@Text["Očisti"]</a></div></form></div>
+<div><button>@Text["Primijeni"]</button> <button name="handler" value="Csv" data-download disabled="@(!Model.FiltersValid)">@Text["Izvezi CSV"]</button> <a href="/Issues">@Text["Očisti"]</a></div></form></div>
 @if(Model.ProjectId is int selectedProject){var selected=Model.Projects.Find(p=>p.Id==selectedProject); if(selected is not null){<p><a asp-page="/Project" asp-route-id="@selectedProject">@selected.Name</a> @if(Model.CanCreate.Contains(selectedProject)){<a class="button" asp-page="/Issue" asp-route-projectId="@selectedProject" asp-route-returnUrl="@Model.CurrentListUrl">@Text["Novi zadatak"]</a>}</p>}}
 else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
 @if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}
 <div asp-validation-summary="All"></div>
+@if(Model.FiltersValid){
 <div class="card table">
     @if (Model.Items.Count == 0)
     {
@@ -73,6 +74,7 @@ else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
         }
     }
 </div>@if(Model.PageCount>1){<div class="pagination" role="navigation" aria-label="@Text["Stranice zadataka"]">@if(Model.PageNumber>1){<a href="@Model.PageUrl(Model.PageNumber-1)">@Text["Prethodna stranica"]</a>} <span>@Text["Stranica {0} od {1}",Model.PageNumber,Model.PageCount]</span> @if(Model.PageNumber<Model.PageCount){<a href="@Model.PageUrl(Model.PageNumber+1)">@Text["Sljedeća stranica"]</a>}</div>}
+}
 <section class="card">
     <h2>@Text["Moji spremljeni upiti"]</h2>
     @foreach (var saved in Model.SavedQueries)
@@ -84,10 +86,12 @@ else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
             </form>
         </div>
     }
+    @if(Model.FiltersValid){
     <form method="post" asp-route-pageNumber="@Model.PageNumber" asp-page-handler="SaveQuery" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns">
         <label>@Text["Naziv upita"]<input name="name" maxlength="80" required></label>
         <button>@Text["Spremi filtre i prikaz"]</button>
     </form>
+    }
 </section>
 @if (canSelect)
 {
