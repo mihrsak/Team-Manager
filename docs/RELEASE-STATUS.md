@@ -2,6 +2,10 @@
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Šesta revizija — bez novih nalaza u lokalnom opsegu
+
+Paket `artifacts/rev5-complete`, kod e783051: ponovljeno je 82 HR/EN prikaza i 28 završnih demo axe provjera, mobilni prikaz na 320 px te dopušteni/nedopušteni pristup triju demo uloga. Nema novih reproduciranih nedostataka u tom opsegu. REV5-01–05 zatvoreni su; nove REV6 stavke nisu otvorene. [Izvještaj šeste revizije](PRODUCT-REVIEW-2026-11-25-R6.md) navodi dokaze, regresije i preostale ciljne uvjete. Oba lokalna pregleda ostaju dostupna, bez izmjene poslovnih demo podataka.
+
 ## REV5-01–REV5-05 — lokalno dovršeno 25. 11. 2026.
 
 Aktivni paket: `artifacts/rev5-complete`. [Demo](https://localhost:7610) i [postojeći radni pregled](https://localhost:7589) imaju readiness 200; postojeći konfiguracijski direktoriji, poslovni podaci, shema 11 i protokol zaključavanja 5 ostaju očuvani. Lokalni pregled koristi dotnet HTTPS procese, ne novu objavu na IIS-u.

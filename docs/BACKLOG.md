@@ -1,5 +1,9 @@
 # Backlog Team Manager
 
+## Šesta revizija — bez novih lokalnih nalaza 25. 11. 2026.
+
+Nakon zatvaranja REV5-01–05 ponovljen je pregled paketa `artifacts/rev5-complete` (kod e783051): 82 HR/EN prikaza i dodatnih 28 demo axe provjera, mobilnih 320 px, tri demo uloge i izolirane regresije. U provjerenom lokalnom opsegu nema novih potvrđenih nedostataka ni novih REV6 stavki. Detaljan opseg i ograničenja: [PRODUCT-REVIEW-2026-11-25-R6.md](PRODUCT-REVIEW-2026-11-25-R6.md). Ciljne produkcijske provjere ostaju zasebne.
+
 ## Peta revizija — dorade dovršene 25. 11. 2026.
 
 Pregled commita ed45f22 pronašao je pet nalaza. Svi su sada lokalno zatvoreni u paketu artifacts/rev5-complete, HR/EN. Nacrti i skupne radnje prolaze SQL Server/Oracle/Db2 regresiju, uključujući ponovljene sukobe i opoziv prava. Reprodukcije i kriteriji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md).
