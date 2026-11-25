@@ -2,6 +2,20 @@
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Lokalni IIS i NVDA — dovršeno 25. 11. 2026.
+
+Aktualni Windows paket `artifacts/iis-local-verified` radi na **stvarnom [IIS-u, port 7443](https://localhost:7443)**, uz očuvane prethodne konfiguracije i SQL podatke. Nadogradnja ima verificirani COPY_ONLY/CHECKSUM backup, shemu 43, readiness 200 i provjeru hasha. Dotnet [demo 7610](https://localhost:7610) i [radni Db2 pregled 7589](https://localhost:7589) usklađeni su paketom `artifacts/iis-a11y-complete`; prolaze njihove demo/smoke regresije bez poslovnih upisa.
+
+Popravljeni su **QA-LOCAL-01** ponavljanje SQL instalacije nakon dodatnih stupaca kataloga, **QA-LOCAL-02** pogrešna obveznost praznog projektnog opisa i **QA-LOCAL-03** IIS tehnički odgovor umjesto lokaliziranog oporavka velikog prijenosa. IIS čuva aplikacijska tijela grešaka i koristi konačni vanjski limit 64 MiB; upravljani limit ostaje izričito 30.000.000 B, prihvat datoteke 10 MiB. Stvarni no-JS 32 MiB zahtjev sada daje HR/EN HTML 413 i Edge povratkom vraća tekst. Nisu povećane dopuštene datoteke.
+
+Prolaze `Test-Package.ps1`, `Test-IisLocalAcceptance.cjs`, `Test-UploadRegistrationRecovery.cjs --registration-disabled`, `Test-DocumentDraftsFilters.cjs` i `Test-FieldBulkDrafts.cjs`. Obuhvaćeni su stvarno prazni opis, projekt/zadatak/komentar/vrijeme/pretraga/CSV, mobilni izvještaj/axe, lokalizirani 404, nacrti, ponovljeni sukobi i opoziv članstva. Isključena registracija ostaje isključena i daje 404.
+
+Čista provjerena prijenosna kopija NVDA 2026.3.1 radi nakon pada prethodne kopije. Proveden je ručni HR/EN Windows/Edge pregled sa stvarnim NVDA najavama, zatim prolazi **24 dodatne stvarne govorne provjere** iz `Test-NvdaIis.cjs`, uključujući anonimnu HR/EN prijavu, grešku/fokus, skip-link, zadatak, komentar, sate, pretragu i odjavu. To nisu samo axe/DOM provjere; pohranjeni su novi `Speaking` zapisi aktivnog NVDA-a. Jezik administratora vraćen je na početnu vrijednost.
+
+Kratko IIS opterećenje šest autentificiranih ruta: **2710 odgovora bez HTTP grešaka**, 1/10/25 paralelnih zahtjeva po 10 sekundi; pri 25 medijan 221 ms, p95 301 ms. Provjereni su health, nepoznati Host, nedostupnost konfiguracije, anonimna zaštita, cookie zastavice i antiforgery. Rezultat nije proizvodni kapacitet niti usporediv s prethodnim uzorkom bez usklađenja podataka i okruženja.
+
+[Detaljni prihvat i ograničenja](LOCAL-IIS-NVDA-2026-11-25.md), dokazi lokalno u `artifacts/iis-nvda-20261125`. Lokalni IIS/NVDA opseg zatvoren je; ciljna produkcija, bankarske integracije i OpenShift ostaju zasebne provjere.
+
 ## Šesta revizija — bez novih nalaza u lokalnom opsegu
 
 Paket `artifacts/rev5-complete`, kod e783051: ponovljeno je 82 HR/EN prikaza i 28 završnih demo axe provjera, mobilni prikaz na 320 px te dopušteni/nedopušteni pristup triju demo uloga. Nema novih reproduciranih nedostataka u tom opsegu. REV5-01–05 zatvoreni su; nove REV6 stavke nisu otvorene. [Izvještaj šeste revizije](PRODUCT-REVIEW-2026-11-25-R6.md) navodi dokaze, regresije i preostale ciljne uvjete. Oba lokalna pregleda ostaju dostupna, bez izmjene poslovnih demo podataka.

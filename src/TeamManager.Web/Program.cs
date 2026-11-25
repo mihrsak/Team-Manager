@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = 30_000_000);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true).AddEnvironmentVariables();
 var databaseProvider = builder.Configuration["Database:Provider"] ?? "SqlServer";
 if (!databaseProvider.Equals("Oracle", StringComparison.OrdinalIgnoreCase) &&

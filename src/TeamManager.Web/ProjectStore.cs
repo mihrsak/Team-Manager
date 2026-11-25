@@ -6,7 +6,7 @@ namespace TeamManager.Web;
 public sealed class ProjectInput
 {
     [Required, StringLength(100)] public string Name { get; set; } = "";
-    [StringLength(4000)] public string Description { get; set; } = "";
+    [StringLength(4000), DisplayFormat(ConvertEmptyStringToNull = false)] public string Description { get; set; } = "";
     public int? ParentId { get; set; }
     public bool InheritParentRoles { get; set; }
     public bool IsPublic { get; set; }

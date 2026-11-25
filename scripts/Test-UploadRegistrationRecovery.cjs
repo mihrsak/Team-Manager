@@ -56,7 +56,9 @@ async function axeCheck(p){
                 await plain.close();await p.goto(path);assert.equal(await p.locator('a[download]').count(),before+1);
 
                 const anon=await b.newContext({baseURL,extraHTTPHeaders:{'Accept-Language':language}}),a=await anon.newPage();
-                const registration=await a.goto('/Register');assert.equal(registration.status(),200,'Enable registration on the isolated SQL fixture.');
+                const registration=await a.goto('/Register');
+                if(process.argv.includes('--registration-disabled')){assert.equal(registration.status(),404);await anon.close();continue;}
+                assert.equal(registration.status(),200,'Enable registration on the isolated SQL fixture.');
                 assert.match(await a.title(),language==='hr'?/Zahtjev za registraciju/:/Registration request/);
                 await a.locator('[name=employee]').fill('review.recovery');await a.locator('[name=name]').fill('  Review <Example>  ');
                 await a.locator('[name=password]').fill('Mismatch-password-A');await a.locator('[name=confirm]').fill('Mismatch-password-B');
@@ -67,6 +69,6 @@ async function axeCheck(p){
                 await axeCheck(a);await anon.close();
             }
         }finally{await post(p,'/Profile?handler=Language',{language:original});}
-        console.log('PASS: HR/EN upload boundaries, client draft protection, no-JS HTTP 413 and browser-back recovery, successful corrected upload, registration safe fields/password clearing/focus/axe and initial page titles.');
+        console.log('PASS: HR/EN upload boundaries, client draft protection, no-JS HTTP 413 and browser-back recovery, successful corrected upload, initial page titles; '+(process.argv.includes('--registration-disabled')?'disabled registration remains 404.':'registration safe fields/password clearing/focus/axe.'));
     }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
