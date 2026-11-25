@@ -294,6 +294,7 @@ if (oracleMode)
 }
 app.UseAuthorization();
 app.UseRateLimiter();
+app.UseDocumentUploadLimits();
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapRazorPages();

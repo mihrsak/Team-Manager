@@ -1425,4 +1425,10 @@
   <data name="Definicije prilagodljivih polja" xml:space="preserve"><value>Custom field definitions</value></data>
   <data name="Profil korisnika" xml:space="preserve"><value>User profile</value></data>
   <data name="Pristup odbijen" xml:space="preserve"><value>Access denied</value></data>
+  <data name="Aktualna vrijednost" xml:space="preserve"><value>Current value</value></data>
+  <data name="Odabir i postavke su sačuvani. Pregledaj aktualne zadatke prije ponovnog slanja." xml:space="preserve"><value>Your selection and settings have been preserved. Review the current issues before submitting again.</value></data>
+  <data name="Odbaci nacrt i ponovno odaberi zadatke" xml:space="preserve"><value>Discard draft and select issues again</value></data>
+  <data name="Pregledao sam aktualne zadatke i želim primijeniti odabrane izmjene." xml:space="preserve"><value>I have reviewed the current issues and want to apply the selected changes.</value></data>
+  <data name="Zahtjev je prevelik." xml:space="preserve"><value>The request is too large.</value></data>
+  <data name="Vrati se u pregledniku i odaberi datoteku do 10 MiB." xml:space="preserve"><value>Go back in your browser and select a file up to 10 MiB.</value></data>
 </root>

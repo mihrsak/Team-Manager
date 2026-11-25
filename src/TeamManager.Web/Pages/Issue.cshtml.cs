@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
 public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments,IssueFieldStore fields):PageModel
 {
+    public FieldValueDraft? FieldDraft { get; private set; }
     [BindProperty]public IssueInput Input{get;set;}=new();
     [BindProperty(SupportsGet=true)] public string? ReturnUrl {get;set;}
     public string BackUrl => ReturnUrl is not null && Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : Url.Page("/Issues",new{ProjectId})!;
@@ -224,16 +225,20 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         return StatusCode(StatusCodes.Status303SeeOther);
     }
 
-    public async Task<IActionResult> OnPostSetFieldAsync(int id, int fieldId, int? revision, string? fieldValue)
+    public async Task<IActionResult> OnPostSetFieldAsync(int id, int fieldId, int? revision, string? fieldValue, bool resolveConflict = false, int? reviewedRevision = null)
     {
         if (id <= 0 || fieldId <= 0 || revision is null or < 0) return BadRequest();
-        try { await fields.SetValue(UserId, id, fieldId, revision.Value, fieldValue); }
+        if (!ListFilterValidation.Valid(ModelState,"id","fieldId","revision","reviewedRevision","resolveConflict") || resolveConflict && reviewedRevision is null or < 0) return BadRequest();
+        var attemptedRevision = resolveConflict ? reviewedRevision!.Value : revision.Value;
+        try { await fields.SetValue(UserId, id, fieldId, attemptedRevision, fieldValue); }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             ModelState.Clear();
             var result = await OnGetAsync(id, 0);
             if (result is not PageResult) return result;
+            if (!CanEdit || !CustomFields.Any(f => f.Id == fieldId)) return Forbid();
+            FieldDraft = new(fieldId, attemptedRevision, Request.Form["fieldValue"].ToString());
             ModelState.AddModelError("", ex.Message);
             return Page();
         }

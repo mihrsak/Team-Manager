@@ -4,7 +4,7 @@
 @using TeamManager.Web.Pages
 @{
     var visibleColumns = IssuesModel.ColumnLabels.Where(column => Model.VisibleColumns.Contains(column.Key)).ToList();
-    var canSelect = Model.Items.Any(item => Model.CanEdit.Contains(item.ProjectId));
+    var canSelect = Model.FiltersValid && (Model.HasBulkDraft || Model.Items.Any(item => Model.CanEdit.Contains(item.ProjectId)));
 }
 <p class="muted">@Text["PROJEKTI / ZADACI"]</p><h1>@Text["Projektni zadaci"]</h1><p>@Text["Prikazani su projekti za koje imaš ovlast pregleda zadataka."]</p>
 <div class="card"><form method="get" class="grid"><label>@Text["Projekt"]<select name="ProjectId" id="ProjectId">@if(Model.InvalidProjectFilter){<option value="@Model.ProjectFilterValue" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>}<option value="" selected="@(!Model.InvalidProjectFilter && Model.ProjectId is null)">@Text["Svi dostupni projekti"]</option>@foreach(var p in Model.Projects){<option value="@p.Id" selected="@(!Model.InvalidProjectFilter && Model.ProjectId==p.Id)">@p.Name</option>}</select></label><label>@Text["Status"]<select name="Status" id="Status">@if(Model.InvalidStatusFilter){<option value="@Model.StatusFilterValue" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>}<option value="" selected="@(!Model.InvalidStatusFilter && Model.Status is null)">@Text["Svi statusi"]</option>@foreach(var status in Model.Statuses){<option value="@status" selected="@(!Model.InvalidStatusFilter && Model.Status==status)">@status</option>}</select></label><label>@Text["Pretraga"]<input asp-for="Query" maxlength="200"></label><label>@Text["Sortiranje"]
@@ -61,7 +61,7 @@ else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
                                 <td>
                                     @if (Model.CanEdit.Contains(item.ProjectId))
                                     {
-                                        <input form="bulk-edit" type="checkbox" name="selection" value="@item.Id:@item.Revision" aria-label="@Text["Odaberi zadatak {0}", item.Id]">
+                                        <input form="bulk-edit" type="checkbox" name="selection" disabled="@Model.HasBulkDraft" value="@item.Id:@item.Revision" aria-label="@Text["Odaberi zadatak {0}", item.Id]">
                                     }
                                 </td>
                             }
@@ -95,11 +95,22 @@ else{<p class="muted">@Text["Za novi zadatak odaberi projekt u filtru."]</p>}
 </section>
 @if (canSelect)
 {
-    <form id="bulk-edit" method="post" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns" class="card">
+    <form id="bulk-edit" data-unsaved-draft="@(Model.HasBulkDraft ? "true" : null)" method="post" asp-route-pageNumber="@Model.PageNumber" asp-page-handler="Bulk" asp-route-projectId="@Model.ProjectId" asp-route-status="@Model.Status" asp-route-query="@Model.Query" asp-route-sortOrder="@Model.SortOrder" asp-route-groupBy="@Model.GroupBy" asp-route-columns="@Model.Columns" class="card">
         <h2>@Text["Skupno uređivanje"]</h2>
         <p>@Text["Označi do 100 zadataka na popisu."]</p>
-        <label>@Text["Status"]<select name="bulkStatus"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var status in Model.Statuses){<option>@status</option>}</select></label>
-        <label>@Text["Prioritet"]<select name="bulkPriority"><option value="">@Text["Zadrži postojeći"]</option>@foreach(var priority in Model.Priorities){<option>@priority</option>}</select></label>
+        @if(Model.HasBulkDraft)
+        {
+            <p class="notice">@Text["Odabir i postavke su sačuvani. Pregledaj aktualne zadatke prije ponovnog slanja."]</p>
+            <a href="@Model.CurrentListUrl">@Text["Odbaci nacrt i ponovno odaberi zadatke"]</a>
+            @foreach(var item in Model.BulkDraftItems)
+            {
+                <label><input type="checkbox" name="selection" value="@item.Id:@item.Revision" checked> #@item.Id · @item.Title · @item.Status · @item.Priority</label>
+                <input type="hidden" name="reviewedSelection" value="@item.Id:@item.CurrentRevision">
+            }
+            @if(Model.BulkConflict){<label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualne zadatke i želim primijeniti odabrane izmjene."]</label>}
+        }
+        <label>@Text["Status"]<select name="bulkStatus"><option value="">@Text["Zadrži postojeći"]</option>@if(!string.IsNullOrEmpty(Model.BulkStatus)&&!Model.Statuses.Contains(Model.BulkStatus)){<option selected value="@Model.BulkStatus">@Model.BulkStatus</option>}@foreach(var status in Model.Statuses){<option selected="@(Model.BulkStatus==status)">@status</option>}</select></label>
+        <label>@Text["Prioritet"]<select name="bulkPriority"><option value="">@Text["Zadrži postojeći"]</option>@if(!string.IsNullOrEmpty(Model.BulkPriority)&&!Model.Priorities.Contains(Model.BulkPriority)){<option selected value="@Model.BulkPriority">@Model.BulkPriority</option>}@foreach(var priority in Model.Priorities){<option selected="@(Model.BulkPriority==priority)">@priority</option>}</select></label>
         <button>@Text["Spremi odabrane zadatke"]</button>
     </form>
 }

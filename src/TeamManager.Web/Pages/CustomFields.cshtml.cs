@@ -5,8 +5,11 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
+public sealed record FieldValueDraft(int FieldId, int Revision, string Value);
+
 public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
 {
+    public FieldValueDraft? Draft { get; private set; }
     public string Scope { get; private set; } = "";
     public int? EntityId { get; private set; }
     public FieldTarget? Target { get; private set; }
@@ -46,17 +49,21 @@ public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
         return RedirectToPage(new { scope = Scope });
     }
 
-    public async Task<IActionResult> OnPostValueAsync(string? scope, int entityId, int fieldId, int? revision, string? fieldValue)
+    public async Task<IActionResult> OnPostValueAsync(string? scope, int entityId, int fieldId, int? revision, string? fieldValue, bool resolveConflict = false, int? reviewedRevision = null)
     {
         if (!ModelState.IsValid || !CustomFieldStore.ValidScope(scope) || entityId <= 0 ||
             fieldId <= 0 || revision is null or < 0) return BadRequest();
 
-        try { await fields.Set(UserId, ManagesUsers, scope!, entityId, fieldId, revision.Value, fieldValue); }
+        if (resolveConflict && reviewedRevision is null or < 0) return BadRequest();
+        var attemptedRevision = resolveConflict ? reviewedRevision!.Value : revision.Value;
+        try { await fields.Set(UserId, ManagesUsers, scope!, entityId, fieldId, attemptedRevision, fieldValue); }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             var result = await OnGetAsync(scope, entityId);
             if (result is not PageResult) return result;
+            if (Target?.CanEdit != true || !Fields.Any(f => f.Id == fieldId)) return Forbid();
+            Draft = new(fieldId, attemptedRevision, Request.Form["fieldValue"].ToString());
             return Invalid(ex.Message);
         }
         return RedirectToPage(new { scope, entityId });

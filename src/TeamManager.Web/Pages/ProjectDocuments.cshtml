@@ -13,7 +13,7 @@
             <label>@Text["Naslov"]<input name="title" maxlength="150" required value="@Model.DraftTitle"></label>
             <label>@Text["Opis"]<textarea name="description" maxlength="2000" rows="3">@("\n"+Model.DraftDescription)</textarea></label>
             @if(Model.HasDraft){<p id="document-file-reselect" class="notice">@Text["Nacrt je sačuvan. Ponovno odaberi datoteku prije slanja."]</p>}
-            <label>@Text["Datoteka (do 10 MiB)"]<input name="attachment" type="file" required aria-describedby="@(Model.HasDraft ? "document-file-reselect" : null)"></label>
+            <label>@Text["Datoteka (do 10 MiB)"]<input name="attachment" type="file" required data-max-file-size="10485760" data-file-size-message="@Text["Odaberi datoteku veličine od 1 bajta do 10 MiB."]" aria-describedby="@(Model.HasDraft ? "document-file-reselect" : null)"></label>
             <button>@Text["Dodaj dokument"]</button>
         </form>
     </section>

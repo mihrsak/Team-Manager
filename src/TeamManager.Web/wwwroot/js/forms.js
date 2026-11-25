@@ -46,6 +46,11 @@
     });
     const errors = document.querySelector('[data-validation-focus]');
     if (errors) errors.focus();
+    for (const field of document.querySelectorAll('input[type=file][data-max-file-size]')) {
+        const validateSize = () => field.setCustomValidity([...field.files].some(file => file.size < 1 || file.size > Number(field.dataset.maxFileSize)) ? field.dataset.fileSizeMessage : '');
+        field.addEventListener('change', validateSize);
+        window.addEventListener('pageshow', validateSize);
+    }
     for (const notice of document.querySelectorAll('.notice')) notice.setAttribute('role','status');
     for (const kind of document.querySelectorAll('[data-lookup-kind]')) {
         const name=kind.form.elements.namedItem('name');

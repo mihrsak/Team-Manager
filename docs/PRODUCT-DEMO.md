@@ -1,8 +1,8 @@
 # Demo za reviziju proizvoda
 
-Završni pregled od 22. 11. 2026.: [https://localhost:7610/Projects](https://localhost:7610/Projects). Lokalni demonstracijski administrator: `admin` / `admin`. Ovaj račun pripada isključivo lokalnoj demo bazi. Demo korisnici `demo.lead`, `demo.dev` i `demo.viewer` imaju generiranu lozinku u ignoriranoj datoteci `LocalDemoAccess.private.json`; ne spremati je u Git niti koristiti za stvarne račune.
+Završni pregled od 25. 11. 2026.: [https://localhost:7610/Projects](https://localhost:7610/Projects). Lokalni demonstracijski administrator: `admin` / `admin`. Ovaj račun pripada isključivo lokalnoj demo bazi. Demo korisnici `demo.lead`, `demo.dev` i `demo.viewer` imaju generiranu lozinku u ignoriranoj datoteci `LocalDemoAccess.private.json`; ne spremati je u Git niti koristiti za stvarne račune.
 
-Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste konačni paket `artifacts/rev4-export-titles-catalog` i lokalni dotnet HTTPS proces. Završni paket nije objavljen na IIS u ovoj sesiji jer proces nema Windows administratorski token.
+Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste konačni paket `artifacts/rev5-complete` i lokalni dotnet HTTPS proces. Završni paket nije objavljen na IIS u ovoj sesiji jer proces nema Windows administratorski token.
 
 ## Sadržaj i tokovi za pregled
 

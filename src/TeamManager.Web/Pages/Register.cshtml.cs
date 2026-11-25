@@ -9,6 +9,8 @@ namespace TeamManager.Web.Pages;
 public sealed class RegisterModel(RegistrationStore registrations, IConfiguration configuration, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public bool Submitted { get; private set; }
+    public string? DraftEmployee { get; private set; }
+    public string? DraftName { get; private set; }
 
     public IActionResult OnGet()
     {
@@ -21,6 +23,8 @@ public sealed class RegisterModel(RegistrationStore registrations, IConfiguratio
         if (!configuration.GetValue<bool>("Registration:Enabled")) return NotFound();
         if (User.Identity?.IsAuthenticated == true) return RedirectToPage("/Profile");
 
+        DraftEmployee = Request.Form["employee"].ToString();
+        DraftName = Request.Form["name"].ToString();
         employee = employee?.Trim().ToLowerInvariant();
         name = name?.Trim();
         if (!ModelState.IsValid || employee is null || !Regex.IsMatch(employee, @"^[a-z0-9._-]{1,30}$") ||

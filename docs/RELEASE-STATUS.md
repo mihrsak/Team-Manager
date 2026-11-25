@@ -2,13 +2,31 @@
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
-## Peta revizija — pregled dovršen 25. 11. 2026., pet dorada otvoreno
+## REV5-01–REV5-05 — lokalno dovršeno 25. 11. 2026.
+
+Aktivni paket: `artifacts/rev5-complete`. [Demo](https://localhost:7610) i [postojeći radni pregled](https://localhost:7589) imaju readiness 200; postojeći konfiguracijski direktoriji, poslovni podaci, shema 11 i protokol zaključavanja 5 ostaju očuvani. Lokalni pregled koristi dotnet HTTPS procese, ne novu objavu na IIS-u.
+
+- **REV5-01:** nakon odbijene predaje čuvaju se sirova vrijednost prilagodljivog polja i pokušavana revizija. Odvojeno se prikazuje aktualna spremljena vrijednost. Vraćeni nacrt aktivira postojeću zaštitu odlaska/reloada. Aktualna revizija koristi se tek nakon izričite potvrde pregleda; drugi sukob ponovno vraća nacrt bez prepisivanja. Vrijedi za projekt/korisnika/vrijeme te polja zadatka. Pri gubitku ovlasti nema prikaza vraćenog privatnog nacrta ili podataka nedostupnog zapisa.
+- **REV5-02:** odbijena skupna radnja čuva dopušteni odabir s izvornim revizijama, status/prioritet i kontekst popisa, uključujući odabrani zadatak koji više ne pripada filtru/stranici. Pregled prikazuje aktualni naslov/status/prioritet. Nove revizije zahtijevaju potvrdu; ponovljeni sukob ponovno odbija upis. Odabir se može smanjiti ili cijeli nacrt odbaciti uz postojeću zaštitu. Store i dalje provjerava ovlasti i transakcijsku dosljednost.
+- **REV5-03:** datoteka od 0 B ili veća od 10 MiB s JS-om se odbija prije navigacije, uz HR/EN poruku, sačuvan tekst i aktivnu zaštitu izmjena. Za poznatu duljinu dokumentnog POST-a iznad stvarnog HTTP limita autentificirani korisnik dobiva lokalizirani HTML **413** s uputom za povratak prije čitanja multipart tijela/antiforgery obrade. Limit nije podignut. Bez JS-a provjereni Edge povratkom vraća tekst; vanjski proxy/IIS koji odbije prije aplikacije ostaje zaseban ciljni uvjet. Uobičajena serverska provjera 10 MiB i čuvanje nacrta ostaju aktivni.
+- **REV5-04:** odbijena registracija čuva sirovi broj radnika i ime uz Razor kodiranje; lozinke su prazne. Postojeći lokalizirani sažetak dobiva fokus. Ne mijenjaju se uključivanje registracije, rate limiting i poruka koja ne otkriva postojeći račun.
+- **REV5-05:** server generira opisne HR/EN naslove registracije i početne promjene lozinke, bez osobnih podataka.
+
+`Test-FieldBulkDrafts.cjs` prolazi na izoliranim SQL Server/Oracle/Db2 bazama, HR/EN: šest vrijednosti zajedničkih polja i dva polja zadatka, sirovi nacrt i izvorne revizije, ponovljeni sukobi zajedničkih polja i skupnih radnji, izričit oporavak, oba skupna odabira, status/prioritet, zadatak izvan filtra, ispravna pohrana nakon pregleda, axe nad vraćenim nacrtima te opoziv članstva dok su nacrt polja i skupna radnja otvoreni. Opozvani pokušaji završavaju odbijenim pristupom/404 i ne vraćaju privatni sadržaj.
+
+Na konačnom SQL paketu prolaze `Test-DocumentDraftsFilters.cjs` i `Test-UploadRegistrationRecovery.cjs`. Regresija veličine dokumenta sada prvo potvrđuje JS odbijanje, zatim namjerno uklanja klijentsku zabranu da provjeri neovisno serversko odbijanje i nacrt. Nova provjera obuhvaća 0 B, 10 MiB, 10 MiB + 1 B, 32 MiB, uspješnu ispravljenu predaju, no-JS 413 i povratak, sigurno kodiranje registracijskog imena, prazne lozinke, fokus i axe te početne naslove.
+
+Nakon postavljanja prolaze `Test-ProductDemo.cjs` i nova revizija 82 HR/EN prikaza: ukupno 110 demo axe provjera bez prijava, bez prelijevanja cijelog dokumenta na 320 px i bez JS grešaka. Privatni projekt/profil i dalje su zaštićeni u provjerenim tokovima triju demo uloga. Poslovni demo podaci očuvani su; jezik/tema vraćeni na početne postavke. Dokazi: `artifacts/rev5-final-*.log`, `artifacts/rev5-draft-regression/<port>`, `artifacts/product-review6-2026-11-25`.
+
+Svih pet nalaza REV5 lokalno je zatvoreno. Raniji kriteriji revizija ostaju zatvoreni u tada provjerenom opsegu; ovo nije nova potvrda ciljnog IIS-a/OpenShifta, NVDA ili bankarskih integracija.
+
+## Peta revizija — izvorni pregled 25. 11. 2026.
 
 Pregledan je ed45f22 / `artifacts/rev4-export-titles-catalog`, [demo](https://localhost:7610). U 82 HR/EN prikaza nema axe prijava, prelijevanja cijelog dokumenta na 320 px ni JS grešaka; provjerene granice privatnih projekata i tuđih profila ostaju očuvane. Završni `Test-ProductDemo.cjs` prolazi s dodatnih 28 HR/EN axe provjera i očuvanim demo podacima. `Test-DocumentDraftsFilters.cjs` ponovno prolazi na privremenom SQL Serveru, uključujući nacrte, nevaljane filtre, CSV, skupne radnje i opoziv prava u opsegu te regresije.
 
 Potvrđeno je pet novih nalaza: **REV5-01 P1** gubitak nacrta prilagodljivih polja pri sukobu; **REV5-02 P2** izgubljen odabir i vrijednosti odbijene skupne radnje; **REV5-03 P2** generički HTTP 400 nakon prijenosa iznad HTTP limita; **REV5-04 P3** izgubljeno ime/broj radnika pri registracijskoj validaciji; **REV5-05 P3** generički naslovi registracije i početne promjene lozinke. Kod velikog prijenosa povratak u provjerenom Edgeu vraća tekst; nepovratan gubitak nacrta nije potvrđen.
 
-Novi sukobi i registracija reproducirani su HR/EN u izoliranoj SQL bazi; veliki odbijeni prijenos i početni naslov na Db2 demou. Dokumentirani su nalazi i kriteriji, bez promjene aplikacijskog koda. Prethodni REV4 popravci ostaju zatvoreni u ranije provjerenom opsegu. Ovo nije nova provjera Oraclea, ciljnog IIS-a/OpenShifta ili NVDA. Detalji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md); dokazi lokalno u `artifacts/product-review5-2026-11-25`.
+U izvornom pregledu novi sukobi i registracija reproducirani su HR/EN u izoliranoj SQL bazi; veliki odbijeni prijenos i početni naslov na Db2 demou. Tada su dokumentirani nalazi i kriteriji bez promjene aplikacijskog koda; naknadni popravci i provjere navedeni su iznad. Prethodni REV4 popravci ostaju zatvoreni u ranije provjerenom opsegu. Detalji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md); izvorni dokazi lokalno u `artifacts/product-review5-2026-11-25`.
 
 ## REV4-03 / REV4-04 / REV4-05 — dovršeno 25. 11. 2026.
 

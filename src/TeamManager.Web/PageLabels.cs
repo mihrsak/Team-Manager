@@ -12,6 +12,7 @@ public static class PageLabels
         "/Denied"=>"Pristup odbijen", "/Error"=>"Zahtjev nije uspio.",
         "/CustomFields"=>"Prilagodljiva polja", "/IssueFields"=>"Polja zadataka",
         "/RegistrationRequests"=>"Zahtjevi za registraciju",
+        "/Register"=>"Zahtjev za registraciju", "/InitialPassword"=>"Početna lozinka",
         "/Search"=>"Pretraga", "/Projects"=>"Projekti", "/Project"=>"Projekt",
         "/Issues"=>"Zadaci", "/Issue"=>"Zadatak", "/Calendar"=>"Kalendar", "/Gantt"=>"Gantt",
         "/Activity"=>"Aktivnosti", "/Notifications"=>"Obavijesti", "/TimeReport"=>"Izvještaj o vremenu", "/TimeEntry"=>"Detalji unosa vremena",

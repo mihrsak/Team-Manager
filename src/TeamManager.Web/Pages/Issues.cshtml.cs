@@ -8,6 +8,11 @@ using Microsoft.Data.SqlClient;
 namespace TeamManager.Web.Pages;
 public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQueryStore savedQueries,Microsoft.Extensions.Localization.IStringLocalizer<UiText> text):PageModel
 {
+    public bool HasBulkDraft {get;private set;}
+    public string? BulkStatus {get;private set;}
+    public string? BulkPriority {get;private set;}
+    public List<(int Id,string Title,int Revision,int CurrentRevision,string Status,string Priority)> BulkDraftItems {get;}=[];
+    public bool BulkConflict => BulkDraftItems.Any(i=>i.Revision!=i.CurrentRevision);
     [BindProperty(SupportsGet=true)]public int? ProjectId{get;set;}
     [BindProperty(SupportsGet=true), StringLength(30)]public string? Status{get;set;}
     [BindProperty(SupportsGet=true), StringLength(200)]public string? Query{get;set;}
@@ -177,7 +182,7 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         return await OnGetAsync();
     }
 
-    public async Task<IActionResult> OnPostBulkAsync(string[] selection, string? bulkStatus, string? bulkPriority)
+    public async Task<IActionResult> OnPostBulkAsync(string[] selection, string? bulkStatus, string? bulkPriority, bool resolveConflict=false, string[]? reviewedSelection=null)
     {
         var error=await LoadFilters();if(error is not null)return error;
         if(!FiltersValid)return Page();
@@ -190,6 +195,20 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
                 return BadRequest();
         }
         if (!ModelState.IsValid) return BadRequest();
+        if(revisions.Count>100)return BadRequest();
+        if(resolveConflict)
+        {
+            var reviewed=new Dictionary<int,int>();
+            foreach(var item in reviewedSelection??[])
+            {
+                var parts=item.Split(':',2);
+                if(parts.Length!=2||!int.TryParse(parts[0],out var id)||!int.TryParse(parts[1],out var rev)||rev<0)return BadRequest();
+                if(!revisions.ContainsKey(id))continue;
+                if(!reviewed.TryAdd(id,rev))return BadRequest();
+            }
+            if(reviewed.Count!=revisions.Count)return BadRequest();
+            revisions=reviewed;
+        }
 
         var user = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         try
@@ -202,7 +221,16 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             ModelState.AddModelError("", ex.Message);
-            return await OnGetAsync();
+            var result=await OnGetAsync();
+            if(result is not PageResult)return result;
+            HasBulkDraft=true;BulkStatus=Request.Form["bulkStatus"].ToString();BulkPriority=Request.Form["bulkPriority"].ToString();
+            foreach(var selected in revisions)
+            {
+                var issue=await store.Get(UserId,selected.Key);
+                if(issue is null||!await store.Can(UserId,issue.ProjectId,"issues.edit"))continue;
+                BulkDraftItems.Add((selected.Key,issue.Input.Title,selected.Value,issue.Input.Revision,issue.Input.Status,issue.Input.Priority));
+            }
+            return Page();
         }
     }
 

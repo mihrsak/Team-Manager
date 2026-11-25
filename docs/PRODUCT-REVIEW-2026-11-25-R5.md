@@ -2,6 +2,8 @@
 
 Pregledan je commit **ed45f22**, paket `artifacts/rev4-export-titles-catalog`, na [lokalnom Db2 demou](https://localhost:7610). Potvrđeno je **pet preostalih nedostataka: jedan P1, dva P2 i dva P3**. Ovaj korak donosi pregled i backlog, bez implementacije novih dorada.
 
+Naknadni status 25. 11. 2026.: **REV5-01–REV5-05 lokalno su popravljeni i provjereni**, paket `artifacts/rev5-complete`. Nacrti i skupne radnje provjereni su HR/EN na izoliranim SQL Server/Oracle/Db2 bazama, uključujući ponovljene sukobe i opoziv prava; prijenos s/bez JS-a, registracija i početni naslovi u izoliranom SQL okruženju. Demo je ažuriran uz očuvane podatke. Izvorni nalazi ispod ostaju zapis početne reprodukcije; [RELEASE-STATUS.md](RELEASE-STATUS.md) sadrži rezultate dorada.
+
 ## Opseg i rezultati
 
 - **82 HR/EN prikaza**: po 41 na svakom jeziku, desktop 1440 px i mobilnih 320 px. Projekti, zadaci i novi zadatak, grupiranje, pretraga, kalendar/Gantt, aktivnosti, planovi, wiki, dokumenti, novosti, forum, repozitoriji, izvještaj/detalji vremena, obavijesti, audit, workflow, korisnici/profili, ovlasti, grupe, registracijski zahtjevi, polja i njihove definicije, osobne postavke/tokeni, ulazna pošta i stranice grešaka. Uključena je početna promjena administratorske lozinke.

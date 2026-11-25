@@ -1,18 +1,18 @@
 # Backlog Team Manager
 
-## Peta revizija — otvorene dorade 25. 11. 2026.
+## Peta revizija — dorade dovršene 25. 11. 2026.
 
-Pregled commita ed45f22 na [Db2 demou](https://localhost:7610): 82 HR/EN prikaza i axe provjera, 320 px/desktop i tri uloge; završni demo test dodaje 28 axe provjera. Izolirani SQL Server potvrđuje nove sukobe polja/skupnih radnji i neuspjelu registraciju; prolazi i regresija prethodnih nacrta dokumenata/filtara. Pet nalaza ostaje otvoreno, bez implementacije u ovoj reviziji. Reprodukcije, ograničenja i kriteriji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md).
+Pregled commita ed45f22 pronašao je pet nalaza. Svi su sada lokalno zatvoreni u paketu artifacts/rev5-complete, HR/EN. Nacrti i skupne radnje prolaze SQL Server/Oracle/Db2 regresiju, uključujući ponovljene sukobe i opoziv prava. Reprodukcije i kriteriji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md).
 
-| Stavka | Prioritet | Status / predložena dorada |
+| Stavka | Prioritet | Status |
 |---|---|---|
-| REV5-01 | P1 | Otvoreno: pri sukobu sačuvati nacrt prilagodljivih polja projekta/korisnika/vremena/zadatka, izvornu reviziju i zaštitu odlaska; izričit pregled aktualne vrijednosti prije ponovnog pokušaja. |
-| REV5-02 | P2 | Otvoreno: nakon odbijene skupne izmjene očuvati odabrane zadatke i željene vrijednosti, uz pregled sukoba i siguran ponovni pokušaj. |
-| REV5-03 | P2 | Otvoreno: 32 MiB prijenos prelazi HTTP limit i vodi na generički 400; dodati provjeru prije slanja i HR/EN oporavak. Povratak u provjerenom Edgeu vraća tekst; nepovratan gubitak nije potvrđen. |
-| REV5-04 | P3 | Otvoreno: nakon registracijske greške sačuvati ime i broj radnika, lozinke ostaviti prazne; jasna HR/EN poruka i fokus. |
-| REV5-05 | P3 | Otvoreno: opisni HR/EN naslovi kartica za registraciju i početnu promjenu lozinke. |
+| REV5-01 | P1 | Dovršeno: sačuvani sirovi nacrti polja, izvorne revizije, aktualna vrijednost i zaštita odlaska. Izričit pregled prije ponovne predaje; novi sukob ponovno odbija upis. HR/EN, sva tri providera. |
+| REV5-02 | P2 | Dovršeno: vraćeni odabir, status/prioritet i kontekst popisa, uključujući zadatak koji više nije u filtru. Aktualne revizije tek nakon potvrde pregleda; ponovljeni sukob i opoziv prava na sva tri providera. |
+| REV5-03 | P2 | Dovršeno: JS provjera veličine zadržava tekst prije slanja; iznad HTTP limita HR/EN 413 s uputom za povratak, bez podizanja limita. Bez JS-a Edge povratkom vraća tekst; proxy koji odbija prije aplikacije ostaje ciljna provjera. |
+| REV5-04 | P3 | Dovršeno: registracijska greška vraća sigurno kodirano ime/broj radnika, prazne lozinke i fokus na prevedenoj grešci. |
+| REV5-05 | P3 | Dovršeno: opisni HR/EN naslovi registracije i početne promjene lozinke. |
 
-Predloženi redoslijed je REV5-01, REV5-02, REV5-03, zatim REV5-04/05. Novi nalazi ne mijenjaju ranije potvrđene kriterije REV4; novi opseg uključuje druge obrasce i HTTP limit prije obrade dokumenta. Pri implementaciji provjeriti sva tri providera; ova revizija nije svježa potvrda Oraclea ni ciljnog IIS-a/OpenShifta.
+Svih pet nalaza lokalno je zatvoreno. Prethodni REV4 kriteriji ostaju potvrđeni; novi opseg uključuje druge obrasce i HTTP limit prije obrade dokumenta. Ciljni IIS/OpenShift, NVDA i bankarske integracije ostaju zasebne provjere.
 
 ## Četvrta revizija — status dorada 25. 11. 2026.
 

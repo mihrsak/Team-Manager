@@ -28,10 +28,13 @@
         {
             if (Model.CanEdit)
             {
-                <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="SetField" asp-route-id="@Model.Id">
+                var draft = Model.FieldDraft?.FieldId == field.Id ? Model.FieldDraft : null;
+                @if(draft is not null){<p class="notice">@Text["Prikazana je aktualna spremljena stavka. Tvoj nacrt ostaje u obrascu."]</p><p>@Text["Aktualna vrijednost"]: @(field.Value ?? "—")</p>}
+                <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="SetField" asp-route-id="@Model.Id" data-unsaved-draft="@(draft is not null ? "true" : null)">
                     <input type="hidden" name="fieldId" value="@field.Id">
-                    <input type="hidden" name="revision" value="@Model.Input.Revision">
-                    <label>@field.Name<input name="fieldValue" value="@field.Value" maxlength="500"></label>
+                    <input type="hidden" name="revision" value="@(draft?.Revision ?? Model.Input.Revision)">
+                    <label>@field.Name<input name="fieldValue" value="@(draft?.Value ?? field.Value)" maxlength="500"></label>
+                    @if(draft is not null && draft.Revision != Model.Input.Revision){<input type="hidden" name="reviewedRevision" value="@Model.Input.Revision"><label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>}
                     <button>@Text["Spremi vrijednost"]</button>
                 </form>
             }
