@@ -4,7 +4,7 @@ Pregledani commit: `aed6e3d` (implementacija `10c8943`), paket `artifacts/rev3-n
 
 Najviši prioritet je očuvanje tekstualnog nacrta dokumenta nakon odbijenog prijenosa. Prethodne dorade REV3-01–06 prolaze svoje provjere; novi nalazi obuhvaćaju dodatne obrasce, nevaljane filtre, izvoz i administrativni kontekst izvan prethodnih kriterija prihvata. Raniji lokalni prihvat ostaje dokaz za tada izričito provjereni opseg.
 
-Naknadni status 24. 11. 2026.: **REV4-01 i REV4-02 popravljeni su i provjereni na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev4-documents-filters`; otvorene ostaju REV4-03/04/05. Izvorni nalazi ispod ostaju dokaz pregledanog commita; detalji provjera su u [RELEASE-STATUS.md](RELEASE-STATUS.md).
+Naknadni status 25. 11. 2026.: **Svih pet nalaza REV4-01–REV4-05 popravljeno je i provjereno na SQL Serveru, Oracleu i Db2, HR/EN**. Aktualni paket je `artifacts/rev4-export-titles-catalog`; svih pet nalaza lokalno je zatvoreno. Izvorni nalazi ispod ostaju dokaz pregledanog commita; detalji provjera su u [RELEASE-STATUS.md](RELEASE-STATUS.md).
 
 ## Što je provjereno
 

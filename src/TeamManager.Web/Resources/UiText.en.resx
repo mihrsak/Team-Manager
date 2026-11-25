@@ -1422,4 +1422,7 @@
   <data name="Svaki filtar smije imati samo jednu vrijednost." xml:space="preserve"><value>Each filter must have only one value.</value></data>
   <data name="Odaberi valjano stanje projekta." xml:space="preserve"><value>Select a valid project state.</value></data>
   <data name="Pretraga može imati najviše 200 znakova." xml:space="preserve"><value>Search can contain at most 200 characters.</value></data>
+  <data name="Definicije prilagodljivih polja" xml:space="preserve"><value>Custom field definitions</value></data>
+  <data name="Profil korisnika" xml:space="preserve"><value>User profile</value></data>
+  <data name="Pristup odbijen" xml:space="preserve"><value>Access denied</value></data>
 </root>

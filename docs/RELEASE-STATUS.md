@@ -1,6 +1,20 @@
 # Status izdanja Team Manager
 
-Ažurirano nakon lokalnih revizija 24. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
+Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
+
+## REV4-03 / REV4-04 / REV4-05 — dovršeno 25. 11. 2026.
+
+Aktivni paket: `artifacts/rev4-export-titles-catalog`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589), readiness 200. Konfiguracija i poslovni podaci očuvani su bez migracije (shema 11 / protokol 5).
+
+- **REV4-03:** CSV zaglavlja koriste jezik trenutačnog zahtjeva. HR zadržava `Id,Naslov,Projekt,Status,Prioritet,Nositelj,Rok` i `zadaci.csv`; EN dobiva `Id,Title,Project,Status,Priority,Assignee,Due date` i `issues.csv`. Ostaju isti redoslijed i broj stupaca, puni filtrirani skup, izvorna imena/statusi/prioriteti, ISO datumi, UTF-8 BOM, escaping navodnika/zareza/novih redaka te apostrofna zaštita formula. Izvoz ne prevodi korisnički sadržaj.
+- **REV4-04:** naslovi kartica koriste učitani model: katalog definicija i njegova vrsta razlikuju se od vrijednosti konkretnog projekta/korisnika/vremena; pojedinačna polja uključuju dopušteni naziv entiteta. Vlastiti profil ima osobnu oznaku, tuđi opis profila korisnika; registracijski zahtjevi, odbijen pristup i greška imaju opisne HR/EN naslove. Sadržaj naslova kodira Razor kao tekst; ne gradi se iz neprovjerenog URL-a. Nedostupni zapisi ostaju generički 404 bez privatnih imena.
+- **REV4-05:** puna administracija ima novu poveznicu Definicije prilagodljivih polja. Samo katalog bez entityId označava tu sekundarnu poveznicu, bez lažne aktivacije osobnog profila. Vrijednosti polja konkretnog entiteta zadržavaju prethodno označavanje projekata/vremena/vlastitog ili tuđeg korisnika. Osnovni uvjet pune administracije kataloga nije promijenjen.
+
+`Test-ExportTitlesCatalog.cjs` prolazi na privremenom SQL Serveru te izoliranim Oracle/Db2 shemama, HR/EN: zaglavlja/nazivi CSV-a, BOM, ISO datumi, neprevedeni podaci, više redaka u ćeliji, navodnici/zarezi i ASCII/Unicode formule, sortiranje/filtriranje; kontekstualni naslovi i pokušaj zatvaranja title elementa s umetnutim HTML-om, sa i bez JavaScripta; katalog naspram vrijednosti, axe, odbijen pristup i opoziv. Skripta stvara regresijske podatke i koristi se samo na izoliranim bazama.
+
+Konačni SQL paket prolazi `Test-NavigationRevision.cjs` s 52 zadatka (50 + 2 u prikazu, svih 52 u izvozu), `Test-DocumentDraftsFilters.cjs` i `Test-LocalizedNavigation.cjs`. Nakon postavljanja prolaze `Test-ProductDemo.cjs` (28 HR/EN axe provjera i ovlasti) te `Test-ReviewSmoke.cjs` nad postojećim Db2 podacima bez poslovnih upisa. Na stvarnom demou dodatno su potvrđeni HR/EN CSV zaglavlja/nazivi, opisni naslovi i katalog na 320 px bez prelijevanja. Dokazi su lokalno u ignoriranoj mapi `artifacts/rev4-export-evidence`; jezik administratora vraćen je na početnu vrijednost.
+
+Svih pet nalaza četvrte revizije lokalno je zatvoreno. Ciljni IIS/OpenShift, bankarske integracije, NVDA i Db2 z/OS ostaju odvojeni uvjeti iz osnovnog backloga.
 
 ## REV4-01 / REV4-02 — dovršeno 24. 11. 2026.
 

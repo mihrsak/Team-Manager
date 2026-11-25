@@ -1,18 +1,18 @@
 # Backlog Team Manager
 
-## Četvrta revizija — status dorada 24. 11. 2026.
+## Četvrta revizija — status dorada 25. 11. 2026.
 
-Pregled aktualnog paketa rev3-navigation-complete (aed6e3d / kod 10c8943) na Db2 demou: 80 HR/EN prikaza i axe provjera, tri uloge, mobilnih 320 px, negativni unosi dokumenata, filtri i CSV. Pet nalaza: jedan P1, jedan P2 i tri P3. REV4-01 i REV4-02 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Preostaju REV4-03/04/05. Dokazi i kriteriji: [PRODUCT-REVIEW-2026-11-24-R4.md](PRODUCT-REVIEW-2026-11-24-R4.md).
+Pregled aktualnog paketa rev3-navigation-complete (aed6e3d / kod 10c8943) na Db2 demou: 80 HR/EN prikaza i axe provjera, tri uloge, mobilnih 320 px, negativni unosi dokumenata, filtri i CSV. Pet nalaza: jedan P1, jedan P2 i tri P3. REV4-01–REV4-05 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Svih pet nalaza četvrte revizije lokalno je zatvoreno. Dokazi i kriteriji: [PRODUCT-REVIEW-2026-11-24-R4.md](PRODUCT-REVIEW-2026-11-24-R4.md).
 
 | Stavka | Prioritet | Status / predložena dorada |
 |---|---|---|
 | REV4-01 | P1 | Dovršeno: sirovi naslov/opis i početni prazni retci ostaju nakon greške naslova, veličine ili nedostajuće datoteke; zaštita odlaska/reloada i HR/EN uputa za ponovni odabir. Ispravljena predaja stvara jedan dokument. Sva tri providera. |
 | REV4-02 | P2 | Dovršeno: nevaljani/ponovljeni filtri daju lokaliziranu grešku bez rezultata i skupnih radnji; eksplicitni nevaljan odabir, generički 404 za nedostupan projekt i 400 za nevaljan CSV. Provjera prije spremanja upita/izmjene; ponovno provjeren spremljeni upit nakon opoziva. HR/EN, sva tri providera. |
-| REV4-03 | P3 | Otvoreno: uskladiti EN CSV zaglavlja i naziv datoteke uz očuvan ugovor i sigurnost izvoza. |
-| REV4-04 | P3 | Otvoreno: opisni HR/EN naslovi polja, registracijskih zahtjeva i odbijenog pristupa; razlikovati vlastiti i tuđi profil. |
-| REV4-05 | P3 | Prijedlog: razlikovati administrativni katalog definicija polja od osobnih vrijednosti u navigaciji. |
+| REV4-03 | P3 | Dovršeno: HR zadržava postojeća zaglavlja/zadaci.csv, EN koristi prevedena zaglavlja/issues.csv; očuvani stupci, izvorni podaci, UTF-8 BOM, ISO datumi, escaping i zaštita formula. Sva tri providera; SQL regresija 52 retka. |
+| REV4-04 | P3 | Dovršeno: opisni HR/EN naslovi kataloga i vrijednosti polja, registracijskih zahtjeva i grešaka; vlastiti/tuđi profil s autoriziranim imenom. Sigurno HTML kodiranje i generički privatni 404, sa i bez JS-a. |
+| REV4-05 | P3 | Dovršeno: katalog definicija ima zasebnu administratorsku poveznicu i aktivnu sekundarnu oznaku; pojedinačne vrijednosti čuvaju projektni/vremenski/osobni kontekst. Ovlasti i zabrana pristupa bez pune administracije ostaju očuvane. |
 
-Sljedeće: REV4-03/04, zatim REV4-05. Regresija: scripts/Test-DocumentDraftsFilters.cjs na izoliranim bazama. Prethodni REV3 popravci prolaze provjerene regresije; novi nalazi obuhvaćaju dodatne scenarije izvan prethodnih kriterija. Svježe pozitivne provjere upisa/povratka provedene su u privremenim SQL bazama, dok je demo sačuvan. Naknadne Oracle/Db2/SQL provjere obuhvaćaju ove popravke; vanjski produkcijski uvjeti nisu ponovno potvrđivani.
+Četvrta revizija lokalno je dovršena. Regresija izvoza/naslova/kataloga: scripts/Test-ExportTitlesCatalog.cjs na izoliranim bazama. Ciljne integracijske i produkcijske provjere ostaju zasebne. Regresija: scripts/Test-DocumentDraftsFilters.cjs na izoliranim bazama. Prethodni REV3 popravci prolaze provjerene regresije; novi nalazi obuhvaćaju dodatne scenarije izvan prethodnih kriterija. Svježe pozitivne provjere upisa/povratka provedene su u privremenim SQL bazama, dok je demo sačuvan. Naknadne Oracle/Db2/SQL provjere obuhvaćaju ove popravke; vanjski produkcijski uvjeti nisu ponovno potvrđivani.
 
 ## Treća revizija — status dorada 24. 11. 2026.
 

@@ -19,12 +19,16 @@ public sealed class ActiveNavigationTagHelper : TagHelper
         output.Attributes.RemoveAll("aria-current");
         if(ViewContext.HttpContext.Response.StatusCode>=400) return;
         var page=ViewContext.RouteData.Values["page"]?.ToString();
-        var section=Area=="administration"?page:Primary(page);
+        var section=Area=="administration"?Administration(page):Primary(page);
         var target=System.Net.WebUtility.HtmlDecode(output.Attributes["href"]?.Value?.ToString());
         if(section is not null && target is not null &&
             ReturnNavigation.PagePath(target,ViewContext.HttpContext).Equals(section,StringComparison.OrdinalIgnoreCase))
             output.Attributes.SetAttribute("aria-current","page");
     }
+
+    private string? Administration(string? page)=>page=="/CustomFields"
+        ? ViewContext.ViewData.Model is CustomFieldsModel {EntityId:null}?"/CustomFields":null
+        : page;
 
     private string? Primary(string? page)=>page switch
     {
@@ -34,6 +38,7 @@ public sealed class ActiveNavigationTagHelper : TagHelper
         "/ApiTokens" or "/EmailNotifications"=>"/Profile",
         "/RegistrationRequests" or "/Groups"=>"/Users",
         "/Profile" when ViewContext.ViewData.Model is ProfileModel person=>person.IsSelf?"/Profile":"/Users",
+        "/CustomFields" when ViewContext.ViewData.Model is CustomFieldsModel {EntityId:null}=>null,
         "/CustomFields" when ViewContext.ViewData.Model is CustomFieldsModel fields=>fields.Scope switch
         {
             "project"=>"/Projects", "time"=>"/TimeReport",

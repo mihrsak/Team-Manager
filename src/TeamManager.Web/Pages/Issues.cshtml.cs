@@ -213,7 +213,9 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
         var user = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var rows = await store.List(user, ProjectId, Status, Query);
         Priorities=await workflow.Values("priority");
-        var csv = new StringBuilder("\uFEFFId,Naslov,Projekt,Status,Prioritet,Nositelj,Rok\r\n");
+        var csv = new StringBuilder("\uFEFF");
+        csv.AppendJoin(',',new[]{"Id","Naslov","Projekt","Status","Prioritet","Nositelj","Rok"}.Select(label=>text[label].Value));
+        csv.Append("\r\n");
         NormalizeLayout();
         foreach (var row in Sort(rows))
         {
@@ -223,7 +225,8 @@ public class IssuesModel(IssueStore store,WorkflowStore workflow,SavedIssueQuery
             csv.Append("\r\n");
         }
         Response.Headers.CacheControl = "private, no-store";
-        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv; charset=utf-8", "zadaci.csv");
+        return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv; charset=utf-8",
+            CultureInfo.CurrentUICulture.TwoLetterISOLanguageName=="en"?"issues.csv":"zadaci.csv");
     }
 
     private static string CsvCell(string? value)
