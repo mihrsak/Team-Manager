@@ -1,5 +1,19 @@
 # Backlog Team Manager
 
+## Peta revizija — otvorene dorade 25. 11. 2026.
+
+Pregled commita ed45f22 na [Db2 demou](https://localhost:7610): 82 HR/EN prikaza i axe provjera, 320 px/desktop i tri uloge; završni demo test dodaje 28 axe provjera. Izolirani SQL Server potvrđuje nove sukobe polja/skupnih radnji i neuspjelu registraciju; prolazi i regresija prethodnih nacrta dokumenata/filtara. Pet nalaza ostaje otvoreno, bez implementacije u ovoj reviziji. Reprodukcije, ograničenja i kriteriji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md).
+
+| Stavka | Prioritet | Status / predložena dorada |
+|---|---|---|
+| REV5-01 | P1 | Otvoreno: pri sukobu sačuvati nacrt prilagodljivih polja projekta/korisnika/vremena/zadatka, izvornu reviziju i zaštitu odlaska; izričit pregled aktualne vrijednosti prije ponovnog pokušaja. |
+| REV5-02 | P2 | Otvoreno: nakon odbijene skupne izmjene očuvati odabrane zadatke i željene vrijednosti, uz pregled sukoba i siguran ponovni pokušaj. |
+| REV5-03 | P2 | Otvoreno: 32 MiB prijenos prelazi HTTP limit i vodi na generički 400; dodati provjeru prije slanja i HR/EN oporavak. Povratak u provjerenom Edgeu vraća tekst; nepovratan gubitak nije potvrđen. |
+| REV5-04 | P3 | Otvoreno: nakon registracijske greške sačuvati ime i broj radnika, lozinke ostaviti prazne; jasna HR/EN poruka i fokus. |
+| REV5-05 | P3 | Otvoreno: opisni HR/EN naslovi kartica za registraciju i početnu promjenu lozinke. |
+
+Predloženi redoslijed je REV5-01, REV5-02, REV5-03, zatim REV5-04/05. Novi nalazi ne mijenjaju ranije potvrđene kriterije REV4; novi opseg uključuje druge obrasce i HTTP limit prije obrade dokumenta. Pri implementaciji provjeriti sva tri providera; ova revizija nije svježa potvrda Oraclea ni ciljnog IIS-a/OpenShifta.
+
 ## Četvrta revizija — status dorada 25. 11. 2026.
 
 Pregled aktualnog paketa rev3-navigation-complete (aed6e3d / kod 10c8943) na Db2 demou: 80 HR/EN prikaza i axe provjera, tri uloge, mobilnih 320 px, negativni unosi dokumenata, filtri i CSV. Pet nalaza: jedan P1, jedan P2 i tri P3. REV4-01–REV4-05 sada su dovršeni i provjereni na SQL Serveru, Oracleu i Db2, HR/EN. Svih pet nalaza četvrte revizije lokalno je zatvoreno. Dokazi i kriteriji: [PRODUCT-REVIEW-2026-11-24-R4.md](PRODUCT-REVIEW-2026-11-24-R4.md).

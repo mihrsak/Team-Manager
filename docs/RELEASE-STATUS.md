@@ -2,6 +2,14 @@
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## Peta revizija — pregled dovršen 25. 11. 2026., pet dorada otvoreno
+
+Pregledan je ed45f22 / `artifacts/rev4-export-titles-catalog`, [demo](https://localhost:7610). U 82 HR/EN prikaza nema axe prijava, prelijevanja cijelog dokumenta na 320 px ni JS grešaka; provjerene granice privatnih projekata i tuđih profila ostaju očuvane. Završni `Test-ProductDemo.cjs` prolazi s dodatnih 28 HR/EN axe provjera i očuvanim demo podacima. `Test-DocumentDraftsFilters.cjs` ponovno prolazi na privremenom SQL Serveru, uključujući nacrte, nevaljane filtre, CSV, skupne radnje i opoziv prava u opsegu te regresije.
+
+Potvrđeno je pet novih nalaza: **REV5-01 P1** gubitak nacrta prilagodljivih polja pri sukobu; **REV5-02 P2** izgubljen odabir i vrijednosti odbijene skupne radnje; **REV5-03 P2** generički HTTP 400 nakon prijenosa iznad HTTP limita; **REV5-04 P3** izgubljeno ime/broj radnika pri registracijskoj validaciji; **REV5-05 P3** generički naslovi registracije i početne promjene lozinke. Kod velikog prijenosa povratak u provjerenom Edgeu vraća tekst; nepovratan gubitak nacrta nije potvrđen.
+
+Novi sukobi i registracija reproducirani su HR/EN u izoliranoj SQL bazi; veliki odbijeni prijenos i početni naslov na Db2 demou. Dokumentirani su nalazi i kriteriji, bez promjene aplikacijskog koda. Prethodni REV4 popravci ostaju zatvoreni u ranije provjerenom opsegu. Ovo nije nova provjera Oraclea, ciljnog IIS-a/OpenShifta ili NVDA. Detalji: [PRODUCT-REVIEW-2026-11-25-R5.md](PRODUCT-REVIEW-2026-11-25-R5.md); dokazi lokalno u `artifacts/product-review5-2026-11-25`.
+
 ## REV4-03 / REV4-04 / REV4-05 — dovršeno 25. 11. 2026.
 
 Aktivni paket: `artifacts/rev4-export-titles-catalog`; [demo](https://localhost:7610) i [postojeći Db2 pregled](https://localhost:7589), readiness 200. Konfiguracija i poslovni podaci očuvani su bez migracije (shema 11 / protokol 5).
