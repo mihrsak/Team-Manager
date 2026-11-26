@@ -8,6 +8,10 @@ namespace TeamManager.Web.Pages;
 public sealed class EmailNotificationsModel(EmailNotificationStore notifications, IConfiguration configuration, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     public EmailNotificationPreferences Settings { get; private set; } = new(null, false, false);
+    public bool HasDraft { get; private set; }
+    public string? DraftAddress { get; private set; }
+    public bool DraftSendWatchedIssues { get; private set; }
+    public bool DraftSendDueReminders { get; private set; }
     public bool DeliveryEnabled => configuration.GetValue<bool>("Smtp:Enabled");
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -19,6 +23,10 @@ public sealed class EmailNotificationsModel(EmailNotificationStore notifications
 
     public async Task<IActionResult> OnPostAsync(string? address, bool sendWatchedIssues, bool sendDueReminders)
     {
+        HasDraft = true;
+        DraftAddress = Request.Form["address"].ToString();
+        DraftSendWatchedIssues = sendWatchedIssues;
+        DraftSendDueReminders = sendDueReminders;
         address = address?.Trim();
         if (string.IsNullOrEmpty(address)) address = null;
         if (!ModelState.IsValid || (address is null && (sendWatchedIssues || sendDueReminders)) ||

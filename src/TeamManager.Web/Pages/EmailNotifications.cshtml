@@ -8,14 +8,14 @@
 @if (TempData["Notice"] is string notice) { <p class="notice">@Text[notice]</p> }
 <div asp-validation-summary="All"></div>
 <section class="card">
-    <form method="post">
+    <form method="post" data-unsaved-draft="@(Model.HasDraft ? "true" : null)">
         <label>@Text["Adresa e-pošte"]
-            <input name="address" type="email" value="@Model.Settings.Address" maxlength="254" autocomplete="email">
+            <input name="address" type="email" value="@(Model.HasDraft ? Model.DraftAddress : Model.Settings.Address)" maxlength="254" autocomplete="email">
         </label>
-        <label><input name="sendWatchedIssues" type="checkbox" value="true" checked="@Model.Settings.SendWatchedIssues">
+        <label><input name="sendWatchedIssues" type="checkbox" value="true" checked="@(Model.HasDraft ? Model.DraftSendWatchedIssues : Model.Settings.SendWatchedIssues)">
             @Text["Obavijesti o aktivnostima na praćenim zadacima"]
         </label>
-        <label><input name="sendDueReminders" type="checkbox" value="true" checked="@Model.Settings.SendDueReminders">
+        <label><input name="sendDueReminders" type="checkbox" value="true" checked="@(Model.HasDraft ? Model.DraftSendDueReminders : Model.Settings.SendDueReminders)">
             @Text["Podsjeti me na dan roka za dodijeljene otvorene zadatke"]
         </label>
         <button>@Text["Spremi postavke e-pošte"]</button>

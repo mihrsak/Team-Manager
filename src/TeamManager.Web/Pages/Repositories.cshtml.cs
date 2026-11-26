@@ -11,6 +11,9 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
     public List<ProjectRepository> Repositories { get; private set; } = [];
     public HashSet<int> Browsable { get; private set; } = [];
     public bool CanEdit { get; private set; }
+    public bool HasDraft { get; private set; }
+    public string? DraftName { get; private set; }
+    public string? DraftUrl { get; private set; }
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -35,6 +38,9 @@ public sealed class RepositoriesModel(ProjectStore projects, ProjectRepositorySt
         var result = await OnGetAsync(projectId);
         if (result is not PageResult) return result;
         if (!CanEdit) return Forbid();
+        HasDraft = true;
+        DraftName = Request.Form["name"].ToString();
+        DraftUrl = Request.Form["url"].ToString();
         name = name?.Trim();
         url = url?.Trim();
         if (name is null or { Length: 0 or > 80 } ||

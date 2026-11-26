@@ -33,22 +33,28 @@ public class UsersModel(UserStore store, OracleWorkspace oracle) : PageModel
         if (table is null || string.IsNullOrWhiteSpace(name) || name.Length > 100) return await Invalid("Unesi valjan naziv do 100 znakova.");
         if (oracle.Enabled)
         {
-            if (kind == "project")
-                await oracle.SaveProject(UserId, null, new ProjectInput { Name = name });
-            else
-                await oracle.WriteNamedAdministration(UserId, $"organization-name:{kind}:{name.ToUpperInvariant()}", async w =>
-                {
-                    if (!(await OracleWorkspace.Right(w, UserId, "organization.manage"))) throw new UnauthorizedAccessException();
-                    if ((await w.Rows(table)).Any(r => OracleWorkspace.Workspace.Text(r, "Name").Equals(name, StringComparison.OrdinalIgnoreCase)))
-                        throw new ArgumentException("Taj naziv već postoji.");
-                    if (kind == "unit") w.Add(table, ("Id", (await w.Next(table))), ("Name", name));
-                    else w.Add(table, ("Id", (await w.Next(table))), ("Name", name), ("CreatedAt", DateTime.UtcNow));
-                    await OracleWorkspace.Audit(w, UserId, $"organization.{kind}.create", name);
-                    return true;
-                });
+            try
+            {
+                if (kind == "project")
+                    await oracle.SaveProject(UserId, null, new ProjectInput { Name = name });
+                else
+                    await oracle.WriteNamedAdministration(UserId, $"organization-name:{kind}:{name.ToUpperInvariant()}", async w =>
+                    {
+                        if (!(await OracleWorkspace.Right(w, UserId, "organization.manage"))) throw new UnauthorizedAccessException();
+                        if ((await w.Rows(table)).Any(r => OracleWorkspace.Workspace.Text(r, "Name").Equals(name, StringComparison.OrdinalIgnoreCase)))
+                            throw new ArgumentException("Taj naziv već postoji.");
+                        if (kind == "unit") w.Add(table, ("Id", (await w.Next(table))), ("Name", name));
+                        else w.Add(table, ("Id", (await w.Next(table))), ("Name", name), ("CreatedAt", DateTime.UtcNow));
+                        await OracleWorkspace.Audit(w, UserId, $"organization.{kind}.create", name);
+                        return true;
+                    });
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (ArgumentException ex) { return await Invalid(ex.Message); }
             return RedirectToPage();
         }
         try { await store.ExecuteAudited(new(UserId, $"organization.{kind}.create", name), $"INSERT dbo.{table}(Name) VALUES(@name)", P("@name", name)); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return await Invalid("Taj naziv već postoji."); }
         return RedirectToPage();
     }

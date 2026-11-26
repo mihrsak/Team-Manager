@@ -98,6 +98,7 @@ public sealed class Permissions(IConfiguration config, OracleWorkspace oracle)
         if (oracle.Enabled) { await oracle.SaveRole(actorId, name, description, rights, create); return; }
         await Mutate(async (c, tx) =>
         {
+            await RequireRoleAdministration(c, tx, actorId);
             await using var cmd = new SqlCommand(create ? "INSERT dbo.Roles(Name,Description) VALUES(@name,@description)" : "UPDATE dbo.Roles SET Description=@description WHERE Name=@name; DELETE dbo.RolePermissions WHERE RoleName=@name", c, tx); cmd.Parameters.Add(P("@name", name)); cmd.Parameters.Add(P("@description", description)); await cmd.ExecuteNonQueryAsync();
             foreach (var right in rights.Distinct()) { await using var add = new SqlCommand("INSERT dbo.RolePermissions VALUES(@name,@right)", c, tx); add.Parameters.Add(P("@name", name)); add.Parameters.Add(P("@right", right)); await add.ExecuteNonQueryAsync(); }
             await AdministrationAuditStore.Write(c, tx, new(actorId, create ? "role.create" : "role.update", name, string.Join(", ", rights.Distinct().Order())));
@@ -108,9 +109,25 @@ public sealed class Permissions(IConfiguration config, OracleWorkspace oracle)
         if (oracle.Enabled) { await oracle.AssignRole(actorId, userId, role, remove); return; }
         await Mutate(async (c, tx) =>
         {
+            await RequireRoleAdministration(c, tx, actorId);
             await using var cmd = new SqlCommand(remove ? "DELETE dbo.UserRoles WHERE UserId=@id AND RoleName=@role" : "IF NOT EXISTS(SELECT 1 FROM dbo.UserRoles WHERE UserId=@id AND RoleName=@role) INSERT dbo.UserRoles VALUES(@id,@role)", c, tx); cmd.Parameters.Add(P("@id", userId)); cmd.Parameters.Add(P("@role", role));
             if (await cmd.ExecuteNonQueryAsync() > 0)
                 await AdministrationAuditStore.Write(c, tx, new(actorId, remove ? "role.revoke" : "role.assign", $"#{userId}", role));
         });
+    }
+
+    private static async Task RequireRoleAdministration(SqlConnection connection, SqlTransaction transaction, int actorId)
+    {
+        await using var command = new SqlCommand("""
+            SELECT CASE WHEN EXISTS(
+                SELECT 1 FROM dbo.AppUsers a
+                JOIN dbo.EffectiveUserRoles r ON r.UserId=a.Id
+                JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName
+                WHERE a.Id=@actor AND a.IsActive=1 AND p.Permission IN ('*','roles.manage')
+            ) THEN 1 ELSE 0 END
+            """, connection, transaction);
+        command.Parameters.Add(P("@actor", actorId));
+        if (Convert.ToInt32(await command.ExecuteScalarAsync()) != 1)
+            throw new UnauthorizedAccessException();
     }
 }

@@ -10,9 +10,9 @@
 {
     <section class="card">
         <h2>@Text["Poveži repozitorij"]</h2>
-        <form method="post" asp-page-handler="Add" asp-route-projectId="@Model.Project.Id">
-            <label>@Text["Naziv"]<input name="name" maxlength="80" required></label>
-            <label>@Text["HTTPS adresa repozitorija"]<input name="url" type="url" maxlength="500" required></label>
+        <form method="post" asp-page-handler="Add" asp-route-projectId="@Model.Project.Id" data-unsaved-draft="@(Model.HasDraft ? "true" : null)">
+            <label>@Text["Naziv"]<input name="name" value="@Model.DraftName" maxlength="80" required></label>
+            <label>@Text["HTTPS adresa repozitorija"]<input name="url" type="url" value="@Model.DraftUrl" maxlength="500" required></label>
             <button>@Text["Dodaj repozitorij"]</button>
         </form>
     </section>

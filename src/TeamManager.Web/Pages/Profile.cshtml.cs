@@ -42,17 +42,22 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
         if (!User.IsInRole("users.manage")) unit = Person.OrganizationUnitId;
         if (oracle.Enabled)
         {
-            await oracle.WriteAccount(UserId, id, async w =>
+            try
             {
-                if (UserId != id && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
-                if (unit is not null && (await w.Find("OrganizationUnits", unit.Value)) is null) throw new ArgumentException("Organizacijska jedinica nije valjana.");
-                var row = (await w.Find("AppUsers", id)) ?? throw new UnauthorizedAccessException();
-                if (unit != OracleWorkspace.Workspace.OptionalInt(row, "OrganizationUnitId") && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
-                OracleWorkspace.Workspace.Set(row, "DisplayName", name);
-                OracleWorkspace.Workspace.Set(row, "JobTitle", job);
-                OracleWorkspace.Workspace.Set(row, "OrganizationUnitId", unit);
-                await OracleWorkspace.Audit(w, UserId, "account.update", Person.EmployeeNumber); return true;
-            });
+                await oracle.WriteAccount(UserId, id, async w =>
+                {
+                    if (UserId != id && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
+                    if (unit is not null && (await w.Find("OrganizationUnits", unit.Value)) is null) throw new ArgumentException("Organizacijska jedinica nije valjana.");
+                    var row = (await w.Find("AppUsers", id)) ?? throw new UnauthorizedAccessException();
+                    if (unit != OracleWorkspace.Workspace.OptionalInt(row, "OrganizationUnitId") && !(await OracleWorkspace.Right(w, UserId, "users.manage"))) throw new UnauthorizedAccessException();
+                    OracleWorkspace.Workspace.Set(row, "DisplayName", name);
+                    OracleWorkspace.Workspace.Set(row, "JobTitle", job);
+                    OracleWorkspace.Workspace.Set(row, "OrganizationUnitId", unit);
+                    await OracleWorkspace.Audit(w, UserId, "account.update", Person.EmployeeNumber); return true;
+                });
+            }
+            catch (UnauthorizedAccessException) { return Forbid(); }
+            catch (ArgumentException ex) { return Invalid(ex.Message); }
             return Success(id, "Podaci su spremljeni.");
         }
         const string sql = "UPDATE dbo.AppUsers SET DisplayName=@n,JobTitle=@j,OrganizationUnitId=@o WHERE Id=@id";
@@ -64,6 +69,7 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
             else
                 await store.Execute(sql, parameters);
         }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number == 547) { return Invalid("Organizacijska jedinica nije valjana."); }
         return Success(id, "Podaci su spremljeni.");
     }
@@ -171,6 +177,7 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
         if (!User.IsInRole("roles.manage")) return Forbid(); await OnGetAsync(id); if (Person is null) return NotFound();
         if (!Roles.Any(x => x.Name == role)) return Invalid("Nepostojeća rola.");
         try { await permissions.Assign(UserId, id, role, remove); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number == 51001) { return Invalid("Mora ostati barem jedan puni administrator."); }
         catch (InvalidOperationException ex) { return Invalid(ex.Message); }
         return Success(id, "Globalne role su spremljene.");
