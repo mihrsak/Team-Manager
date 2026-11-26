@@ -219,3 +219,8 @@ Završni prošireni Oracle browser paket sada provjerava 52 HR/EN WCAG A/AA sken
 ## Lokalni prekid baze i readiness
 
 `pwsh -NoProfile -File scripts/Test-HealthRecovery.ps1 -PackagePath <čisti-Windows-paket>` stvara vlastitu SQL Express bazu, pokreće paket na HTTPS portu 7558 (promjenjivo s `-Port`) i provjerava liveness/readiness prije, tijekom i nakon OFFLINE/ONLINE ciklusa samo te baze. Potreban je pouzdan razvojni certifikat i SQL ovlasti nad privremenom bazom. Paket s appsettings.Local.json odbija se. Ne gasi SQL servis, IIS ili postojeće aplikacije. Vlastiti proces i bazu uklanja, a varijable okoline vraća na izvorne vrijednosti. Test nije proba mrežnog ispada niti bankarskog nadzora.
+## Provjera ZIP-a bez baze
+
+`pwsh -NoProfile -File scripts/Test-PackageArchive.ps1 -PackagePath <paket.zip>` provjerava obvezne runtime/IIS/dokumentacijske datoteke, zabranjene lokalne konfiguracije i odabrane privatne ekstenzije, sigurne/jedinstvene ZIP putanje, zadanu praznu SQL vezu i SHA-256 podudaranje svih migracijskih SQL/JSON datoteka s trenutačnim checkoutom. Stari paket iz druge verzije migracija zato treba provjeravati uz pripadajući checkout.
+
+`pwsh -NoProfile -File scripts/Test-PackageArchiveGuards.ps1 -PackagePath <paket.zip>` dokazuje odbijanje pet sintetičkih neispravnih arhiva; izvorni ZIP ne mijenja. Obje skripte izvršavaju se u GitHub Actions prije uploada paketa. Testovi ne traže bazu i nisu potpuni skener tajni niti aplikacijski E2E.

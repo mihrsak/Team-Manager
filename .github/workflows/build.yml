@@ -19,6 +19,13 @@ jobs:
       - name: Package
         shell: pwsh
         run: ./scripts/Publish-Windows.ps1
+      - name: Verify Windows archive
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem artifacts/windows-*.zip | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $package) { throw 'Windows package is missing.' }
+          ./scripts/Test-PackageArchive.ps1 -PackagePath $package.FullName
+          ./scripts/Test-PackageArchiveGuards.ps1 -PackagePath $package.FullName
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:

@@ -1,5 +1,12 @@
 # Backlog Team Manager
 
+## QA-LOCAL-04 — provjera distributivnog ZIP-a, dovršeno lokalno 26. 11. 2026.
+
+Dodani `Test-PackageArchive.ps1` i `Test-PackageArchiveGuards.ps1`, povezani u GitHub Actions prije objave Windows artefakta. Na paketu `artifacts/windows-20261126-153839.zip` prolaze tri pozitivne provjere: runtime/IIS/dokumentacija, identični SHA-256 hashovi svih 54 SQL/JSON migracijskih datoteka i ispravni zadani runtime/IIS/config ulazi. Pet negativnih slučajeva odbija lokalnu konfiguraciju, izlazak iz direktorija putem ZIP putanje, nedostajući obvezni sadržaj, duplikat ZIP zapisa i izmijenjenu migraciju. Negativni ZIP-ovi su sintetički i uklanjaju se nakon testa.
+
+Ovo je provjera strukture i određenih konfiguracijskih pravila, ne potpuni skener tajni ili zamjena za SQL/Oracle/Db2 integracijske testove. SQL provjere obnove i prekida baze ostaju lokalne; GitHub runneru ne trebaju SQL instanca ni bankarske vjerodajnice za ovu provjeru.
+
+
 ## OPS-LOCAL-05 — prekid baze i oporavak readinessa, dovršeno 26. 11. 2026.
 
 Novi `scripts/Test-HealthRecovery.ps1` provjeren je s paketom `artifacts/windows-20261126-153839` i zasebnom bazom `TeamManager_HealthTest_<guid>`. Tri scenarija prolaze: HTTPS liveness/readiness 200 pri pokretanju; nakon namjernog OFFLINE samo testne baze readiness 503 uz liveness 200 i bez detalja baze u HTTP tijelu; nakon ONLINE isti aplikacijski proces vraća readiness 200 bez restarta. Proces i vlastita testna baza uklonjeni su u finally bloku. Dokaz: `artifacts/local-health-recovery-20261126.log`.
