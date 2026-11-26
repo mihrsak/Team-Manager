@@ -1,5 +1,12 @@
 # Backlog Team Manager
 
+## OPS-LOCAL-05 — prekid baze i oporavak readinessa, dovršeno 26. 11. 2026.
+
+Novi `scripts/Test-HealthRecovery.ps1` provjeren je s paketom `artifacts/windows-20261126-153839` i zasebnom bazom `TeamManager_HealthTest_<guid>`. Tri scenarija prolaze: HTTPS liveness/readiness 200 pri pokretanju; nakon namjernog OFFLINE samo testne baze readiness 503 uz liveness 200 i bez detalja baze u HTTP tijelu; nakon ONLINE isti aplikacijski proces vraća readiness 200 bez restarta. Proces i vlastita testna baza uklonjeni su u finally bloku. Dokaz: `artifacts/local-health-recovery-20261126.log`.
+
+Ovo je kontrolirani prekid lokalne SQL baze. Ne simulira ispad mreže/klastera, restart SQL servisa, gubitak podataka, sve korisničke obrasce ili produkcijski sustav nadzora. Ciljni OPS-03 ostaje otvoren.
+
+
 ## OPS-LOCAL-04 — stvarna obnova i povratak, dovršeno 26. 11. 2026.
 
 Proširen `scripts/Test-Rollback.ps1` i provjeren s paketima `artifacts/review13-final` i `artifacts/windows-20261126-153839`. Isključivo privremene baze `TeamManager_RollbackTest_<guid>`: COPY_ONLY/CHECKSUM backup i VERIFYONLY, obnova u zasebnu bazu i fizičke datoteke, SHA-256 usporedba šest tablica prije pokretanja aplikacije (projekti, korisnici, zadaci, povijest, vrijeme i privitci), provjera nepromijenjenog izvora, readiness/prijava/projekt iz obnovljene baze te nadogradnja i povratak na prethodni paket i stanje baze. Usporedba uključuje Unicode, hashove lozinki i binarni sadržaj. Test ne tvrdi da uspoređuje svaku tablicu ili produkcijski RTO.
