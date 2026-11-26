@@ -2,7 +2,7 @@
 
 ## Osma revizija — 26. 11. 2026.
 
-REV8-01/02/03 implementirani i provjereni na izoliranim SQL Server, Oracle i Db2 bazama uz HR/EN: oporavak nacrta zadatka nakon ponovljenog sukoba, očuvanje odbijenih komentara i odvojene privatne bilješke. IIS objava i završni prihvat ostaju otvoreni jer Windows administratorsko pokretanje nije potvrđeno; port 7443 još koristi prethodni paket. Detalji: [PRODUCT-REVIEW-2026-11-26-R8.md](PRODUCT-REVIEW-2026-11-26-R8.md).
+REV8-01/02/03 implementirani i provjereni na izoliranim SQL Server, Oracle i Db2 bazama uz HR/EN: oporavak nacrta zadatka nakon ponovljenog sukoba, očuvanje odbijenih komentara i odvojene privatne bilješke. Paket review8-final objavljen je na IIS-u nakon ponovljenog UAC zahtjeva, uz verificirani backup i HTTPS readiness 200. HR/EN provjere nacrta i glavni IIS prihvat prolaze. Detalji: [PRODUCT-REVIEW-2026-11-26-R8.md](PRODUCT-REVIEW-2026-11-26-R8.md).
 
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.

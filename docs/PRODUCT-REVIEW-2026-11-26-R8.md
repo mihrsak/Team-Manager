@@ -22,6 +22,10 @@ Ovaj pregled ne potvrđuje odsutnost svih grešaka. NVDA, test opterećenja i ci
 
 ## Status IIS objave
 
-Objava novog paketa nije izvršena: Windows Start-Process -Verb RunAs završio je porukom „The operation was canceled by the user.” Administratorska skripta nije pokrenuta i manifest objave nije nastao. Na https://localhost:7443 ostaje prethodni paket review7-final. Za završnu IIS provjeru potreban je uspješan Windows UAC korak, zatim Test-IssueDraftRecovery.cjs, Test-IisLocalAcceptance.cjs i ponovljeni HR/EN pregled. Osnovni pregled 82 prikaza odnosi se na postojeći IIS paket, ne na novu objavu. REV8 popravci potvrđeni su na izoliranim bazama; status objave i završnog IIS prihvata ostaje otvoren.
+Prvi Windows administratorski zahtjev prekinut je bez pokretanja skripte. Nakon korisnikova zahtjeva za ponavljanjem, UAC je potvrđen i objava je dovršena. Paket review8-final radi na https://localhost:7443 iz direktorija C:\inetpub\TeamManager-LocalTest\review-20261126-064917. Verificirani su COPY_ONLY backup, hash paketa i HTTPS readiness 200. Manifest: artifacts/review8-iis-update.json.
+
+Na novom IIS paketu prolaze HR/EN Test-IssueDraftRecovery.cjs i Test-IisLocalAcceptance.cjs: izvorni tekst i validacija, odvojeni komentari i bilješke, ponovljeni sukobi i oporavak, projekti/zadaci/komentari/vrijeme/pretraga/CSV, 404, mobilni izvještaj i axe. Dokazi: artifacts/review8-iis-drafts.log i artifacts/review8-iis-acceptance.log.
 
 Dodatna HR/EN regresija `Test-FieldBulkDrafts.cjs` na izoliranom Db2 prošla je: polja, izvorne revizije, ponovljeni sukobi, odabir/postavke skupnih izmjena, atomarni oporavak i opoziv ovlasti. Rezultat: `artifacts/review8-field-bulk.log`.
+
+Završni pregled novog IIS paketa ponovio je 82 HR/EN prikaza: nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. Dokaz: artifacts/review8-overview-final.log; pregled je obnovio artifacts/product-review8-2026-11-26/overview.json. REV8-01/02/03 zatvoreni su u provjerenom lokalnom opsegu.
