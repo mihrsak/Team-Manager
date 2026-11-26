@@ -1,5 +1,10 @@
 # Status izdanja Team Manager
 
+## Trinaesta revizija — dovršeno 26. 11. 2026.
+
+REV13-01–04 zatvoreni su u provjerenom lokalnom opsegu: transakcijske provjere SQL upisa foruma i grupa nakon zaključavanja, zaštićeni nacrti grupa i definicija te očuvan odabir ograničene vidljivosti polja. Šesnaest kontroliranih slučajeva provjereno je samo na privremenim SQL bazama; HR/EN funkcionalni tokovi prolaze na SQL Serveru, Oracleu i Db2 te na IIS-u. Paket `artifacts/review13-final` radi na [https://localhost:7443](https://localhost:7443), uz verificirani backup, hash i readiness 200. Završnih 82 HR/EN prikaza nema novih axe prijava, prelijevanja dokumenta ili JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R13.md).
+
+
 ## Dvanaesta revizija — dovršeno 26. 11. 2026.
 
 REV12-01–04 zatvoreni su u provjerenom lokalnom opsegu: registracijska provjera administratora nakon zaključavanja, lokalizirana zaštita posljednjeg grupnog administratora te nacrti rola i tijeka rada. Osam race slučajeva provjereno je samo na privremenom SQL Serveru; scenarij jedinog grupnog administratora samo na svježim Oracle/Db2 shemama. Paket `artifacts/review12-final` objavljen je na [lokalnom IIS-u](https://localhost:7443), uz verificirani backup, hash i HTTPS readiness 200. Funkcionalne HR/EN IIS provjere registracija, rola, tijeka rada, grupa i glavnih tokova prolaze. Završnih 82 HR/EN prikaza nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R12.md).

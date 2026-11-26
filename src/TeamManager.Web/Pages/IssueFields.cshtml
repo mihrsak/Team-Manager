@@ -9,9 +9,9 @@
 {
     <section class="card">
         <h2>@Text["Novo tekstualno polje"]</h2>
-        <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id">
-            <label>@Text["Naziv"]<input name="name" maxlength="100" required></label>
-            <label><input type="checkbox" name="managersOnly" value="true"> @Text["Samo upravitelji projekta"]</label>
+        <form method="post" asp-page-handler="Create" asp-route-projectId="@Model.Project.Id" data-unsaved-draft="@(Model.HasCreateDraft ? "true" : null)">
+            <label>@Text["Naziv"]<input name="name" value="@Model.CreateName" maxlength="100" required></label>
+            <label><input type="checkbox" name="managersOnly" value="true" checked="@Model.CreateManagersOnly"> @Text["Samo upravitelji projekta"]</label>
             <button>@Text["Dodaj polje"]</button>
         </form>
     </section>

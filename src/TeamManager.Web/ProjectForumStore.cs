@@ -52,36 +52,68 @@ public sealed class ProjectForumStore(IConfiguration config, OracleWorkspace ora
         if (oracle.Enabled) return await oracle.CreateForumTopic(actor, project, title, body);
         await using var connection = Connect();
         await connection.OpenAsync();
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await using (var target = new SqlCommand("SELECT Id FROM dbo.Projects WITH(UPDLOCK,HOLDLOCK) WHERE Id=@project", connection, transaction))
+        {
+            target.Parameters.Add(P("@project", project));
+            if (await target.ExecuteScalarAsync() is null) return null;
+        }
+        if (!await CanWrite(connection, transaction, actor, project, "forum.post")) return null;
         await using var command = new SqlCommand("""
             INSERT dbo.ForumTopics(ProjectId,AuthorId,Title,Body) OUTPUT inserted.Id
-            SELECT Id,@actor,@title,@body FROM dbo.Projects WITH(HOLDLOCK)
-            WHERE Id=@project AND State='Active'
-            """, connection);
+            VALUES(@project,@actor,@title,@body)
+            """, connection, transaction);
         command.Parameters.AddRange([P("@actor", actor), P("@project", project), P("@title", title), P("@body", body)]);
-        return (int?)await command.ExecuteScalarAsync();
+        var id = (int?)await command.ExecuteScalarAsync();
+        await transaction.CommitAsync();
+        return id;
     }
 
     public Task<bool> Reply(int actor, int project, int topic, string body)
-        => oracle.Enabled ? oracle.ReplyForum(actor, project, topic, body) : Change("""
-            INSERT dbo.ForumReplies(TopicId,AuthorId,Body)
-            SELECT t.Id,@actor,@body FROM dbo.ForumTopics t WITH(UPDLOCK,HOLDLOCK)
-            JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=t.ProjectId
-            WHERE t.Id=@topic AND t.ProjectId=@project AND t.IsLocked=0 AND p.State='Active'
-            """, P("@actor", actor), P("@project", project), P("@topic", topic), P("@body", body));
+        => oracle.Enabled ? oracle.ReplyForum(actor, project, topic, body) : Change(actor, project, topic, "forum.post", true,
+            "INSERT dbo.ForumReplies(TopicId,AuthorId,Body) VALUES(@topic,@actor,@body)", P("@body", body));
 
     public Task<bool> SetLocked(int actor, int project, int topic, bool locked)
-        => oracle.Enabled ? oracle.LockForum(actor, project, topic, locked) : Change("""
-            UPDATE t SET IsLocked=@locked FROM dbo.ForumTopics t
-            JOIN dbo.Projects p WITH(HOLDLOCK) ON p.Id=t.ProjectId
-            WHERE t.Id=@topic AND t.ProjectId=@project AND p.State='Active'
-            """, P("@project", project), P("@topic", topic), P("@locked", locked));
+        => oracle.Enabled ? oracle.LockForum(actor, project, topic, locked) : Change(actor, project, topic, "forum.moderate", false,
+            "UPDATE dbo.ForumTopics SET IsLocked=@locked WHERE Id=@topic AND ProjectId=@project", P("@locked", locked));
 
-    private async Task<bool> Change(string sql, params SqlParameter[] parameters)
+    private async Task<bool> Change(int actor, int project, int topic, string permission, bool requireUnlocked, string sql, params SqlParameter[] parameters)
     {
         await using var connection = Connect();
         await connection.OpenAsync();
-        await using var command = new SqlCommand(sql, connection);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        await using (var target = new SqlCommand("SELECT IsLocked FROM dbo.ForumTopics WITH(UPDLOCK,HOLDLOCK) WHERE Id=@topic AND ProjectId=@project", connection, transaction))
+        {
+            target.Parameters.AddRange([P("@topic", topic), P("@project", project)]);
+            var locked = await target.ExecuteScalarAsync();
+            if (locked is null || requireUnlocked && Convert.ToBoolean(locked)) return false;
+        }
+        if (!await CanWrite(connection, transaction, actor, project, permission)) return false;
+        await using var command = new SqlCommand(sql, connection, transaction);
+        command.Parameters.AddRange([P("@actor", actor), P("@project", project), P("@topic", topic)]);
         command.Parameters.AddRange(parameters);
-        return await command.ExecuteNonQueryAsync() == 1;
+        var changed = await command.ExecuteNonQueryAsync() == 1;
+        await transaction.CommitAsync();
+        return changed;
+    }
+
+    private static async Task<bool> CanWrite(SqlConnection connection, SqlTransaction transaction, int actor, int project, string permission)
+    {
+        // Check after acquiring the target lock and retain the authorization reads
+        // through commit, including inherited and group-derived project rights.
+        await using var command = new SqlCommand("""
+            WITH rights AS (
+                SELECT p.Permission FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName WHERE r.UserId=@actor
+                UNION
+                SELECT p.Permission FROM dbo.EffectiveProjectRoles(@project,@actor) r JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName
+            )
+            SELECT CASE WHEN EXISTS(SELECT 1 FROM dbo.AppUsers WHERE Id=@actor AND IsActive=1)
+                AND EXISTS(SELECT 1 FROM dbo.Projects WHERE Id=@project AND State='Active'
+                    AND (IsPublic=1 OR EXISTS(SELECT 1 FROM rights WHERE Permission IN ('*','issues.view','projects.manage'))))
+                AND EXISTS(SELECT 1 FROM rights WHERE Permission IN ('*',@permission))
+                THEN 1 ELSE 0 END OPTION(MAXRECURSION 0)
+            """, connection, transaction);
+        command.Parameters.AddRange([P("@actor", actor), P("@project", project), P("@permission", permission)]);
+        return Convert.ToInt32(await command.ExecuteScalarAsync()) == 1;
     }
 }

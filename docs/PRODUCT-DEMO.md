@@ -2,7 +2,7 @@
 
 Završni pregled od 25. 11. 2026.: [https://localhost:7610/Projects](https://localhost:7610/Projects). Lokalni demonstracijski administrator: `admin` / `admin`. Ovaj račun pripada isključivo lokalnoj demo bazi. Demo korisnici `demo.lead`, `demo.dev` i `demo.viewer` imaju generiranu lozinku u ignoriranoj datoteci `LocalDemoAccess.private.json`; ne spremati je u Git niti koristiti za stvarne račune.
 
-Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste paket `artifacts/review7-current-preview` i lokalni dotnet HTTPS proces. Aktualni Windows paket `artifacts/review12-final` dodatno je objavljen i provjeren na [lokalnom IIS-u, port 7443](https://localhost:7443), uz njegovu zasebnu SQL testnu bazu i očuvanu konfiguraciju. [Dvanaesta revizija](PRODUCT-REVIEW-2026-11-26-R12.md) i [IIS/NVDA prihvat](LOCAL-IIS-NVDA-2026-11-25.md) odvojeni su od čistog Db2 demoa; IIS sadrži označene regresijske zapise.
+Postojeći radni podaci ostaju dostupni odvojeno na [https://localhost:7589/Projects](https://localhost:7589/Projects). Oba pregleda koriste paket `artifacts/review7-current-preview` i lokalni dotnet HTTPS proces. Aktualni Windows paket `artifacts/review13-final` dodatno je objavljen i provjeren na [lokalnom IIS-u, port 7443](https://localhost:7443), uz njegovu zasebnu SQL testnu bazu i očuvanu konfiguraciju. [Trinaesta revizija](PRODUCT-REVIEW-2026-11-26-R13.md) i [IIS/NVDA prihvat](LOCAL-IIS-NVDA-2026-11-25.md) odvojeni su od čistog Db2 demoa; IIS sadrži označene regresijske zapise.
 
 ## Sadržaj i tokovi za pregled
 

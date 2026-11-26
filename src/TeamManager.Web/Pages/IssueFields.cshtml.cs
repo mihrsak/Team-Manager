@@ -9,6 +9,9 @@ public sealed class IssueFieldsModel(ProjectStore projects, IssueFieldStore fiel
 {
     public ProjectDetail Project { get; private set; } = null!;
     public List<IssueField> Fields { get; private set; } = [];
+    public bool HasCreateDraft { get; private set; }
+    public string? CreateName { get; private set; }
+    public bool CreateManagersOnly { get; private set; }
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     public async Task<IActionResult> OnGetAsync(int projectId)
@@ -41,6 +44,9 @@ public sealed class IssueFieldsModel(ProjectStore projects, IssueFieldStore fiel
         var result = await OnGetAsync(projectId);
         if (result is not PageResult) return result;
         if (Project.Input.State != "Active") return Forbid();
+        HasCreateDraft = true;
+        CreateName = Request.Form["name"].ToString();
+        CreateManagersOnly = managersOnly;
         name = name?.Trim();
         if (!ModelState.IsValid || name is null or { Length: 0 or > 100 })
         {

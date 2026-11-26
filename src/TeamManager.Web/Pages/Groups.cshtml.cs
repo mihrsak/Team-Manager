@@ -5,12 +5,19 @@ using Microsoft.Data.SqlClient;
 
 namespace TeamManager.Web.Pages;
 
+public sealed record GroupMemberDraft(int GroupId, string UserId);
+public sealed record GroupRoleDraft(int GroupId, string Role);
+
 public sealed class GroupsModel(GroupStore groups, UserStore users, Permissions permissions, Microsoft.Extensions.Localization.IStringLocalizer<UiText> text) : PageModel
 {
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public GroupDirectory Directory { get; private set; } = new([], []);
     public List<DirectoryEntry> Users { get; private set; } = [];
     public List<AccessRole> Roles { get; private set; } = [];
+    public bool HasCreateDraft { get; private set; }
+    public string? CreateName { get; private set; }
+    public GroupMemberDraft? MemberDraft { get; private set; }
+    public GroupRoleDraft? RoleDraft { get; private set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -21,17 +28,28 @@ public sealed class GroupsModel(GroupStore groups, UserStore users, Permissions 
         return Page();
     }
 
-    public Task<IActionResult> OnPostCreateAsync(string? name)
+    public async Task<IActionResult> OnPostCreateAsync(string? name)
     {
+        if (!User.IsInRole("*")) return Forbid();
+        HasCreateDraft = true;
+        CreateName = Request.Form["name"].ToString();
         name = name?.Trim();
-        return Save(name is { Length: > 0 and <= 100 } ? () => groups.Create(UserId, name) : null);
+        return await Save(name is { Length: > 0 and <= 100 } ? () => groups.Create(UserId, name) : null);
     }
 
-    public Task<IActionResult> OnPostMemberAsync(int groupId, int userId, bool remove)
-        => Save(groupId > 0 && userId > 0 ? () => groups.SetMember(UserId, groupId, userId, remove) : null);
+    public async Task<IActionResult> OnPostMemberAsync(int groupId, int userId, bool remove)
+    {
+        if (!User.IsInRole("*")) return Forbid();
+        MemberDraft = new(groupId, Request.Form["userId"].ToString());
+        return await Save(groupId > 0 && userId > 0 ? () => groups.SetMember(UserId, groupId, userId, remove) : null);
+    }
 
-    public Task<IActionResult> OnPostRoleAsync(int groupId, string? role, bool remove)
-        => Save(groupId > 0 && role is { Length: > 0 and <= 30 } ? () => groups.SetRole(UserId, groupId, role, remove) : null);
+    public async Task<IActionResult> OnPostRoleAsync(int groupId, string? role, bool remove)
+    {
+        if (!User.IsInRole("*")) return Forbid();
+        RoleDraft = new(groupId, Request.Form["role"].ToString());
+        return await Save(groupId > 0 && role is { Length: > 0 and <= 30 } ? () => groups.SetRole(UserId, groupId, role, remove) : null);
+    }
 
     private async Task<IActionResult> Save(Func<Task>? change)
     {

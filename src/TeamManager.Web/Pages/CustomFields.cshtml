@@ -38,8 +38,8 @@ else
     </div>
     <section class="card">
         <h2>@Text[labels[Model.Scope]]</h2>
-        <form method="post" asp-page-handler="Create" asp-route-scope="@Model.Scope">
-            <label>@Text["Naziv"]<input name="name" maxlength="100" required></label>
+        <form method="post" asp-page-handler="Create" asp-route-scope="@Model.Scope" data-unsaved-draft="@(Model.HasCreateDraft ? "true" : null)">
+            <label>@Text["Naziv"]<input name="name" value="@Model.CreateName" maxlength="100" required></label>
             <button>@Text["Dodaj polje"]</button>
         </form>
     </section>

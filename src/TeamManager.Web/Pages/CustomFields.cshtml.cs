@@ -10,6 +10,8 @@ public sealed record FieldValueDraft(int FieldId, int Revision, string Value);
 public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
 {
     public FieldValueDraft? Draft { get; private set; }
+    public bool HasCreateDraft { get; private set; }
+    public string? CreateName { get; private set; }
     public string Scope { get; private set; } = "";
     public int? EntityId { get; private set; }
     public FieldTarget? Target { get; private set; }
@@ -40,10 +42,13 @@ public sealed class CustomFieldsModel(CustomFieldStore fields) : PageModel
         if (!User.IsInRole("*")) return Forbid();
         var result = await OnGetAsync(scope, null);
         if (result is not PageResult) return result;
+        HasCreateDraft = true;
+        CreateName = Request.Form["name"].ToString();
         name = name?.Trim();
         if (name is null or { Length: 0 or > 100 }) return Invalid("Unesi valjan naziv do 100 znakova.");
 
         try { await fields.Create(UserId, Scope, name); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Invalid("Taj naziv već postoji."); }
         catch (ArgumentException) { return Invalid("Taj naziv već postoji."); }
         return RedirectToPage(new { scope = Scope });

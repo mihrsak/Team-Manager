@@ -4,6 +4,7 @@ $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
 $dll=(Resolve-Path $ApplicationDll).Path
 $db='TeamManager_AccountTest_'+[guid]::NewGuid().ToString('N')
+$logPrefix=Join-Path $root ('artifacts/account-sql-'+$db)
 $process=$null
 $previous=@{}
 $variables=@{
@@ -18,9 +19,9 @@ $variables=@{
 try {
     if(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue){throw 'Test port already in use.'}
     foreach($key in $variables.Keys){$previous[$key]=[Environment]::GetEnvironmentVariable($key,'Process');[Environment]::SetEnvironmentVariable($key,$variables[$key],'Process')}
-    dotnet $dll --apply-schema --create-database *> (Join-Path $root 'artifacts/account-sql-migration.log')
+    dotnet $dll --apply-schema --create-database *> ($logPrefix+'-migration.log')
     if($LASTEXITCODE){throw 'Account SQL test migration failed.'}
-    $process=Start-Process dotnet -ArgumentList @('"'+$dll+'"','--urls',"https://localhost:$Port") -WorkingDirectory (Split-Path $dll) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $root 'artifacts/account-sql-server.log') -RedirectStandardError (Join-Path $root 'artifacts/account-sql-error.log')
+    $process=Start-Process dotnet -ArgumentList @('"'+$dll+'"','--urls',"https://localhost:$Port") -WorkingDirectory (Split-Path $dll) -WindowStyle Hidden -PassThru -RedirectStandardOutput ($logPrefix+'-server.log') -RedirectStandardError ($logPrefix+'-error.log')
     $ready=$false
     for($attempt=0;$attempt -lt 30 -and !$ready;$attempt++){try{$ready=(Invoke-WebRequest "https://localhost:$Port/health/ready" -TimeoutSec 2).StatusCode -eq 200}catch{Start-Sleep -Milliseconds 200}}
     if(!$ready){throw 'Account SQL test server did not become ready.'}

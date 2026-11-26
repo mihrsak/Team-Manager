@@ -6,36 +6,46 @@
 <div asp-validation-summary="All"></div>
 <section class="card">
     <h2>@Text["Nova grupa"]</h2>
-    <form method="post" asp-page-handler="Create">
-        <label>@Text["Naziv"]<input name="name" required maxlength="100"></label>
+    <form method="post" asp-page-handler="Create" data-unsaved-draft="@(Model.HasCreateDraft ? "true" : null)">
+        <label>@Text["Naziv"]<input name="name" value="@Model.CreateName" required maxlength="100"></label>
         <button>@Text["Kreiraj grupu"]</button>
     </form>
 </section>
 @foreach (var group in Model.Directory.Groups)
 {
     var assignments = Model.Directory.Assignments.Where(a => a.GroupId == group.Id).ToList();
+    var memberDraft = Model.MemberDraft?.GroupId == group.Id ? Model.MemberDraft : null;
+    var roleDraft = Model.RoleDraft?.GroupId == group.Id ? Model.RoleDraft : null;
     <section class="card">
         <h2>@group.Name</h2>
-        <form method="post" asp-page-handler="Member" asp-route-groupId="@group.Id">
+        <form method="post" asp-page-handler="Member" asp-route-groupId="@group.Id" data-unsaved-draft="@(memberDraft is not null ? "true" : null)">
             <label>@Text["Korisnik"]
                 <select name="userId" required>
+                    @if (memberDraft is not null && !Model.Users.Any(entry => entry.User.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == memberDraft.UserId))
+                    {
+                        <option value="@memberDraft.UserId" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>
+                    }
                     @foreach (var entry in Model.Users)
                     {
                         var member = assignments.Any(a => a.UserId == entry.User.Id);
-                        <option value="@entry.User.Id">@entry.User.DisplayName (@entry.User.EmployeeNumber)@(member ? $" · {Text["član"]}" : "")</option>
+                        <option value="@entry.User.Id" selected="@(memberDraft?.UserId == entry.User.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))">@entry.User.DisplayName (@entry.User.EmployeeNumber)@(member ? $" · {Text["član"]}" : "")</option>
                     }
                 </select>
             </label>
             <button>@Text["Dodaj člana"]</button>
             <button name="remove" value="true">@Text["Ukloni člana"]</button>
         </form>
-        <form method="post" asp-page-handler="Role" asp-route-groupId="@group.Id">
+        <form method="post" asp-page-handler="Role" asp-route-groupId="@group.Id" data-unsaved-draft="@(roleDraft is not null ? "true" : null)">
             <label>@Text["Globalna uloga"]
                 <select name="role" required>
+                    @if (roleDraft is not null && !Model.Roles.Any(role => role.Name == roleDraft.Role))
+                    {
+                        <option value="@roleDraft.Role" selected>@Text["Nevaljan odabir — odaberi ponovno"]</option>
+                    }
                     @foreach (var role in Model.Roles)
                     {
                         var assigned = assignments.Any(a => a.RoleName == role.Name);
-                        <option value="@role.Name">@role.Name@(assigned ? $" · {Text["dodijeljena"]}" : "")</option>
+                        <option value="@role.Name" selected="@(roleDraft?.Role == role.Name)">@role.Name@(assigned ? $" · {Text["dodijeljena"]}" : "")</option>
                     }
                 </select>
             </label>
