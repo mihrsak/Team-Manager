@@ -10,6 +10,11 @@ try{
     if(Test-Path (Join-Path $PackagePath 'appsettings.Local.json')){throw 'Package must not contain local configuration'}
     if(Test-Path (Join-Path $PackagePath 'appsettings.Development.json')){throw 'Package must not contain development configuration'}
     if(-not(Test-Path (Join-Path $PackagePath 'web.config'))){throw 'Missing IIS web.config'}
+    foreach($document in @('README.md','INSTALL.md','docs/INSTALL.md','docs/BACKLOG.md','docs/RELEASE-STATUS.md','docs/DB2-LOCAL.md','docs/TARGET-ACCEPTANCE.md')){
+        if(-not(Test-Path (Join-Path $PackagePath $document))){throw "Missing package documentation: $document"}
+    }
+    if(-not([IO.File]::ReadAllText((Join-Path $PackagePath 'INSTALL.md')).Contains('docs/INSTALL.md'))){throw 'Root install entry must link to bundled provider instructions'}
+    Write-Host 'PASS: Package includes provider instructions, backlog and target acceptance plan.'
     $env:ConnectionStrings__TeamManager="Server=localhost\SQLEXPRESS;Database=$dbName;Integrated Security=True;Encrypt=True;TrustServerCertificate=True"
     $env:ASPNETCORE_ENVIRONMENT='Production'
     & (Join-Path $PackagePath 'Install-Database.ps1') -CreateDatabase

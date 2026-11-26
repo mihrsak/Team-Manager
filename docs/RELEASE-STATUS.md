@@ -1,5 +1,14 @@
 # Status izdanja Team Manager
 
+## DELIV-01 — paket i aktualne upute, dovršeno 26. 11. 2026.
+
+Pri nastavku nakon REV13 pronađeni su zastarjeli uvodi README/INSTALL i problem izbora SDK-a: lokalni runtime bez SDK-a sprečavao je publish unatoč instaliranom .NET 10 SDK-u u Windowsu. Publish sada bira dostupni .NET 10 SDK, u ZIP uključuje README i dokumentaciju te zadržava korijenski INSTALL kao poveznicu na cjelovite upute.
+
+Provjeren je stvarni Windows paket `artifacts/windows-20261126-153839`: standardna SQL instalacija bez demoa, izričito i ponovljeno demo učitavanje bez duplikata, IIS konfiguracija, odsutnost lokalnih postavki i uključene upute. Pet paketnih provjera prolazi na privremenoj SQL bazi. Postojeći IIS `/health/ready` vraća 200; ova dorada ne mijenja aplikacijski kod ni postojeću IIS objavu. Oracle/Db2 i pregledničke regresije nisu ponovno izvođene za dokumentacijsku/paketnu promjenu.
+
+Sljedeće otvorene stavke zahtijevaju ciljne ulaze: [plan ciljnog prihvata](TARGET-ACCEPTANCE.md). Lokalna revizija 13 ostaje posljednja funkcionalna revizija; bankarske integracije i produkcijski prihvat nisu time zatvoreni.
+
+
 ## Trinaesta revizija — dovršeno 26. 11. 2026.
 
 REV13-01–04 zatvoreni su u provjerenom lokalnom opsegu: transakcijske provjere SQL upisa foruma i grupa nakon zaključavanja, zaštićeni nacrti grupa i definicija te očuvan odabir ograničene vidljivosti polja. Šesnaest kontroliranih slučajeva provjereno je samo na privremenim SQL bazama; HR/EN funkcionalni tokovi prolaze na SQL Serveru, Oracleu i Db2 te na IIS-u. Paket `artifacts/review13-final` radi na [https://localhost:7443](https://localhost:7443), uz verificirani backup, hash i readiness 200. Završnih 82 HR/EN prikaza nema novih axe prijava, prelijevanja dokumenta ili JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R13.md).

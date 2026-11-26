@@ -1,6 +1,6 @@
 # Instalacija Team Managera
 
-Status: razvojno izdanje. Aktualni implementirani opseg i preostali moduli zapisani su u docs/BACKLOG.md. Podržana baza ovog izdanja je SQL Server. Oracle/Db2/OCP nisu još implementirani.
+Status: razvojno izdanje s lokalno provjerenim SQL Server, Oracle i Db2 LUW modulima. Ciljni bankarski prihvat nije dovršen. Aktualni opseg i dokazi su u [backlogu](BACKLOG.md) i [statusu izdanja](RELEASE-STATUS.md). Sljedeće početne upute za instalaciju baze odnose se na SQL Server; Oracle koristi zaseban postupak niže u ovom dokumentu, a Db2 LUW [posebne upute](DB2-LOCAL.md). OpenShift predlošci i lokalna proba postoje; ciljni klaster i Db2 z/OS nisu potvrđeni.
 
 ## Iz izvornog koda
 
