@@ -20,7 +20,7 @@ Navedite stvarni lokalni račun ako početni admin više nije u uporabi. Test kr
 
 Pokriveno: bootstrap, opcionalna promjena lozinke, prijava, ovlasti, projektna izolacija, unos korisnika, promjena lozinke, migracije/demo ponovljivost, zadaci, konkurentne izmjene, komentari/XSS kodiranje, sati i CSRF.
 
-Nije pokriveno ovim skriptama: bankarski IIS/AD/OCP, opterećenje, backup restore i puna preglednička automatizacija. Backlog vodi preostale provjere.
+Gornje osnovne skripte nisu cijeli skup provjera. Zasebne lokalne provjere sada pokrivaju IIS, pregledničke tokove, pristupačnost, ograničeno opterećenje, obnovu i rollback. Aktualni opseg i završni status navedeni su u [lokalnom prihvatu](LOCAL-ACCEPTANCE-2026-11-26.md). Ciljni bankarski IIS/AD/OCP i produkcijski kapacitet ostaju zasebne provjere.
 
 PROJ-02: Test-Issues sada ima 35 provjera. Provjerava i kružne veze u hijerarhiji, konkurentno uređivanje projekta, privatnost, javno čitanje bez prava pisanja, zatvaranje/arhiviranje/ponovno otvaranje, izolaciju voditelja projekta i očuvanje postavki nakon ponovljene instalacije.
 

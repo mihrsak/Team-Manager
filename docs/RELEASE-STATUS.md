@@ -1,5 +1,12 @@
 # Status izdanja Team Manager
 
+## FINAL-LOCAL-01 — lokalna faza zatvorena 26. 11. 2026.
+
+Nema evidentiranih otvorenih obveznih lokalnih nalaza za dokumentirani implementirani opseg. [Završni pregled lokalnog prihvata](LOCAL-ACCEPTANCE-2026-11-26.md) objedinjuje REV13, paket/CI, obnovu/rollback i oporavak readinessa. Ovo je konsolidacija dokaza, ne novo izvođenje svih testova niti potvrda bankarske produkcije.
+
+Preostaje sedam područja [ciljnog prihvata](TARGET-ACCEPTANCE.md); biraju se primjenjiva odredišta/integracije. Novi lokalni krug opravdan je promjenom ili reproduciranim nalazom. Sljedeći korak je korisnički pilot nad probnim podacima i priprema ciljnog okruženja, bez neograničenog dodavanja testova bez razloga.
+
+
 ## QA-LOCAL-04 — provjera distributivnog ZIP-a, dovršeno lokalno 26. 11. 2026.
 
 Dodani `Test-PackageArchive.ps1` i `Test-PackageArchiveGuards.ps1`, povezani u GitHub Actions prije objave Windows artefakta. Na paketu `artifacts/windows-20261126-153839.zip` prolaze tri pozitivne provjere: runtime/IIS/dokumentacija, identični SHA-256 hashovi svih 54 SQL/JSON migracijskih datoteka i ispravni zadani runtime/IIS/config ulazi. Pet negativnih slučajeva odbija lokalnu konfiguraciju, izlazak iz direktorija putem ZIP putanje, nedostajući obvezni sadržaj, duplikat ZIP zapisa i izmijenjenu migraciju. Negativni ZIP-ovi su sintetički i uklanjaju se nakon testa.

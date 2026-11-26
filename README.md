@@ -35,6 +35,8 @@ Izostavite `-CreateDatabase` ako DBA već kreira bazu. `-Demo` dodajte samo za i
 
 ## Sljedeći koraci
 
+[Lokalni prihvat je zatvoren za dokumentirani implementirani opseg](docs/LOCAL-ACCEPTANCE-2026-11-26.md). Nema evidentiranih otvorenih obveznih lokalnih nalaza; ciljane regresije nastavljaju se uz buduće promjene ili prijavljene greške.
+
 Lokalno dovršene funkcionalnosti ne znače dovršen prihvat u banci. Otvoreni su povezivanje i provjera namjenskog sandučića, bankarski SSO/AD, ciljni IIS ili OpenShift, obnova/rollback i nadzor u ciljnom okruženju, produkcijski kapacitet te Db2 z/OS ako se odabere. [Plan ciljnog prihvata](docs/TARGET-ACCEPTANCE.md) navodi potrebne ulaze i kriterije bez označavanja tih provjera dovršenima.
 
 - [Lokalna okolina](docs/LOCAL-SETUP.md)

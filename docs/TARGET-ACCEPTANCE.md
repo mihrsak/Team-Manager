@@ -1,5 +1,7 @@
 # Ciljni prihvat — nastavak nakon lokalne revizije 13
 
+[Lokalna faza je zatvorena za dokumentirani opseg](LOCAL-ACCEPTANCE-2026-11-26.md). Tablica ima sedam ciljnih područja, ne sedam pojedinačnih testova. Odredišta i integracije provjeravaju se samo ako se odaberu; OCP i Db2 z/OS nisu obvezni za Windows/IIS sa SQL Serverom.
+
 Datum: 26. 11. 2026. Ovaj plan razdvaja lokalne dokaze od provjera koje zahtijevaju stvarno odredište. Lokalni dokaz nije potvrda bankarske konfiguracije. Nove produkcijske veze niti tajne nisu unesene ovim korakom.
 
 | Backlog | Potrebni ulazi | Kriterij zatvaranja u ciljnom okruženju |
