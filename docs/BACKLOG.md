@@ -1,5 +1,10 @@
 # Backlog Team Manager
 
+## Osma revizija — 26. 11. 2026.
+
+REV8-01/02/03 implementirani i provjereni na izoliranim SQL Server, Oracle i Db2 bazama uz HR/EN: oporavak nacrta zadatka nakon ponovljenog sukoba, očuvanje odbijenih komentara i odvojene privatne bilješke. IIS objava i završni prihvat ostaju otvoreni jer Windows administratorsko pokretanje nije potvrđeno; port 7443 još koristi prethodni paket. Detalji: [PRODUCT-REVIEW-2026-11-26-R8.md](PRODUCT-REVIEW-2026-11-26-R8.md).
+
+
 ## Sedma revizija — dovršeno 25. 11. 2026.
 
 Nova revizija stvarnog [IIS pregleda](https://localhost:7443), početno 0f1cef4, donijela je tri nalaza. Sva tri popravljena su uz HR/EN i provjere na IIS-u te izoliranim SQL Server/Oracle/Db2 bazama. Paket: `artifacts/review7-final`. Reprodukcije i dokazi: [PRODUCT-REVIEW-2026-11-25-R7.md](PRODUCT-REVIEW-2026-11-25-R7.md).

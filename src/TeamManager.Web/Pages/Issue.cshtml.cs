@@ -4,6 +4,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace TeamManager.Web.Pages;
 public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore links,RoadmapStore roadmap,IssuePersonalStore personal,IssueAttachmentStore attachments,IssueFieldStore fields):PageModel
 {
+    public IssueInput CurrentInput {get;private set;}=new();
+    public bool HasIssueDraft {get;private set;}
+    public bool HasIssueConflict => HasIssueDraft && Id is not null && Input.Revision != CurrentInput.Revision;
+    public string? CommentDraft {get;private set;}
+    public string? PrivateNoteDraft {get;private set;}
     public FieldValueDraft? FieldDraft { get; private set; }
     [BindProperty]public IssueInput Input{get;set;}=new();
     [BindProperty(SupportsGet=true)] public string? ReturnUrl {get;set;}
@@ -40,7 +45,7 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
     public async Task<IActionResult> OnGetAsync(int? id,int projectId)
     {
         Response.Headers.CacheControl = "private, no-store";
-        Id=id;
+        Id=id; CopyProjects.Clear(); MoveProjects.Clear();
         if(ReturnUrl is not null && !Url.IsLocalUrl(ReturnUrl)) ReturnUrl=null;
         Types=await workflow.Values("type");Statuses=await workflow.Values("status");Priorities=await workflow.Values("priority");
         if (id is int selected)
@@ -82,20 +87,33 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
         Types=await workflow.Selectable("type",id is null?null:Input.Type);
         Statuses=await workflow.Selectable("status",id is null?null:Input.Status);
         Priorities=await workflow.Selectable("priority",id is null?null:Input.Priority);
+        CurrentInput=Input;
         return Page();
     }
-    public async Task<IActionResult> OnPostSaveAsync(int? id,int projectId)
+    public async Task<IActionResult> OnPostSaveAsync(int? id,int projectId,bool resolveConflict=false,int? reviewedRevision=null)
     {
-        var submitted=Input;var result=await OnGetAsync(id,projectId);if(result is not PageResult)return result;Input=submitted;
-        if(!CanEdit)return Forbid();if(!ModelState.IsValid)return Page();
+        if(!ListFilterValidation.Valid(ModelState,"id","projectId","resolveConflict","reviewedRevision","Input.Revision") || resolveConflict && reviewedRevision is null or < 0) return BadRequest();
+        var submitted=Input;
+        if(resolveConflict){submitted.Revision=reviewedRevision!.Value;ModelState.Remove("Input.Revision");}
+        async Task<IActionResult> Restore()
+        {
+            var result=await OnGetAsync(id,projectId);if(result is not PageResult)return result;
+            if(!CanEdit)return Forbid();
+            Input=submitted;HasIssueDraft=true;
+            foreach(var pair in new[]{(Types,submitted.Type),(Statuses,submitted.Status),(Priorities,submitted.Priority)})
+                if(!string.IsNullOrEmpty(pair.Item2)&&!pair.Item1.Contains(pair.Item2))pair.Item1.Add(pair.Item2);
+            return Page();
+        }
+        var loaded=await Restore();if(loaded is not PageResult)return loaded;
+        if(!ModelState.IsValid)return Page();
         try{var saved=await store.Save(UserId,ProjectId,id,Input);TempData["Notice"]="Zadatak je spremljen.";return RedirectToPage(new{id=saved,returnUrl=ReturnUrl});}
         catch(UnauthorizedAccessException){return Forbid();}
-        catch(Exception ex) when(ex is ArgumentException or InvalidOperationException){ModelState.AddModelError("",ex.Message);return Page();}
+        catch(Exception ex) when(ex is ArgumentException or InvalidOperationException){var result=await Restore();if(result is not PageResult)return result;ModelState.AddModelError("",ex.Message);return Page();}
     }
     public async Task<IActionResult> OnPostCommentAsync(int id,string? text)
     {
         ModelState.Clear();var result=await OnGetAsync(id,0);if(result is not PageResult)return result;
-        try{await store.Comment(UserId,id,text??"");return RedirectToPage(new{id,returnUrl=ReturnUrl});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){ModelState.AddModelError("",ex.Message);return Page();}
+        try{await store.Comment(UserId,id,text??"");return RedirectToPage(new{id,returnUrl=ReturnUrl});}catch(UnauthorizedAccessException){return Forbid();}catch(ArgumentException ex){if(!CanComment)return Forbid();CommentDraft=Request.Form["text"].ToString();ModelState.AddModelError("",ex.Message);return Page();}
     }
     public async Task<IActionResult> OnPostTimeAsync(int id,DateTime? date,string? hours,string? note,string? activity)
     {
@@ -180,6 +198,8 @@ public class IssueModel(IssueStore store,WorkflowStore workflow,IssueLinkStore l
             ModelState.Clear();
             var result = await OnGetAsync(id, 0);
             if (result is not PageResult) return result;
+            if(!CanAddPrivateNote)return Forbid();
+            PrivateNoteDraft=Request.Form["text"].ToString();
             ModelState.AddModelError("", ex.Message);
             return Page();
         }

@@ -4,15 +4,28 @@
 <a href="@Model.BackUrl">@Text[Model.BackLabel]</a><h1>@(Model.Id is null?Text["Novi zadatak"].Value:Text["Zadatak #{0}", Model.Id!].Value)</h1><p>@Model.ProjectName</p>
 @if (Model.Id is not null)
 {
-    @if (Model.Input.IsPrivate == true) { <p class="badge">@Text["Privatni zadatak"]</p> }
+    @if (Model.CurrentInput.IsPrivate == true) { <p class="badge">@Text["Privatni zadatak"]</p> }
     <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Watch" asp-route-id="@Model.Id">
         <button name="watch" value="@(Model.IsWatching ? "false" : "true")">@(Model.IsWatching ? Text["Prestani pratiti"].Value : Text["Prati zadatak"].Value)</button>
     </form>
 }
 @if(TempData["Notice"] is string notice){<p class="notice">@Text[notice]</p>}<div asp-validation-summary="All"></div>
-<section class="card"><form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Save" asp-route-id="@Model.Id" asp-route-projectId="@Model.ProjectId">
+<section class="card"><form method="post" asp-route-returnUrl="@Model.ReturnUrl" data-unsaved-draft="@(Model.HasIssueDraft ? "true" : null)" asp-page-handler="Save" asp-route-id="@Model.Id" asp-route-projectId="@Model.ProjectId">
+@if(Model.HasIssueConflict){
+<section class="notice" aria-label="@Text["Aktualna spremljena verzija"]">
+<h2>@Text["Aktualna spremljena verzija"]</h2>
+<p>@Model.CurrentInput.Title</p><p style="white-space:pre-wrap">@Model.CurrentInput.Description</p>
+<dl><dt>@Text["Tip"] / @Text["Status"] / @Text["Prioritet"]</dt><dd>@Model.CurrentInput.Type / @Model.CurrentInput.Status / @Model.CurrentInput.Priority</dd>
+<dt>@Text["Nositelj"]</dt><dd>@(Model.Assignees.FirstOrDefault(x=>x.Id==Model.CurrentInput.AssigneeId)?.Name ?? "—")</dd>
+<dt>@Text["Verzija ili prekretnica"]</dt><dd>@(Model.RoadmapItems.FirstOrDefault(x=>x.Id==Model.CurrentInput.RoadmapItemId)?.Name ?? "—")</dd>
+<dt>@Text["Početak"] / @Text["Rok"]</dt><dd>@Model.CurrentInput.StartDate?.ToString("d") / @Model.CurrentInput.DueDate?.ToString("d")</dd>
+<dt>@Text["Privatni zadatak"]</dt><dd>@Text[Model.CurrentInput.IsPrivate == true ? "Da" : "Ne"]</dd></dl>
+</section>
+<input type="hidden" name="reviewedRevision" value="@Model.CurrentInput.Revision">
+<label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>
+}
 <input type="hidden" asp-for="Input.Revision"><fieldset disabled="@(!Model.CanEdit)" style="border:0;padding:0"><label>@Text["Naslov"]<input asp-for="Input.Title" required maxlength="200"></label><label>@Text["Opis"]<textarea asp-for="Input.Description" rows="5" maxlength="4000" style="width:100%"></textarea></label>
-<div class="grid"><label>@Text["Tip"]<select asp-for="Input.Type">@foreach(var v in Model.Types){<option>@v</option>}</select></label><label>@Text["Status"]<select asp-for="Input.Status">@foreach(var v in Model.Statuses){<option>@v</option>}</select></label><label>@Text["Prioritet"]<select asp-for="Input.Priority">@foreach(var v in Model.Priorities){<option>@v</option>}</select></label><label>@Text["Nositelj"]<select asp-for="Input.AssigneeId"><option value="">@Text["Nije dodijeljen"]</option>@foreach(var u in Model.Assignees){<option value="@u.Id">@u.Name</option>}</select></label><label>@Text["Verzija ili prekretnica"]<select asp-for="Input.RoadmapItemId"><option value="">@Text["Bez stavke plana"]</option>@foreach(var item in Model.RoadmapItems){<option value="@item.Id">@(item.Kind == "version" ? Text["Verzija"].Value : Text["Prekretnica"].Value) · @item.Name</option>}</select></label><label>@Text["Početak"]<input asp-for="Input.StartDate" type="date"></label><label>@Text["Rok"]<input asp-for="Input.DueDate" type="date"></label></div>
+<div class="grid"><label>@Text["Tip"]<select asp-for="Input.Type">@foreach(var v in Model.Types){<option>@v</option>}</select></label><label>@Text["Status"]<select asp-for="Input.Status">@foreach(var v in Model.Statuses){<option>@v</option>}</select></label><label>@Text["Prioritet"]<select asp-for="Input.Priority">@foreach(var v in Model.Priorities){<option>@v</option>}</select></label><label>@Text["Nositelj"]<select asp-for="Input.AssigneeId"><option value="">@Text["Nije dodijeljen"]</option>@if(Model.Input.AssigneeId is int missingAssignee && !Model.Assignees.Any(x=>x.Id==missingAssignee)){<option value="@missingAssignee">@Text["Nedostupan odabir"]</option>}@foreach(var u in Model.Assignees){<option value="@u.Id">@u.Name</option>}</select></label><label>@Text["Verzija ili prekretnica"]<select asp-for="Input.RoadmapItemId"><option value="">@Text["Bez stavke plana"]</option>@if(Model.Input.RoadmapItemId is int missingPlan && !Model.RoadmapItems.Any(x=>x.Id==missingPlan)){<option value="@missingPlan">@Text["Nedostupan odabir"]</option>}@foreach(var item in Model.RoadmapItems){<option value="@item.Id">@(item.Kind == "version" ? Text["Verzija"].Value : Text["Prekretnica"].Value) · @item.Name</option>}</select></label><label>@Text["Početak"]<input asp-for="Input.StartDate" type="date"></label><label>@Text["Rok"]<input asp-for="Input.DueDate" type="date"></label></div>
 @if (Model.CanEdit && (Model.Id is null || Model.CanSetPrivacy))
 {
     <label><input type="checkbox" name="Input.IsPrivate" value="true" checked="@(Model.Input.IsPrivate == true)"> @Text["Privatni zadatak"]</label>
@@ -32,9 +45,9 @@
                 @if(draft is not null){<p class="notice">@Text["Prikazana je aktualna spremljena stavka. Tvoj nacrt ostaje u obrascu."]</p><p>@Text["Aktualna vrijednost"]: @(field.Value ?? "—")</p>}
                 <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="SetField" asp-route-id="@Model.Id" data-unsaved-draft="@(draft is not null ? "true" : null)">
                     <input type="hidden" name="fieldId" value="@field.Id">
-                    <input type="hidden" name="revision" value="@(draft?.Revision ?? Model.Input.Revision)">
+                    <input type="hidden" name="revision" value="@(draft?.Revision ?? Model.CurrentInput.Revision)">
                     <label>@field.Name<input name="fieldValue" value="@(draft?.Value ?? field.Value)" maxlength="500"></label>
-                    @if(draft is not null && draft.Revision != Model.Input.Revision){<input type="hidden" name="reviewedRevision" value="@Model.Input.Revision"><label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>}
+                    @if(draft is not null && draft.Revision != Model.CurrentInput.Revision){<input type="hidden" name="reviewedRevision" value="@Model.CurrentInput.Revision"><label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>}
                     <button>@Text["Spremi vrijednost"]</button>
                 </form>
             }
@@ -50,7 +63,7 @@
     <section class="card">
         <h2>@Text["Kopiranje i premještanje"]</h2>
         <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Transfer" asp-route-id="@Model.Id">
-            <input type="hidden" name="revision" value="@Model.Input.Revision">
+            <input type="hidden" name="revision" value="@Model.CurrentInput.Revision">
             <label>@Text["Projekt za kopiju"]<select name="destination" required>@foreach(var project in Model.CopyProjects){<option value="@project.Id">@project.Name</option>}</select></label>
             <p>@Text["Kopija počinje u statusu Novo, bez nositelja i povijesti."]</p>
             <button>@Text["Kopiraj zadatak"]</button>
@@ -58,7 +71,7 @@
         @if (Model.MoveProjects.Count > 0)
         {
             <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Transfer" asp-route-id="@Model.Id">
-                <input type="hidden" name="revision" value="@Model.Input.Revision">
+                <input type="hidden" name="revision" value="@Model.CurrentInput.Revision">
                 <input type="hidden" name="move" value="true">
                 <label>@Text["Projekt za premještanje"]<select name="destination" required>@foreach(var project in Model.MoveProjects){<option value="@project.Id">@project.Name</option>}</select></label>
                 <p>@Text["Zadatak zadržava komentare, priloge, evidenciju vremena i povijest. Nositelj se uklanja ako nije član odredišnog projekta."]</p>
@@ -129,8 +142,8 @@
         }
         @if (Model.CanAddPrivateNote)
         {
-            <form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="PrivateNote" asp-route-id="@Model.Id">
-                <label>@Text["Bilješka vidljiva samo tebi"]<textarea name="text" maxlength="4000" rows="3" required></textarea></label>
+            <form method="post" asp-route-returnUrl="@Model.ReturnUrl" data-unsaved-draft="@(Model.PrivateNoteDraft is not null ? "true" : null)" asp-page-handler="PrivateNote" asp-route-id="@Model.Id">
+                <label>@Text["Bilješka vidljiva samo tebi"]<textarea name="text" maxlength="4000" rows="3" required>@("\n"+Model.PrivateNoteDraft)</textarea></label>
                 <button>@Text["Spremi bilješku"]</button>
             </form>
         }
@@ -163,7 +176,7 @@
     </section>
 }
 @if(Model.Id is not null){<div class="grid">
-@if(Model.CanComment){<section class="card"><h2>@Text["Komentar"]</h2><form method="post" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>@Text["Tekst"]<textarea name="text" required maxlength="4000" rows="4" style="width:100%"></textarea></label><button>@Text["Dodaj komentar"]</button></form></section>}
+@if(Model.CanComment){<section class="card"><h2>@Text["Komentar"]</h2><form method="post" asp-route-returnUrl="@Model.ReturnUrl" data-unsaved-draft="@(Model.CommentDraft is not null ? "true" : null)" asp-page-handler="Comment" asp-route-id="@Model.Id"><label>@Text["Tekst"]<textarea name="text" required maxlength="4000" rows="4" style="width:100%">@("\n"+Model.CommentDraft)</textarea></label><button>@Text["Dodaj komentar"]</button></form></section>}
 @if(Model.CanLogTime){<section class="card"><h2>@Text["Evidencija vremena"]</h2><form method="post" data-unsaved-draft="@(Model.HasTimeDraft ? "true" : null)" asp-route-returnUrl="@Model.ReturnUrl" asp-page-handler="Time" asp-route-id="@Model.Id"><label>@Text["Datum"]<input name="date" type="date" value="@Model.TimeDraftDate" required></label><label>@Text["Sati"]<input name="hours" type="text" inputmode="decimal" value="@Model.TimeDraftHours" required><small>@Text["Unesi datum i sate od 0,01 do 24 (najviše dvije decimale)."]</small></label><label>@Text["Aktivnost"]<input name="activity" maxlength="60" value="@Model.TimeDraftActivity" placeholder="@Text["Općenito"]"></label><label>@Text["Napomena"]<input name="note" maxlength="1000" value="@Model.TimeDraftNote"></label><button>@Text["Spremi vrijeme"]</button></form></section>}
 </div>@if(Model.ShowTime){<section class="card"><h2>@Text["Utrošeno vrijeme"]: @Model.Time.Sum(x=>x.Hours) h</h2><div class="table-scroll" role="region" aria-label="@Text["Utrošeno vrijeme"]" tabindex="0"><table class="issue-time-table"><thead><tr><th>@Text["Datum"]</th><th>@Text["Korisnik"]</th><th>@Text["Aktivnost"]</th><th>@Text["Sati"]</th><th>@Text["Napomena"]</th><th>@Text["Polja unosa vremena"]</th></tr></thead><tbody>@foreach(var t in Model.Time){<tr id="time-@t.Id"><td><a asp-page="/TimeEntry" asp-route-id="@t.Id" asp-route-issueId="@Model.Id" asp-route-returnUrl="@Model.TimeReturnUrl(t.Id)">@t.Date.ToString("d")</a></td><td>@t.Author</td><td>@t.Activity</td><td>@t.Hours</td><td>@t.Note</td><td><a asp-page="/CustomFields" asp-route-scope="time" asp-route-entityId="@t.Id" asp-route-returnUrl="@Model.TimeReturnUrl(t.Id)">@Text["Polja unosa vremena"]</a></td></tr>}</tbody></table></div></section>}
 <section class="card" aria-labelledby="issue-history-heading">
