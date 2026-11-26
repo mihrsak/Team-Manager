@@ -1,5 +1,10 @@
 # Backlog Team Manager
 
+## Jedanaesta revizija — dovršeno 26. 11. 2026.
+
+REV11-01–04 zatvoreni su u provjerenom lokalnom opsegu: zaštićeni netajni nacrti profila, stvaranja korisnika i organizacije; validacija filtara obavijesti/revizijskog zapisa prije dohvata ili označavanja; aktualne HR/EN upute ovlasti. Funkcionalne provjere prošle su na izoliranim SQL Server, Oracle i Db2 bazama te na IIS-u. R10 race regresija provedena je samo na privremenom SQL Serveru. Paket `artifacts/review11-final` radi na [https://localhost:7443](https://localhost:7443), uz verificirani backup, hash i readiness 200. Završnih 82 HR/EN prikaza nema novih axe prijava, prelijevanja ili JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R11.md).
+
+
 ## Deseta revizija — dovršeno 26. 11. 2026.
 
 REV10-01–05 zatvoreni su u provjerenom lokalnom opsegu. Administrativna validacija i nacrti repozitorija/e-pošte prošli su HR/EN na izoliranim SQL Server, Oracle i Db2 bazama. Šest kontroliranih SQL race slučajeva zasebno je provjereno samo na privremenoj SQL bazi. Paket `artifacts/review10-final` objavljen je i funkcionalno provjeren na [lokalnom IIS-u](https://localhost:7443), uz verificirani backup, hash paketa i HTTPS readiness 200. Završni pregled 82 HR/EN prikaza nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R10.md).

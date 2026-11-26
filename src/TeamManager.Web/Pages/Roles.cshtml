@@ -8,4 +8,4 @@
 @foreach(var permission in Permissions.Catalog){<label><input style="display:inline;width:auto" type="checkbox" name="rights" value="@permission.Key" checked="@role.Permissions.Contains(permission.Key)"> @Text[permission.Value]</label>}
 <button>@Text["Spremi ovlasti"]</button></form></section>}
 <section class="card"><h2>@Text["Nova rola"]</h2><form method="post"><input type="hidden" name="create" value="true"><label>@Text["Naziv"]<input name="name" required maxlength="30"></label><label>@Text["Opis"]<input name="description" maxlength="200"></label>@foreach(var permission in Permissions.Catalog){<label><input style="display:inline;width:auto" type="checkbox" name="rights" value="@permission.Key"> @Text[permission.Value]</label>}<button>@Text["Kreiraj rolu"]</button></form></section></div>
-<p class="muted">@Text["Prava za zadatke, dokumente i ostale module dodavat ćemo kada ti moduli budu implementirani. Posljednjem administratoru nije moguće ukloniti punu administraciju."]</p>
+<p class="muted">@Text["Posljednjem administratoru nije moguće ukloniti punu administraciju."]</p>

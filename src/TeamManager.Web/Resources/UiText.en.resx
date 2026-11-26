@@ -1436,4 +1436,6 @@
 <data name="Aktualna spremljena verzija" xml:space="preserve"><value>Current saved version</value></data>
 <data name="Nedostupan odabir" xml:space="preserve"><value>Unavailable selection</value></data>
 <data name="Unos vremena je promijenjen. Pregledaj aktualnu verziju prije ponovnog spremanja." xml:space="preserve"><value>The time entry has changed. Review the current version before saving again.</value></data>
+<data name="Puna administracija" xml:space="preserve"><value>Full administration</value></data>
+<data name="Posljednjem administratoru nije moguće ukloniti punu administraciju." xml:space="preserve"><value>The last full administrator must retain full administrative access.</value></data>
 </root>

@@ -14,10 +14,23 @@ public class UsersModel(UserStore store, OracleWorkspace oracle) : PageModel
     public List<Team> Units { get; set; } = [];
     public List<Team> Teams { get; set; } = [];
     public List<Team> Projects { get; set; } = [];
+    public bool HasCreateDraft { get; private set; }
+    public string? CreateEmployee { get; private set; }
+    public string? CreateName { get; private set; }
+    public string? CreateJob { get; private set; }
+    public string CreateUnitValue { get; private set; } = "";
+    public bool HasScopeDraft { get; private set; }
+    public string? ScopeName { get; private set; }
+    public string? ScopeKind { get; private set; }
     public async Task OnGetAsync() { Entries = await store.Directory(); Units = await store.Choices("unit"); Teams = await store.Choices("team"); Projects = await store.Choices("project"); }
     public async Task<IActionResult> OnPostCreateAsync(string? employee, string? name, string? job, int? unit, string? password)
     {
         if (!User.IsInRole("users.manage")) return Forbid();
+        HasCreateDraft = true;
+        CreateEmployee = Request.Form["employee"].ToString();
+        CreateName = Request.Form["name"].ToString();
+        CreateJob = Request.Form["job"].ToString();
+        CreateUnitValue = Request.Form["unit"].ToString();
         employee = employee?.Trim().ToLowerInvariant(); name = name?.Trim(); job = job?.Trim() ?? "";
         if (!ModelState.IsValid || !Regex.IsMatch(employee ?? "", @"^[a-z0-9._-]{1,30}$") || string.IsNullOrWhiteSpace(name) || name.Length > 100 || job.Length > 100 || password is null || password.Length < 7 || password.Length > 200)
             return await Invalid("Provjeri broj radnika, ime i lozinku (najmanje 7 znakova).");
@@ -29,6 +42,9 @@ public class UsersModel(UserStore store, OracleWorkspace oracle) : PageModel
     public async Task<IActionResult> OnPostScopeAsync(string? kind, string? name)
     {
         if (!User.IsInRole("organization.manage")) return Forbid();
+        HasScopeDraft = true;
+        ScopeKind = Request.Form["kind"].ToString();
+        ScopeName = Request.Form["name"].ToString();
         name = name?.Trim(); var table = kind switch { "unit" => "OrganizationUnits", "team" => "Teams", "project" => "Projects", _ => null };
         if (table is null || string.IsNullOrWhiteSpace(name) || name.Length > 100) return await Invalid("Unesi valjan naziv do 100 znakova.");
         if (oracle.Enabled)

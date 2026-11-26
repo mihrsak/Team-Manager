@@ -10,6 +10,10 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
 {
     public IActionResult OnPost() => BadRequest();
     public AppUser? Person { get; set; }
+    public bool HasProfileDraft { get; private set; }
+    public string? ProfileDraftName { get; private set; }
+    public string? ProfileDraftJob { get; private set; }
+    public string ProfileUnitValue { get; private set; } = "";
     public List<AccessRole> Roles { get; set; } = [];
     public List<string> GlobalRoles { get; set; } = [];
     public HashSet<int> ManageTeams { get; set; } = [];
@@ -37,6 +41,10 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
     public async Task<IActionResult> OnPostSaveAsync(int id, string? name, string? job, int? unit)
     {
         await OnGetAsync(id); if (Person is null) return NotFound(); if (!CanEdit) return Forbid();
+        HasProfileDraft = true;
+        ProfileDraftName = Request.Form["name"].ToString();
+        ProfileDraftJob = Request.Form["job"].ToString();
+        ProfileUnitValue = User.IsInRole("users.manage") ? Request.Form["unit"].ToString() : Person.OrganizationUnitId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
         name = name?.Trim(); job = job?.Trim() ?? "";
         if (!ModelState.IsValid || string.IsNullOrWhiteSpace(name) || name.Length > 100 || job.Length > 100) return Invalid("Unesi ime i funkciju do 100 znakova.");
         if (!User.IsInRole("users.manage")) unit = Person.OrganizationUnitId;

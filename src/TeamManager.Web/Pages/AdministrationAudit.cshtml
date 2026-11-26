@@ -3,7 +3,9 @@
 @model TeamManager.Web.Pages.AdministrationAuditModel
 @using TeamManager.Web.Pages
 <h1>@Text["Revizijski zapis"]</h1>
-<form method="get" class="card"><label>@Text["Pretraga"]<input asp-for="Query" type="search" maxlength="200"></label><button>@Text["Primijeni"]</button></form>
+<form method="get" class="card"><div asp-validation-summary="All"></div><label>@Text["Pretraga"]<input asp-for="Query" type="search" maxlength="200"></label><button>@Text["Primijeni"]</button></form>
+@if(Model.FiltersValid)
+{
 @if (Model.Entries.Count == 0)
 {
     <p>@Text["Nema zabilježenih administrativnih radnji."]</p>
@@ -30,3 +32,4 @@ else
 }
 
 <div class="pagination" role="navigation" aria-label="@Text["Stranice rezultata"]">@if(Model.PageNumber>1){<a href="@Model.PageUrl(Model.PageNumber-1)">@Text["Prethodna stranica"]</a>} <span>@Text["Stranica {0}",Model.PageNumber]</span> @if(Model.HasMore){<a href="@Model.PageUrl(Model.PageNumber+1)">@Text["Sljedeća stranica"]</a>}</div>
+}

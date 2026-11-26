@@ -6,7 +6,7 @@ namespace TeamManager.Web;
 public record AccessRole(string Name, string Description, List<string> Permissions);
 public sealed class Permissions(IConfiguration config, OracleWorkspace oracle)
 {
-    public static readonly Dictionary<string, string> Catalog = new() { ["*"] = "Plna administracija", ["users.manage"] = "Kreiranje i uređivanje korisnika", ["organization.manage"] = "Kreiranje jedinica, timova i projekata", ["roles.manage"] = "Uređivanje rola i dodjela globalnih ovlasti", ["members.manage"] = "Upravljanje članovima timova i projekata" };
+    public static readonly Dictionary<string, string> Catalog = new() { ["*"] = "Puna administracija", ["users.manage"] = "Kreiranje i uređivanje korisnika", ["organization.manage"] = "Kreiranje jedinica, timova i projekata", ["roles.manage"] = "Uređivanje rola i dodjela globalnih ovlasti", ["members.manage"] = "Upravljanje članovima timova i projekata" };
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
     static Permissions()
     {
