@@ -1431,4 +1431,6 @@
   <data name="Pregledao sam aktualne zadatke i želim primijeniti odabrane izmjene." xml:space="preserve"><value>I have reviewed the current issues and want to apply the selected changes.</value></data>
   <data name="Zahtjev je prevelik." xml:space="preserve"><value>The request is too large.</value></data>
   <data name="Vrati se u pregledniku i odaberi datoteku do 10 MiB." xml:space="preserve"><value>Go back in your browser and select a file up to 10 MiB.</value></data>
+  <data name="Uključeno" xml:space="preserve"><value>Enabled</value></data>
+  <data name="Isključeno" xml:space="preserve"><value>Disabled</value></data>
 </root>

@@ -19,6 +19,13 @@ public record ProjectDetail(int Id, ProjectInput Input);
 public sealed class ProjectStore(IConfiguration config, Permissions permissions, OracleWorkspace oracle)
 {
     private SqlConnection Connect() => new(config.GetConnectionString("TeamManager"));
+    public async Task<bool> HasGlobalAdministration(int user)
+    {
+        if(oracle.Enabled)return (await oracle.EffectiveSql(user,null,null)).Contains("*");
+        await using var c=Connect();await c.OpenAsync();
+        await using var command=new SqlCommand("SELECT CAST(CASE WHEN EXISTS(SELECT 1 FROM dbo.EffectiveUserRoles r JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName JOIN dbo.AppUsers a ON a.Id=r.UserId WHERE r.UserId=@id AND a.IsActive=1 AND p.Permission='*') THEN 1 ELSE 0 END AS bit)",c);
+        command.Parameters.Add(P("@id",user));return (bool)(await command.ExecuteScalarAsync())!;
+    }
     public async Task<bool> CanManage(int user, int? id)
     {
         if (oracle.Enabled) return await oracle.ManageSql(user, id);
@@ -35,6 +42,7 @@ public sealed class ProjectStore(IConfiguration config, Permissions permissions,
             await using var r = await cmd.ExecuteReaderAsync();
             while (await r.ReadAsync()) all.Add(new(r.GetInt32(0), new() { Name = r.GetString(1), Description = r.GetString(2), ParentId = r.IsDBNull(3) ? null : r.GetInt32(3), IsPublic = r.GetBoolean(4), State = r.GetString(5), Revision = r.GetInt32(6), IssuesEnabled = r.GetBoolean(7), TimeEnabled = r.GetBoolean(8), InheritParentRoles = r.GetBoolean(9) }));
         }
+        if(await HasGlobalAdministration(user))return all;
         var result = new List<ProjectDetail>();
         foreach (var p in all) { var rights = await permissions.Effective(user, "project", p.Id); if (p.Input.IsPublic || rights.Contains("*") || rights.Contains("issues.view") || rights.Contains("projects.manage")) result.Add(p); }
         return result;

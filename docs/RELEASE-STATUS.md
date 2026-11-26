@@ -2,6 +2,20 @@
 
 Ažurirano nakon lokalnih revizija 25. 11. 2026. SQL Server, Oracle i Db2 LUW podržavaju aktivne module: račune i ovlasti, projekte i zadatke, planove, vrijeme, prilagodljiva polja, dokumente, wiki, novosti, forum, Git poveznice/povijest, ulaznu e-poštu, obavijesti, SMTP/podsjetnike, osobne API tokene, registraciju i grupe. HR/EN sučelje je zadržano. Početni legacy pregled timskih stavki u Oracle načinu otvara aktivni pregled projekata.
 
+## REV7-01 / REV7-02 / REV7-03 — dovršeno 25. 11. 2026.
+
+Na [stvarnom lokalnom IIS-u](https://localhost:7443) radi `artifacts/review7-final`, uz očuvanu bazu i konfiguraciju te verificirani backup/hash/readiness. Dotnet [demo 7610](https://localhost:7610) i [radni pregled 7589](https://localhost:7589) koriste `artifacts/review7-current-preview`; demo/smoke regresije prolaze bez poslovnih upisa u te baze. Sheme i protokol zaključavanja nisu promijenjeni.
+
+- **REV7-01:** vraćeni nacrt projekta čuva sirovi tekst i pokušavanu reviziju te aktivira zaštitu odlaska/reloada. Aktualni podaci, roditelj i nasljeđivanje prikazuju se odvojeno; postojeći projekt zadržava smislen naslov i nakon nevaljanog naziva. Sukob zahtijeva izričit pregled nove revizije, a drugi sukob ponovno odbija upis. Izbor roditelja ne gomila duplikate, a nedostupan roditelj ima HR/EN oznaku bez privatnog naziva.
+- **REV7-02:** neuspjela promjena modula čuva oba odabira i izvornu reviziju uz prikaz aktualnih vrijednosti; preuzimanje revizije zahtijeva pregled, a drugi sukob ponovno odbija upis. Provjera vezanih parametara prethodi čišćenju ModelStatea; nevaljana revizija daje 400 bez izmjene modula.
+- **REV7-03:** provjera stvarne globalne ovlasti `*` iz baze uklanja ponavljanje iste provjere po projektu za punu administraciju. Ostalim korisnicima ostaju pojedinačne provjere; upisi i dalje ponovno autoriziraju korisnika i provjeravaju reviziju. Nema cachea prava ili oslanjanja na stari cookie.
+
+`Test-ProjectDrafts.cjs` prolazi na IIS-u i izoliranim SQL Server/Oracle/Db2 bazama, HR/EN: validacija, izvorni tekst/revizije, dva sukoba projekta i modula, potvrđeni oporavak, stvarni odbijeni odlazak/reload, axe, nevaljani parametri, nedostupan privatni roditelj i opoziv članstva. Konačni IIS paket dodatno prolazi slučaj novog projekta bez netočne poruke o postojećoj spremljenoj verziji. Prolaze `Test-IisLocalAcceptance.cjs` i prethodni `Test-FieldBulkDrafts.cjs`.
+
+Ponovljeni pregled 82 HR/EN prikaza nema axe prijava, prelijevanja cijelog dokumenta na 320 px ni JS grešaka; vizualno su provjereni mobilni projekt i vrijeme. Kratki lokalni IIS uzorak ima 1606 odgovora bez HTTP grešaka, p95 448 ms pri 25 paralelnih zahtjeva. Nema tvrdnje o usporedivom benchmarku prije/poslije ili ciljnom kapacitetu. Nova NVDA sesija nije ponavljana u ovom pregledu.
+
+[Izvještaj sedme revizije](PRODUCT-REVIEW-2026-11-25-R7.md). Sva tri nova nalaza lokalno su zatvorena; novi potvrđeni nalazi nakon ponovljenog pregleda nisu ostali otvoreni. Ciljna produkcija i vanjske integracije ostaju zasebne provjere.
+
 ## Lokalni IIS i NVDA — dovršeno 25. 11. 2026.
 
 Aktualni Windows paket `artifacts/iis-local-verified` radi na **stvarnom [IIS-u, port 7443](https://localhost:7443)**, uz očuvane prethodne konfiguracije i SQL podatke. Nadogradnja ima verificirani COPY_ONLY/CHECKSUM backup, shemu 43, readiness 200 i provjeru hasha. Dotnet [demo 7610](https://localhost:7610) i [radni Db2 pregled 7589](https://localhost:7589) usklađeni su paketom `artifacts/iis-a11y-complete`; prolaze njihove demo/smoke regresije bez poslovnih upisa.

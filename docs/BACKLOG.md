@@ -1,5 +1,17 @@
 # Backlog Team Manager
 
+## Sedma revizija — dovršeno 25. 11. 2026.
+
+Nova revizija stvarnog [IIS pregleda](https://localhost:7443), početno 0f1cef4, donijela je tri nalaza. Sva tri popravljena su uz HR/EN i provjere na IIS-u te izoliranim SQL Server/Oracle/Db2 bazama. Paket: `artifacts/review7-final`. Reprodukcije i dokazi: [PRODUCT-REVIEW-2026-11-25-R7.md](PRODUCT-REVIEW-2026-11-25-R7.md).
+
+| Stavka | Prioritet | Status |
+|---|---|---|
+| REV7-01 | P1 | Zatvoreno: zaštićeni vraćeni nacrti projekta, sirovi tekst i izvorne revizije, aktualni kontekst/hijerarhija i izričit pregled prije ponovnog upisa; drugi sukob, odlazak/reload, kodiranje i opoziv prava. |
+| REV7-02 | P2 | Zatvoreno: odabiri modula i izvorna revizija ostaju nakon sukoba, aktualni odabiri prikazani su odvojeno; izričit pregled, ponovljeni sukob i 400 bez upisa za nevaljano vezanu reviziju. |
+| REV7-03 | P2 | Zatvoreno: puna administracija provjerava se u bazi bez ponavljanja istog upita za svaki roditeljski projekt. Pojedinačna prava drugih korisnika i ponovna autorizacija upisa ostaju očuvani. |
+
+Ponovljeni pregled 82 HR/EN prikaza nema novih axe prijava, prelijevanja cijelog dokumenta ni JS grešaka. Prolaze glavni IIS tokovi i prethodne regresije polja/skupnih radnji. Novi lokalni uzorak opterećenja: 1606 odgovora bez HTTP grešaka, p95 448 ms pri 25 paralelnih zahtjeva; nije produkcijski kapacitet niti usporedba s ranijim mjerenjem. Ciljni uvjeti ostaju zasebni.
+
 ## Lokalni IIS i NVDA — dovršeno 25. 11. 2026.
 
 Aktualni paket radi na stvarnom [lokalnom IIS-u](https://localhost:7443), uz očuvanu testnu bazu i konfiguraciju. Prolaze glavni HR/EN tokovi, nacrti/sukobi/opoziv prava, no-JS prijenos i 413, ručni NVDA pregled te 24 dodatne stvarne NVDA govorne provjere. Kratko opterećenje: 2710 odgovora bez HTTP grešaka, p95 301 ms pri 25 paralelnih zahtjeva. Dokazi, opseg i ograničenja: [LOCAL-IIS-NVDA-2026-11-25.md](LOCAL-IIS-NVDA-2026-11-25.md).
