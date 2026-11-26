@@ -27,12 +27,24 @@ Popravak ponovno provjerava izvršitelja unutar iste transakcije, nakon stjecanj
 - Test-RepositoryEmailDrafts.cjs: HR/EN nevaljan HTTPS i duplikat, sirovi nazivi/URL/adresa, kodiranje, checkbox odabiri, zaštita odlaska i otkazana navigacija, uspješan ispravak i reload, axe i opoziv članstva s 404 bez privatnog nacrta. Koristi poseban nov QA račun i njegove postavke e-pošte, ne mijenja postojeće adminove postavke.
 - Test-Review10Sql.cjs povezuje nove regresije i prethodni Test-TimeAdminRecovery.cjs u jednu izoliranu SQL provjeru.
 
-Baseline artefakti: artifacts/review10-role-race-before.log, artifacts/review10-administration-baseline.log, artifacts/review10-repository-email-observe.log. Paket: artifacts/review10-final. Završni dokazi i status IIS objave dopunjuju se nakon prihvata.
+Baseline artefakti: artifacts/review10-role-race-before.log, artifacts/review10-administration-baseline.log, artifacts/review10-repository-email-observe.log. Paket: artifacts/review10-final. Završni dokazi i potvrđeni status objave navedeni su ispod.
 
 Ovaj pregled ne potvrđuje odsutnost svih mogućih grešaka. NVDA, opterećenje i ciljno produkcijsko okruženje nisu ponovno provjeravani u ovom krugu. Čisti demo 7610 i postojeći pregled 7589 nisu korišteni za testne poslovne upise.
 
 ## Rezultati izoliranih provjera i status objave
 
-Sve nove HR/EN regresije prošle su na izoliranim SQL Server, Oracle i Db2 bazama. SQL paket uključuje svih šest potvrđenih race slučajeva i prethodne R9 provjere vremena i nevaljanih administratorskih parametara. Dokazi: artifacts/review10-sql.log, artifacts/review10-oracle-test.log i artifacts/review10-db2-test.log. Neovisni završni pregled guarda i race koordinatora nije našao konkretnu regresiju u provjerenim scenarijima.
+Administrativna validacija i nacrti repozitorija/e-pošte prošli su HR/EN na izoliranim SQL Server, Oracle i Db2 bazama. Šest kontroliranih race slučajeva provedeno je zasebno samo na izoliranom SQL Serveru. SQL paket uključuje i prethodne R9 provjere vremena i nevaljanih administratorskih parametara. Dokazi: artifacts/review10-sql.log, artifacts/review10-oracle-test.log i artifacts/review10-db2-test.log. Neovisni završni pregled guarda i race koordinatora nije našao konkretnu regresiju u provjerenim scenarijima.
 
-IIS objava još nije izvršena. Windows Start-Process -Verb RunAs završio je porukom „The operation was canceled by the user.” Administratorska skripta nije pokrenuta i manifest artifacts/review10-iis-update.json nije nastao. Na https://localhost:7443 ostaje prethodni paket review9-final. Za završni prihvat novog paketa potrebni su uspješna Windows UAC potvrda te nove IIS regresije i pregled. Osnovnih 82 HR/EN prikaza u ovom izvještaju odnosi se na početni IIS paket, ne na novu objavu. Status implementacije i izoliranih testova je gotov; status IIS isporuke i završnog prihvata ostaje otvoren.
+Nakon ponovljenog Windows UAC zahtjeva objava je uspješno dovršena. Novi paket radi na https://localhost:7443 iz direktorija C:\inetpub\TeamManager-LocalTest\review-20261126-084413. Zadržani su postojeća testna baza i konfiguracija; verificirani su COPY_ONLY backup, hash paketa i HTTPS readiness 200. Manifest: artifacts/review10-iis-update.json. Raniji prekinuti UAC pokušaj nije zamijenio IIS paket; završni prihvat odnosi se na ovu novu objavu.
+
+Na stvarnom IIS-u prošle su ove HR/EN provjere:
+
+- Test-AdministrationValidation.cjs: duplikati jedinica/timova, nepostojeća jedinica profila, očuvani podaci, valjan ispravak i axe. Dokaz: artifacts/review10-iis-administration.log.
+- Test-RepositoryEmailDrafts.cjs: vraćeni naziv/URL, odabiri i adresa e-pošte, zaštita nacrta, oporavak, kodiranje, axe i opoziv pristupa. Dokaz: artifacts/review10-iis-drafts.log.
+- Test-IisLocalAcceptance.cjs: projekti, zadaci, komentari, vrijeme, pretraga/CSV, lokalizirani 404, mobilni izvještaj i axe. Dokaz: artifacts/review10-iis-acceptance.log.
+- Test-TimeAdminRecovery.cjs: ponovljeni sukobi vremena, oporavak i odbijene nevaljane administratorske radnje bez izmjene podataka; 403 i opoziv pristupa. Dokaz: artifacts/review10-iis-time-admin.log.
+- Test-IssueDraftRecovery.cjs: prethodni popravci nacrta zadatka, komentara i privatne bilješke, ponovljeni sukob i eksplicitni oporavak. Dokaz: artifacts/review10-iis-issue-drafts.log.
+
+Kontrolirani race test nije izvođen nad IIS bazom. IIS prihvat obuhvaća zasebne funkcionalne HR/EN provjere novog paketa.
+
+Ponovljeni pregled novog IIS paketa prošao je 82 HR/EN prikaza, uz provjeru očekivanih HTTP statusa: nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. To je završni pregled nove objave, odvojen od početnog pregleda prethodnog paketa. Dokazi: artifacts/review10-overview-final.log i artifacts/product-review10-final-2026-11-26/overview.json. REV10-01–05 zatvoreni su u provjerenom lokalnom opsegu.

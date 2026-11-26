@@ -1,8 +1,8 @@
 # Status izdanja Team Manager
 
-## Deseta revizija — implementirano, IIS prihvat otvoren 26. 11. 2026.
+## Deseta revizija — dovršeno 26. 11. 2026.
 
-REV10-01–05 implementirani su i provjereni uz HR/EN na izoliranim SQL Server, Oracle i Db2 bazama: ponovna provjera role/aktivnosti nakon zaključavanja, obrađene greške jedinice profila i duplikata organizacije te očuvani nacrti repozitorija i postavki e-pošte. Šest kontroliranih SQL race slučajeva sada odbija upis nakon opoziva/deaktivacije. Novi paket je `artifacts/review10-final`. IIS objava i završni prihvat još čekaju Windows UAC; na portu 7443 ostaje review9-final. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R10.md).
+REV10-01–05 zatvoreni su u provjerenom lokalnom opsegu. Administrativna validacija i nacrti repozitorija/e-pošte prošli su HR/EN na izoliranim SQL Server, Oracle i Db2 bazama. Šest kontroliranih SQL race slučajeva zasebno je provjereno samo na privremenoj SQL bazi. Paket `artifacts/review10-final` objavljen je i funkcionalno provjeren na [lokalnom IIS-u](https://localhost:7443), uz verificirani backup, hash paketa i HTTPS readiness 200. Završni pregled 82 HR/EN prikaza nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R10.md).
 
 
 ## Deveta revizija — dovršeno 26. 11. 2026.
