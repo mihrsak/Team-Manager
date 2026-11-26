@@ -13,6 +13,7 @@ public sealed class TimeEntryModel(IssueStore store):PageModel
     [BindProperty,Required,StringLength(60)]public string Activity{get;set;}="";
     [BindProperty,StringLength(1000)]public string? Note{get;set;}
     public bool CanCorrect{get;private set;}
+    public bool HasConflict => CanCorrect && !ModelState.IsValid && Token != Entry.Token;
     public EditableTime Entry{get;private set;}=null!;
     public ReturnNavigation? Navigation=>ReturnNavigation.Get(HttpContext);
     public string BackUrl=>Navigation?.Url??Url.Page("/TimeReport",new{ProjectId=Entry.ProjectId})!;
@@ -29,13 +30,25 @@ public sealed class TimeEntryModel(IssueStore store):PageModel
     {
         var row=await Load();if(row is null)return NotFound();Token=row.Token;Date=row.Date;Hours=row.Hours.ToString("0.00",System.Globalization.CultureInfo.InvariantCulture);Activity=row.Activity;Note=row.Note;return Page();
     }
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(bool resolveConflict=false,string? reviewedToken=null)
     {
+        if(!ListFilterValidation.Valid(ModelState,"Id","IssueId","resolveConflict","reviewedToken"))return BadRequest();
+        if(resolveConflict)
+        {
+            if(reviewedToken is null || reviewedToken.Length!=64 || !reviewedToken.All(Uri.IsHexDigit))return BadRequest();
+            Token=reviewedToken;
+            ModelState.Remove(nameof(Token));
+        }
         if(await Load() is null)return NotFound();if(!CanCorrect)return Forbid();
         var parsed=decimal.TryParse(Hours?.Replace(',','.'),System.Globalization.NumberStyles.AllowDecimalPoint,System.Globalization.CultureInfo.InvariantCulture,out var hours);
         if(!parsed)ModelState.AddModelError(nameof(Hours),"Unesi valjan datum i broj sati.");if(!ModelState.IsValid)return Page();
         try{await store.CorrectTime(UserId,IssueId,Id,Token,Date,hours,Activity,Note);TempData["Notice"]="Unos vremena je ispravljen.";return Navigation is {} navigation?LocalRedirect(navigation.Url):RedirectToPage("/Issue",new{id=IssueId});}
         catch(UnauthorizedAccessException){return Forbid();}
-        catch(Exception ex)when(ex is ArgumentException or InvalidOperationException){ModelState.AddModelError("",ex.Message);return Page();}
+        catch(Exception ex)when(ex is ArgumentException or InvalidOperationException)
+        {
+            if(await Load() is null)return NotFound();if(!CanCorrect)return Forbid();
+            ModelState.AddModelError("",ex is InvalidOperationException ? "Unos vremena je promijenjen. Pregledaj aktualnu verziju prije ponovnog spremanja." : ex.Message);
+            return Page();
+        }
     }
 }

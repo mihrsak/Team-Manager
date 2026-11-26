@@ -20,6 +20,7 @@ public class WorkflowModel(WorkflowStore store,Permissions permissions,Microsoft
     }
     public async Task<IActionResult> OnPostValueAsync(string kind,string name,bool closed)
     {
+        if(!ListFilterValidation.Valid(ModelState,"closed"))return BadRequest();
         if(!User.IsInRole("workflow.manage"))return Forbid();
         var limit=kind switch {"type"=>50,"status"=>30,"priority"=>20,_=>0};
         if(limit==0 || string.IsNullOrWhiteSpace(name) || name.Trim().Length>limit)
@@ -30,6 +31,7 @@ public class WorkflowModel(WorkflowStore store,Permissions permissions,Microsoft
     }
     public async Task<IActionResult> OnPostTransitionAsync(string role,string type,string from,string to,bool remove)
     {
+        if(!ListFilterValidation.Valid(ModelState,"remove"))return BadRequest();
         if(!User.IsInRole("workflow.manage"))return Forbid();await OnGetAsync();
         if(!Roles.Any(r=>r.Name==role)||!Types.Contains(type)||!Statuses.Contains(from)||!Statuses.Contains(to)||from==to){ModelState.AddModelError("","Odaberi valjanu rolu, tip i različite statuse.");return Page();}
         try{await store.Set(UserId,new(role,type,from,to),remove);return RedirectToPage();}catch(SqlException ex) when(ex.Number is 2601 or 2627){ModelState.AddModelError("","Prijelaz već postoji.");return Page();}

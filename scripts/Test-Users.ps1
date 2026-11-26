@@ -1,13 +1,31 @@
 param([string]$BaseUrl='https://localhost:7043',[string]$AdminEmployee='admin',[Parameter(Mandatory=$true)][string]$AdminPassword,[string]$Database='TeamManager')
 $ErrorActionPreference='Stop'
 function Assert($condition,$message){if(-not $condition){throw $message};Write-Host "PASS: $message"}
-function Get-Page($path,$session){Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl$path" -WebSession $session}
-function Post-Page($path,$session,$data){
+function Invoke-Page($parameters,$expectedStatus=200){
+    try { $page=Invoke-WebRequest @parameters }
+    catch {
+        $response=$_.Exception.Response
+        if($expectedStatus -ne 403 -or !$response -or [int]$response.StatusCode -ne 403){throw}
+        if($response.PSObject.Methods.Name -contains 'GetResponseStream'){
+            $reader=New-Object IO.StreamReader($response.GetResponseStream())
+            try{$content=$reader.ReadToEnd()}finally{$reader.Dispose()}
+            $uri=$response.ResponseUri
+        }else{
+            $content=$response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            $uri=$response.RequestMessage.RequestUri
+        }
+        $page=[pscustomobject]@{Content=$content;StatusCode=403;BaseResponse=[pscustomobject]@{ResponseUri=$uri}}
+    }
+    if([int]$page.StatusCode -ne $expectedStatus){throw "Unexpected HTTP status: $($page.StatusCode), expected $expectedStatus"}
+    return $page
+}
+function Get-Page($path,$session,$expectedStatus=200){Invoke-Page @{UseBasicParsing=$true;Uri="$BaseUrl$path";WebSession=$session} $expectedStatus}
+function Post-Page($path,$session,$data,$expectedStatus=200){
     $page=Get-Page $path $session
     $match=[regex]::Match($page.Content,'name="__RequestVerificationToken"[^>]*value="([^"]+)"')
     if(-not $match.Success){throw "No antiforgery token: $path"}
     $data['__RequestVerificationToken']=[System.Net.WebUtility]::HtmlDecode($match.Groups[1].Value)
-    Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl$path" -Method Post -Body $data -WebSession $session
+    Invoke-Page @{UseBasicParsing=$true;Uri="$BaseUrl$path";Method='Post';Body=$data;WebSession=$session} $expectedStatus
 }
 $admin=New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $regular=New-Object Microsoft.PowerShell.Commands.WebRequestSession
@@ -31,7 +49,7 @@ try {
     Assert ($page.Content.Contains($employee)) 'Create user'
     $page=Post-Page '/Login' $regular @{EmployeeNumber=$employee;Password=$testPassword}
     Assert (-not $page.Content.Contains('Novi korisnik')) 'Regular user cannot see user administration'
-    $page=Get-Page '/Roles' $regular
+    $page=Get-Page '/Roles' $regular 403
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Role administration denied for regular user'
     # Profile forms normally include id; obtain it for subsequent authenticated actions.
     $cmd=$db.CreateCommand();$cmd.CommandText='SELECT Id FROM dbo.AppUsers WHERE EmployeeNumber=@e';[void]$cmd.Parameters.AddWithValue('@e',$employee);$id=[int]$cmd.ExecuteScalar()
@@ -45,9 +63,9 @@ try {
     $page=Post-Page "/Profile?id=$id&handler=GlobalRole" $admin @{role=$role;remove='true'}
     $page=Get-Page '/Users' $regular
     Assert (-not $page.Content.Contains('Novi korisnik')) 'Revoked permission takes effect immediately'
-    $page=Post-Page '/Users?handler=Create' $regular @{employee="blocked$suffix";name='Forbidden';password=$testPassword}
+    $page=Post-Page '/Users?handler=Create' $regular @{employee="blocked$suffix";name='Forbidden';password=$testPassword} 403
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Forged user-create request is rejected by server'
-    $page=Get-Page '/Groups' $regular
+    $page=Get-Page '/Groups' $regular 403
     Assert ($page.BaseResponse.ResponseUri.AbsolutePath -eq '/Denied') 'Regular user cannot manage groups'
     $page=Post-Page '/Groups?handler=Create' $admin @{name=$role}
     Assert ($page.Content.Contains($role)) 'Administrator can create a group'

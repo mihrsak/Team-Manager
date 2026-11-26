@@ -15,6 +15,20 @@
 @if(!Model.CanCorrect){<p>@Text["Ovaj unos možeš samo pregledati."]</p>}
 <form method="post" class="card" data-unsaved-draft="@(!ViewData.ModelState.IsValid ? "true" : null)">
  <div asp-validation-summary="All"></div>
+ @if(Model.HasConflict)
+ {
+  <section class="notice" data-current-time aria-label="@Text["Aktualna spremljena verzija"]">
+   <h2>@Text["Aktualna spremljena verzija"]</h2>
+   <dl>
+    <dt>@Text["Datum"]</dt><dd>@Model.Entry.Date.ToString("d")</dd>
+    <dt>@Text["Sati"]</dt><dd>@Model.Entry.Hours.ToString("0.00")</dd>
+    <dt>@Text["Aktivnost"]</dt><dd>@Model.Entry.Activity</dd>
+    <dt>@Text["Napomena"]</dt><dd style="white-space:pre-wrap">@Model.Entry.Note</dd>
+   </dl>
+  </section>
+  <input type="hidden" name="reviewedToken" value="@Model.Entry.Token">
+  <label><input type="checkbox" name="resolveConflict" value="true" required> @Text["Pregledao sam aktualnu verziju i želim spremiti ovaj nacrt umjesto nje."]</label>
+ }
  <input type="hidden" asp-for="IssueId"><input type="hidden" asp-for="Id"><input type="hidden" asp-for="Token">
  <fieldset disabled="@(!Model.CanCorrect)">
   <label>@Text["Datum"]<input asp-for="Date" type="date" required></label>

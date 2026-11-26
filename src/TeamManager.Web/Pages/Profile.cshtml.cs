@@ -167,6 +167,7 @@ public class ProfileModel(UserStore store, Permissions permissions, Microsoft.As
     private IActionResult Invalid(string text) { ModelState.AddModelError("", text); return Page(); }
     public async Task<IActionResult> OnPostGlobalRoleAsync(int id, string role, bool remove)
     {
+        if(!ListFilterValidation.Valid(ModelState,"id","remove"))return BadRequest();
         if (!User.IsInRole("roles.manage")) return Forbid(); await OnGetAsync(id); if (Person is null) return NotFound();
         if (!Roles.Any(x => x.Name == role)) return Invalid("Nepostojeća rola.");
         try { await permissions.Assign(UserId, id, role, remove); }

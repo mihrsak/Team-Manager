@@ -9,6 +9,7 @@ public class RolesModel(Permissions permissions):PageModel
     public async Task<IActionResult> OnGetAsync(){if(!User.IsInRole("roles.manage"))return Forbid();Roles=await permissions.Roles();return Page();}
     public async Task<IActionResult> OnPostAsync(string? name,string? description,string[] rights,bool create)
     {
+        if(!ListFilterValidation.Valid(ModelState,"create"))return BadRequest();
         if(!User.IsInRole("roles.manage"))return Forbid();Roles=await permissions.Roles();name=name?.Trim();description=description?.Trim()??"";
         if(string.IsNullOrWhiteSpace(name)||name.Length>30||description.Length>200||rights.Any(x=>!Permissions.Catalog.ContainsKey(x))||(!create&&!Roles.Any(x=>x.Name==name))){ModelState.AddModelError("","Provjeri naziv i odabrane ovlasti.");return Page();}
         try{await permissions.Save(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),name,description,rights,create);}

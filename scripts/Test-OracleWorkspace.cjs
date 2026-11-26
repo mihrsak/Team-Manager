@@ -179,7 +179,7 @@ async function run() {
         const topicPath = forumPath + '&topicId=' + topicId;
         const forumReplied = await post(reader, topicPath + '&handler=Reply', { body: 'Odgovor <script> čćž 🚀' });
         assert.ok((await forumReplied.text()).includes('&lt;script&gt;'));
-        const deniedModeration = await post(reader, topicPath + '&handler=Lock', { locked: 'true' });
+        const deniedModeration = await post(reader, topicPath + '&handler=Lock', { locked: 'true' }, 403);
         assert.equal(new URL(deniedModeration.url()).pathname, '/Denied');
         await checkStatus(admin, '/Forum?projectId=' + wrongProject + '&topicId=' + topicId, 404);
         for (const language of ['en', 'hr']) {
@@ -192,7 +192,7 @@ async function run() {
             await admin.goto(forumPath);
             const topicRow = admin.getByRole('listitem').filter({ hasText: 'Oracle forum ' + suffix });
             assert.ok((await topicRow.textContent()).includes(language === 'en' ? 'Locked' : 'Zaključano'));
-            const blockedReply = await post(reader, topicPath + '&handler=Reply', { body: 'Locked reply must fail' });
+            const blockedReply = await post(reader, topicPath + '&handler=Reply', { body: 'Locked reply must fail' }, 403);
             assert.equal(new URL(blockedReply.url()).pathname, '/Denied');
             await post(admin, topicPath + '&handler=Lock', { locked: 'false' });
         }
@@ -207,7 +207,7 @@ async function run() {
         assert.ok(Number(repositoryId) > 0);
         await reader.goto(repositoriesPath);
         assert.ok(await reader.getByRole('link', { name: repositoryName, exact: true }).isVisible());
-        const forbiddenRemoval = await post(reader, removeRepositoryPath, {});
+        const forbiddenRemoval = await post(reader, removeRepositoryPath, {}, 403);
         assert.equal(new URL(forbiddenRemoval.url()).pathname, '/Denied');
         const forbiddenHistory = await reader.request.get('/RepositoryHistory?projectId=' + child + '&repositoryId=' + repositoryId);
         assert.equal(new URL(forbiddenHistory.url()).pathname, '/Denied');

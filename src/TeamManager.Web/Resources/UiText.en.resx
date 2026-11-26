@@ -1435,4 +1435,5 @@
   <data name="Isključeno" xml:space="preserve"><value>Disabled</value></data>
 <data name="Aktualna spremljena verzija" xml:space="preserve"><value>Current saved version</value></data>
 <data name="Nedostupan odabir" xml:space="preserve"><value>Unavailable selection</value></data>
+<data name="Unos vremena je promijenjen. Pregledaj aktualnu verziju prije ponovnog spremanja." xml:space="preserve"><value>The time entry has changed. Review the current version before saving again.</value></data>
 </root>
