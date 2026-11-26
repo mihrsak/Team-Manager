@@ -212,3 +212,7 @@ U izdvojenoj `TMR_MIGRATION_QA` shemi test privremeno odgađa stare poslove i ga
 Završna Oracle regresija 19. 11. 2026.: svi glavni browser tokovi, HTTP gateway i 52 HR/EN WCAG A/AA skeniranja prošli su na protokolu 5, sa zadržanom zaštitnom listom ruta. Aktivni paket artifacts/oracle-complete-final vraća readiness 200 na https://localhost:7572.
 
 Završni prošireni Oracle browser paket sada provjerava 52 HR/EN WCAG A/AA skeniranja uključujući API tokene, grupe, zahtjeve za registraciju i postavke e-pošte. Svi glavni tokovi i HTTP gateway prošli su na protokolu 5; zaštita ruta zadržana je.
+
+## Lokalna obnova u zasebnu bazu i rollback
+
+`pwsh -NoProfile -File scripts/Test-Rollback.ps1 -PreviousPackage <prethodni-paket> -CurrentPackage <aktualni-paket>` koristi lokalni SQL Express i slobodan HTTPS port 7545 (ili `-Port`). Potreban je pouzdan razvojni certifikat i SQL ovlasti za kreiranje, backup i restore testnih baza. Paketi trebaju podržavati postojeće tablice privitaka/vremena. Test izvršava stvarni restore u odvojenu bazu/datoteke, uspoređuje šest tablica pomoću SHA-256 kanonskog SQL JSON-a, provjerava HTTP readiness i prijavu, nadograđuje te vraća prethodni paket i bazu. Uključuje demo podatke i vlastiti Unicode komentar, sate i binarni privitak. Ne mijenja IIS ni poslovnu bazu. Vlastite baze i backup uklanja u finally bloku; eventualnu nemogućnost čišćenja backupa izričito ispisuje. SQL brisanje backupa koristi samo točan generirani naziv bez wildcarda. Potpun bankarski DR i produkcijsko vrijeme oporavka nisu pokriveni.

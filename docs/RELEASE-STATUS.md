@@ -1,5 +1,12 @@
 # Status izdanja Team Manager
 
+## OPS-LOCAL-04 — stvarna obnova i povratak, dovršeno 26. 11. 2026.
+
+Proširen `scripts/Test-Rollback.ps1` i provjeren s paketima `artifacts/review13-final` i `artifacts/windows-20261126-153839`. Isključivo privremene baze `TeamManager_RollbackTest_<guid>`: COPY_ONLY/CHECKSUM backup i VERIFYONLY, obnova u zasebnu bazu i fizičke datoteke, SHA-256 usporedba šest tablica prije pokretanja aplikacije (projekti, korisnici, zadaci, povijest, vrijeme i privitci), provjera nepromijenjenog izvora, readiness/prijava/projekt iz obnovljene baze te nadogradnja i povratak na prethodni paket i stanje baze. Usporedba uključuje Unicode, hashove lozinki i binarni sadržaj. Test ne tvrdi da uspoređuje svaku tablicu ili produkcijski RTO.
+
+Čišćenje ograničeno na generirana imena baza i točnu backup datoteku; ako je datoteka u SQL servisnoj mapi, koristi se SQL brisanje samo te datoteke, bez wildcarda ili OS shella. Lokalni dokaz: `artifacts/local-recovery-20261126.log`. Ciljna bankarska obnova/retencija/nadzor iz OPS-03 ostaju otvoreni.
+
+
 ## DELIV-01 — paket i aktualne upute, dovršeno 26. 11. 2026.
 
 Pri nastavku nakon REV13 pronađeni su zastarjeli uvodi README/INSTALL i problem izbora SDK-a: lokalni runtime bez SDK-a sprečavao je publish unatoč instaliranom .NET 10 SDK-u u Windowsu. Publish sada bira dostupni .NET 10 SDK, u ZIP uključuje README i dokumentaciju te zadržava korijenski INSTALL kao poveznicu na cjelovite upute.
