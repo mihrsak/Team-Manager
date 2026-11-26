@@ -3,16 +3,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 namespace TeamManager.Web.Pages;
+public sealed record WorkflowValueDraft(string Kind,string Name,bool Closed);
+public sealed record WorkflowTransitionDraft(string Role,string Type,string From,string To,bool Remove);
+public sealed record WorkflowCatalogDraft(string Kind,string Name,string Order,string Active);
 public class WorkflowModel(WorkflowStore store,Permissions permissions,Microsoft.Extensions.Localization.IStringLocalizer<UiText> text):PageModel
 {
     private int UserId=>int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     public List<string> Types{get;set;}=[];public List<string> Statuses{get;set;}=[];public List<string> Priorities{get;set;}=[];
     public List<AccessRole> Roles{get;set;}=[];public List<Transition> Transitions{get;set;}=[];
     public List<CatalogValue> Catalog{get;private set;}=[];
+    public WorkflowValueDraft? ValueDraft{get;private set;}
+    public WorkflowTransitionDraft? TransitionDraft{get;private set;}
+    public WorkflowCatalogDraft? CatalogDraft{get;private set;}
     public async Task<IActionResult> OnGetAsync(){if(!User.IsInRole("workflow.manage"))return Forbid();Types=await store.Values("type");Statuses=await store.Values("status");Priorities=await store.Values("priority");Catalog=[..await store.Catalog("priority"),..await store.Catalog("status"),..await store.Catalog("type")];Roles=await permissions.Roles();Transitions=await store.Transitions();return Page();}
     public async Task<IActionResult> OnPostCatalogAsync(string kind,string name,int? order,bool? active)
     {
         if(!User.IsInRole("workflow.manage"))return Forbid();
+        CatalogDraft=new(Request.Form["kind"].ToString(),Request.Form["name"].ToString(),Request.Form["order"].ToString(),Request.Form["active"].ToString());
         if(order is null||active is null||!ModelState.IsValid){await OnGetAsync();ModelState.AddModelError("","Provjeri polja zadatka.");return Page();}
         try{await store.SetCatalog(UserId,kind,name,order.Value,active.Value);return RedirectToPage();}
         catch(UnauthorizedAccessException){return Forbid();}
@@ -22,18 +29,20 @@ public class WorkflowModel(WorkflowStore store,Permissions permissions,Microsoft
     {
         if(!ListFilterValidation.Valid(ModelState,"closed"))return BadRequest();
         if(!User.IsInRole("workflow.manage"))return Forbid();
+        ValueDraft=new(Request.Form["kind"].ToString(),Request.Form["name"].ToString(),closed);
         var limit=kind switch {"type"=>50,"status"=>30,"priority"=>20,_=>0};
         if(limit==0 || string.IsNullOrWhiteSpace(name) || name.Trim().Length>limit)
         {
             await OnGetAsync(); ModelState.AddModelError("name",text["Unesi naziv od 1 do {0} znakova.",limit==0?50:limit]); return Page();
         }
-        try{await store.AddValue(UserId,kind,name,closed);return RedirectToPage();}catch(Exception ex) when(ex is ArgumentException||ex is SqlException {Number:2601 or 2627}){await OnGetAsync();ModelState.AddModelError("","Naziv nije valjan ili već postoji.");return Page();}
+        try{await store.AddValue(UserId,kind,name,closed);return RedirectToPage();}catch(UnauthorizedAccessException){return Forbid();}catch(Exception ex) when(ex is ArgumentException||ex is SqlException {Number:2601 or 2627}){await OnGetAsync();ModelState.AddModelError("","Naziv nije valjan ili već postoji.");return Page();}
     }
     public async Task<IActionResult> OnPostTransitionAsync(string role,string type,string from,string to,bool remove)
     {
         if(!ListFilterValidation.Valid(ModelState,"remove"))return BadRequest();
         if(!User.IsInRole("workflow.manage"))return Forbid();await OnGetAsync();
+        TransitionDraft=new(Request.Form["role"].ToString(),Request.Form["type"].ToString(),Request.Form["from"].ToString(),Request.Form["to"].ToString(),remove);
         if(!Roles.Any(r=>r.Name==role)||!Types.Contains(type)||!Statuses.Contains(from)||!Statuses.Contains(to)||from==to){ModelState.AddModelError("","Odaberi valjanu rolu, tip i različite statuse.");return Page();}
-        try{await store.Set(UserId,new(role,type,from,to),remove);return RedirectToPage();}catch(SqlException ex) when(ex.Number is 2601 or 2627){ModelState.AddModelError("","Prijelaz već postoji.");return Page();}
+        try{await store.Set(UserId,new(role,type,from,to),remove);return RedirectToPage();}catch(UnauthorizedAccessException){return Forbid();}catch(SqlException ex) when(ex.Number is 2601 or 2627){ModelState.AddModelError("","Prijelaz već postoji.");return Page();}
     }
 }

@@ -1,5 +1,10 @@
 # Backlog Team Manager
 
+## Dvanaesta revizija — implementirano, IIS prihvat otvoren 26. 11. 2026.
+
+REV12-01–04 implementirani su uz HR/EN: registracijska ponovna provjera administratora nakon zaključavanja, lokalizirano odbijanje uklanjanja posljednjeg grupnog administratora te nacrti rola i tijeka rada. Prolaze osam SQL race slučajeva, svježi Oracle/Db2 sole-admin testovi i funkcionalne provjere nacrta na sve tri baze. Paket je `artifacts/review12-final`. IIS objava još čeka Windows UAC; port7443 koristi review11-final. Postojeći IIS registracijski tokovi potvrđeni su samo kao baseline testnog postupka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R12.md).
+
+
 ## Jedanaesta revizija — dovršeno 26. 11. 2026.
 
 REV11-01–04 zatvoreni su u provjerenom lokalnom opsegu: zaštićeni netajni nacrti profila, stvaranja korisnika i organizacije; validacija filtara obavijesti/revizijskog zapisa prije dohvata ili označavanja; aktualne HR/EN upute ovlasti. Funkcionalne provjere prošle su na izoliranim SQL Server, Oracle i Db2 bazama te na IIS-u. R10 race regresija provedena je samo na privremenom SQL Serveru. Paket `artifacts/review11-final` radi na [https://localhost:7443](https://localhost:7443), uz verificirani backup, hash i readiness 200. Završnih 82 HR/EN prikaza nema novih axe prijava, prelijevanja ili JavaScript grešaka. [Nalazi i dokazi](PRODUCT-REVIEW-2026-11-26-R11.md).

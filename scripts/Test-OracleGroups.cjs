@@ -6,13 +6,15 @@ async function post(page, path, fields) {
     assert.equal(form.status(), 200);
     const token = (await form.text()).match(/name="__RequestVerificationToken"[^>]*value="([^"]+)"/)?.[1];
     assert.ok(token);
-    return page.request.post(path, { form: { ...fields, __RequestVerificationToken: token } });
+    const response = await page.request.post(path, { form: { ...fields, __RequestVerificationToken: token } }); assert.equal(response.status(),200); return response;
 }
 (async () => {
     const browser = await chromium.launch({ channel: 'msedge' });
+    let admin, originalLanguage;
     try {
-        const admin = await browser.newPage({ baseURL });
+        admin = await browser.newPage({ baseURL });
         await post(admin, '/Login', { EmployeeNumber: 'admin', Password: process.env.TEAM_MANAGER_QA_PASSWORD || 'admin' });
+        await admin.goto('/Profile');originalLanguage=await admin.locator('[name=language]').inputValue();
         const group = 'Browser group ' + Date.now();
         await post(admin, '/Groups?handler=Create', { name: group });
         await admin.goto('/Groups');
@@ -30,5 +32,5 @@ async function post(page, path, fields) {
         }
         await post(admin, '/Groups?handler=Role&groupId=' + groupId, { role: 'Developer', remove: 'true' });
         console.log('PASS: Group creation, role assignment/removal and two HR/EN accessibility scans.');
-    } finally { await browser.close(); }
-})().catch(error => { console.error(error); process.exitCode = 1; });
+    } finally { if(admin&&originalLanguage)await post(admin,'/Profile?handler=Language',{language:originalLanguage});await browser.close(); }
+})().catch(error => { console.error(JSON.stringify({error:error.name,message:String(error.message).split(/[\r\n]/)[0],actual:error.actual,expected:error.expected})); process.exitCode = 1; });

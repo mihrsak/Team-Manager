@@ -6,11 +6,19 @@ namespace TeamManager.Web.Pages;
 public class RolesModel(Permissions permissions):PageModel
 {
     public List<AccessRole> Roles{get;set;}=[];
+    public bool HasDraft{get;private set;}
+    public bool DraftCreate{get;private set;}
+    public string? DraftRoleName{get;private set;}
+    public string? DraftName{get;private set;}
+    public string? DraftDescription{get;private set;}
+    public HashSet<string> DraftRights{get;private set;}=[];
     public async Task<IActionResult> OnGetAsync(){if(!User.IsInRole("roles.manage"))return Forbid();Roles=await permissions.Roles();return Page();}
     public async Task<IActionResult> OnPostAsync(string? name,string? description,string[] rights,bool create)
     {
         if(!ListFilterValidation.Valid(ModelState,"create"))return BadRequest();
-        if(!User.IsInRole("roles.manage"))return Forbid();Roles=await permissions.Roles();name=name?.Trim();description=description?.Trim()??"";
+        if(!User.IsInRole("roles.manage"))return Forbid();Roles=await permissions.Roles();
+        HasDraft=true;DraftCreate=create;DraftName=Request.Form["name"].ToString();DraftRoleName=name?.Trim();DraftDescription=Request.Form["description"].ToString();DraftRights=rights.Where(Permissions.Catalog.ContainsKey).ToHashSet();
+        name=name?.Trim();description=description?.Trim()??"";
         if(string.IsNullOrWhiteSpace(name)||name.Length>30||description.Length>200||rights.Any(x=>!Permissions.Catalog.ContainsKey(x))||(!create&&!Roles.Any(x=>x.Name==name))){ModelState.AddModelError("","Provjeri naziv i odabrane ovlasti.");return Page();}
         try{await permissions.Save(int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),name,description,rights,create);}
         catch(UnauthorizedAccessException){return Forbid();}

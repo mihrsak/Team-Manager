@@ -43,7 +43,12 @@ public sealed class GroupsModel(GroupStore groups, UserStore users, Permissions 
                 await change();
                 return RedirectToPage();
             }
+            catch (UnauthorizedAccessException) { return Forbid(); }
             catch (ArgumentException ex) { ModelState.AddModelError("", text[ex.Message]); }
+            catch (InvalidOperationException ex) when (ex.Message == "Mora ostati barem jedan aktivan puni administrator.")
+            {
+                ModelState.AddModelError("", text[ex.Message]);
+            }
             catch (SqlException ex) when (ex.Number is 547 or 2601 or 2627)
             {
                 ModelState.AddModelError("", text["Naziv već postoji ili odabrana grupa, korisnik ili uloga više nisu dostupni."]);

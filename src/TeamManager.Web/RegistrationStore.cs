@@ -54,14 +54,23 @@ public sealed class RegistrationStore(IConfiguration config, IPasswordHasher<App
             SELECT @employee=EmployeeNumber,@name=DisplayName,@hash=PasswordHash
             FROM dbo.RegistrationRequests WITH(UPDLOCK,HOLDLOCK) WHERE Id=@id;
             IF @employee IS NULL RETURN;
+            IF NOT EXISTS(
+                SELECT 1 FROM dbo.AppUsers a
+                JOIN dbo.EffectiveUserRoles r ON r.UserId=a.Id
+                JOIN dbo.RolePermissions p ON p.RoleName=r.RoleName
+                WHERE a.Id=@actor AND a.IsActive=1 AND p.Permission='*')
+                THROW 51002,'Full administration is required',1;
             IF @approve=1
                 INSERT dbo.AppUsers(EmployeeNumber,DisplayName,PasswordHash,IsAdministrator)
                 VALUES(@employee,@name,@hash,0);
             DELETE dbo.RegistrationRequests WHERE Id=@id;
             SELECT @employee;
             """, connection, transaction);
-        command.Parameters.AddRange([P("@id", id), P("@approve", approve)]);
-        if (await command.ExecuteScalarAsync() is not string employee) return false;
+        command.Parameters.AddRange([P("@id", id), P("@approve", approve), P("@actor", actor)]);
+        string? employee;
+        try { employee = await command.ExecuteScalarAsync() as string; }
+        catch (SqlException ex) when (ex.Number == 51002) { throw new UnauthorizedAccessException("Full administration is required", ex); }
+        if (employee is null) return false;
         await AdministrationAuditStore.Write(connection, transaction,
             new(actor, approve ? "registration.approve" : "registration.reject", employee));
         await transaction.CommitAsync();

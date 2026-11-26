@@ -26,6 +26,7 @@ public sealed class RegistrationRequestsModel(RegistrationStore registrations, M
         {
             if (!await registrations.Decide(actor, id, approve.Value)) return NotFound();
         }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (RegistrationConflictException ex) { var result = await OnGetAsync(); ModelState.AddModelError("", text[ex.Message]); return result; }
         catch (SqlException ex) when (ex.Number is 2601 or 2627)
         {
