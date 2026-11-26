@@ -31,12 +31,26 @@ Test-RoleWorkflowDrafts.cjs provjerava HR/EN sirovi tekst i HTML kodiranje, ozna
 
 Test-OracleGroups.cjs koristi se i za valjane generičke HR/EN grupne tokove; dodana je provjera HTTP odgovora, obnova izvornog jezika i sigurno prijavljivanje grešaka. Ne uklanja postojeće administratore niti postojeća članstva. Test-Review12Sql.cjs povezuje nacrte i te grupne tokove na privremenoj SQL bazi.
 
-Paket: artifacts/review12-final. Završni IIS prihvat dokumentira se nakon objave. Čisti demo7610 i postojeći pregled7589 nisu korišteni za testne poslovne upise. NVDA, opterećenje i ciljno produkcijsko okruženje nisu ponovno provjeravani; pregled ne potvrđuje odsutnost svih mogućih grešaka.
+Paket: artifacts/review12-final. Završna IIS objava i prihvat potvrđeni su ispod. Čisti demo7610 i postojeći pregled7589 nisu korišteni za testne poslovne upise. NVDA, opterećenje i ciljno produkcijsko okruženje nisu ponovno provjeravani; pregled ne potvrđuje odsutnost svih mogućih grešaka.
 
 ## Status IIS isporuke
 
-Novi paket još nije objavljen na IIS-u: Windows Start-Process -Verb RunAs završio je porukom „The operation was canceled by the user.” Administratorska skripta nije pokrenuta i manifest artifacts/review12-iis-update.json nije nastao. Na https://localhost:7443 ostaje paket review11-final. Za završni prihvat novog paketa potrebni su ponovljeni potvrđeni Windows UAC zahtjev, nova IIS objava i provjere.
+Nakon ponovljenog Windows UAC zahtjeva novi paket uspješno je objavljen na https://localhost:7443 iz direktorija C:\inetpub\TeamManager-LocalTest\review-20261126-111707. Očuvani su postojeća testna baza i konfiguracija; verificirani su COPY_ONLY backup, hash paketa i HTTPS readiness 200. Manifest: artifacts/review12-iis-update.json. Raniji prekinuti pokušaj nije zamijenio paket; završni prihvat odnosi se na novu objavu.
 
 Pripremljeni Test-IisRegistration.cjs i Invoke-IisRegistrationFixture.ps1 prošli su HR/EN na postojećem IIS paketu kao provjera testnog postupka: approve/reject, malformedapprove400 bez promjene, repeat404, jedan audit i axe. Helper se ograničava na TeamManager_IisTest i generirane QA identifikatore te preuzima hash samo od novog QA seed korisnika. Svi stvoreni QA računi deaktivirani su u finally; postojeći administrator i članstva nisu mijenjani. Dokaz: artifacts/review12-iis-registration-baseline.log. To je baseline starog paketa, a ne prihvat nove autorizacijske provjere.
 
-Svi implementacijski popravci imaju prolazne izolirane provjere: registracija na privremenom SQL Serveru, posljednji grupni administrator na svježim Oracle/Db2 shemama, nacrti na SQL Server/Oracle/Db2 te valjani grupni tokovi na privremenom SQL Serveru. IIS prihvat REV12 ostaje otvoren.
+Svi implementacijski popravci imaju prolazne izolirane provjere: registracija na privremenom SQL Serveru, posljednji grupni administrator na svježim Oracle/Db2 shemama, nacrti na SQL Server/Oracle/Db2 te valjani grupni tokovi na privremenom SQL Serveru. Završni funkcionalni IIS prihvat REV12 potvrđen je ispod.
+
+## Završni IIS prihvat
+
+Na novom paketu prošle su HR/EN provjere:
+
+- Test-RoleWorkflowDrafts.cjs: create/edit rola i Value/Transition/Catalog nacrti, označene ovlasti i odabiri, izolacija obrazaca, zaštita odlaska, oporavak, autorizacija i axe. Dokaz: artifacts/review12-iis-drafts.log.
+- Test-IisRegistration.cjs: odobravanje/odbijanje, nevaljana odluka 400 bez promjene, ponovljena odluka 404, točno jedan registracijski audit i axe. Samo generirani QA zahtjevi/računi; svi stvoreni računi deaktivirani su u finally. Dokaz: artifacts/review12-iis-registration.log.
+- Test-OracleGroups.cjs: valjani grupni tokovi i HR/EN axe. Dokaz: artifacts/review12-iis-groups.log.
+- Test-TimeAdminRecovery.cjs: ponovljeni sukob vremena, oporavak i prethodna zaštita nevaljanih administratorskih parametara, 403 i opoziv pristupa. Dokaz: artifacts/review12-iis-time-admin.log.
+- Test-IisLocalAcceptance.cjs: projekti, zadaci, komentari, vrijeme, pretraga/CSV, lokalizirani 404, mobilni izvještaj i axe. Dokaz: artifacts/review12-iis-acceptance.log.
+
+Ponovljeni pregled novog IIS paketa prošao je 82 HR/EN prikaza uz očekivane HTTP statuse: nema novih axe prijava, prelijevanja dokumenta ni JavaScript grešaka. Dokazi: artifacts/review12-overview-final.log i artifacts/product-review12-final-2026-11-26/overview.json. To je završni pregled nove objave, odvojen od početnog pregleda i registracijskog baselinea prethodnog paketa.
+
+Kontrolirana utrka registracijskih odluka provedena je samo na privremenoj SQL bazi. Scenarij jedinog grupnog administratora s privremenom deaktivacijom početnog administratora proveden je samo na svježim Oracle/Db2 shemama. IIS prihvat obuhvaća zasebne funkcionalne HR/EN tokove; postojeći IIS administrator i članstva nisu mijenjani. Sva četiri nalaza REV12 zatvorena su u provjerenom lokalnom opsegu.
